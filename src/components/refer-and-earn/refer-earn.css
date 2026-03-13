@@ -1,0 +1,485 @@
+.refer-earn-page {
+    width: 100%;
+    flex: 1;
+    overflow-y: auto;
+    background-color: var(--bg-color);
+}
+
+.refer-earn-page::-webkit-scrollbar {
+    display: none;
+}
+
+.refer-earn-wrapper {
+    max-width: 1040px;
+    margin: 0 auto;
+    padding: 30px;
+    width: 100%;
+}
+
+.refer-header {
+    margin-bottom: 30px;
+}
+
+.refer-header h1 {
+    font-size: 1.25rem;
+    color: var(--text-main);
+    font-weight: 600;
+}
+
+.refer-container {
+    display: flex;
+    gap: 20px;
+    width: 100%;
+    align-items: flex-start;
+}
+
+.refer-left-column {
+    flex: 2;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.refer-right-column {
+    flex: 1;
+    min-width: 250px;
+}
+
+/* Cards Shared Styles */
+.refer-main-card,
+.how-it-works-card,
+.redeem-card {
+    background: var(--surface);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+}
+
+/* Main Graphic Banner */
+.refer-banner-graphic {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-bottom: 1px solid var(--border-color);
+    overflow: hidden;
+    background: #f8f6f3;
+}
+
+[data-theme='dark'] .refer-banner-graphic {
+    background: rgba(255, 255, 255, 0.03);
+}
+
+.refer-banner-img {
+    width: 100%;
+    height: auto;
+    display: block;
+}
+
+
+/* Main Content Section */
+.refer-main-content {
+    padding: 20px 25px;
+}
+
+.refer-main-content h2 {
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: var(--text-main);
+    margin-bottom: 6px;
+}
+
+.refer-main-content p {
+    font-size: 0.85rem;
+    line-height: 1.4;
+    color: var(--text-muted);
+    margin-bottom: 16px;
+    max-width: 95%;
+}
+
+.share-link-section {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.share-link-section span {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--text-main);
+}
+
+.link-input-group {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+}
+
+.link-input-wrapper {
+    position: relative;
+    flex: 1;
+    max-width: 600px;
+    display: flex;
+    align-items: center;
+}
+
+.link-input-wrapper input {
+    width: 100%;
+    background: var(--bg-color);
+    border: 1px solid var(--border-color);
+    padding: 10px 16px;
+    padding-right: 70px;
+    border-radius: 8px;
+    color: var(--text-main);
+    font-size: 0.85rem;
+    outline: none;
+    transition: border-color 0.2s;
+}
+
+.link-input-wrapper input:focus {
+    border-color: var(--primary);
+}
+
+.inline-copy-btn {
+    position: absolute;
+    right: 12px;
+    background: transparent;
+    border: none;
+    color: var(--primary);
+    font-weight: 600;
+    font-size: 0.8rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    transition: opacity 0.2s;
+}
+
+.inline-copy-btn:hover {
+    opacity: 0.8;
+}
+
+.send-invites-btn {
+    background: var(--primary);
+    color: #fff;
+    border: none;
+    padding: 10px 24px;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: background 0.2s;
+    min-width: 120px;
+}
+
+.send-invites-btn:hover {
+    background: var(--primary-hover);
+}
+
+/* How It Works Card */
+.how-it-works-card {
+    padding: 20px 25px;
+}
+
+.how-it-works-card h3 {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--text-main);
+    margin-bottom: 16px;
+}
+
+.steps-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+}
+
+.step-item {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.step-icon {
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-main);
+}
+
+.step-item h4 {
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: var(--text-main);
+}
+
+.step-item p {
+    font-size: 0.8rem;
+    line-height: 1.4;
+    color: var(--text-muted);
+}
+
+/* Right Column Redeem Card */
+.redeem-card {
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+}
+
+.redeem-label {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    margin-bottom: 6px;
+}
+
+.redeem-amount {
+    font-size: 2rem;
+    font-weight: 800;
+    color: var(--text-main);
+    margin-bottom: 16px;
+    line-height: 1;
+}
+
+.redeem-divider {
+    height: 1px;
+    background: var(--border-color);
+    width: 100%;
+    margin-bottom: 25px;
+}
+
+.track-invites-btn {
+    background: transparent;
+    border: none;
+    color: var(--primary);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 600;
+    font-size: 0.95rem;
+    cursor: pointer;
+    padding: 0;
+    width: fit-content;
+}
+
+.track-invites-btn:hover {
+    text-decoration: underline;
+}
+
+/* Responsive */
+@media (max-width: 1024px) {
+    .refer-container {
+        flex-direction: column;
+    }
+
+    .refer-left-column,
+    .refer-right-column {
+        width: 100%;
+    }
+}
+
+@media (max-width: 768px) {
+    .link-input-group {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .send-invites-btn {
+        width: 100%;
+    }
+
+    .steps-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .refer-main-content {
+        padding: 25px;
+    }
+
+    .how-it-works-card {
+        padding: 25px;
+    }
+}
+
+/* Copy Toast Animation */
+.copy-toast {
+    position: fixed;
+    top: 24px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #22c55e;
+    color: #ffffff;
+    padding: 12px 24px;
+    border-radius: 50px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    box-shadow: 0 10px 15px -3px rgba(34, 197, 94, 0.3);
+    z-index: 9999;
+    animation: toastSlideIn 0.3s cubic-bezier(0.18, 0.89, 0.32, 1.28) forwards;
+}
+
+@keyframes toastSlideIn {
+    0% {
+        top: -50px;
+        opacity: 0;
+    }
+    100% {
+        top: 24px;
+        opacity: 1;
+    }
+}
+
+/* Share Modal Styles */
+.share-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.4);
+    backdrop-filter: blur(8px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10000;
+    animation: fadeIn 0.3s ease;
+}
+
+.share-modal-content {
+    background: var(--surface);
+    width: 90%;
+    max-width: 440px;
+    border-radius: 20px;
+    padding: 30px;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+    border: 1px solid var(--border-color);
+    animation: slideUp 0.3s cubic-bezier(0.18, 0.89, 0.32, 1.28);
+}
+
+.share-modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+}
+
+.share-modal-header h3 {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--text-main);
+    margin: 0;
+}
+
+.close-share-modal {
+    background: var(--bg-color);
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+}
+
+.close-share-modal:hover {
+    background: #ff5252;
+    color: white;
+}
+
+.share-modal-body p {
+    font-size: 0.9rem;
+    color: var(--text-muted);
+    margin-bottom: 24px;
+    line-height: 1.5;
+}
+
+.share-platforms-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 20px;
+    margin-bottom: 30px;
+}
+
+.share-platform-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    text-decoration: none;
+    transition: transform 0.2s;
+}
+
+.share-platform-item:hover {
+    transform: translateY(-5px);
+}
+
+.platform-icon-circle {
+    width: 60px;
+    height: 60px;
+    border-radius: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+}
+
+.share-platform-item span {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--text-main);
+}
+
+.share-modal-link-copy {
+    display: flex;
+    background: var(--bg-color);
+    border: 1px solid var(--border-color);
+    padding: 6px;
+    border-radius: 12px;
+    align-items: center;
+    gap: 8px;
+}
+
+.share-modal-link-copy input {
+    flex: 1;
+    background: transparent;
+    border: none;
+    padding: 8px 10px;
+    font-size: 0.85rem;
+    color: var(--text-main);
+    outline: none;
+}
+
+.share-modal-link-copy button {
+    background: var(--primary);
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 8px;
+    font-size: 0.8rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: opacity 0.2s;
+}
+
+.share-modal-link-copy button:hover {
+    opacity: 0.9;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes slideUp {
+    from { transform: translateY(30px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+}

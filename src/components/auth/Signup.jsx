@@ -1,0 +1,555 @@
+import React, { useState, useEffect, useRef } from 'react';
+import { Eye, EyeOff, Globe, ChevronDown, Search, Check, X } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import './login.css';
+
+const countryCodes = [
+    { code: "+1", label: "🇺🇸 USA (+1)", name: "United States" },
+    { code: "+44", label: "🇬🇧 UK (+44)", name: "United Kingdom" },
+    { code: "+91", label: "🇮🇳 India (+91)", name: "India" },
+    { code: "+61", label: "🇦🇺 Australia (+61)", name: "Australia" },
+    { code: "+81", label: "🇯🇵 Japan (+81)", name: "Japan" },
+    { code: "+49", label: "🇩🇪 Germany (+49)", name: "Germany" },
+    { code: "+86", label: "🇨🇳 China (+86)", name: "China" },
+    { code: "+33", label: "🇫🇷 France (+33)", name: "France" },
+    { code: "+39", label: "🇮🇹 Italy (+39)", name: "Italy" },
+    { code: "+7", label: "🇷🇺 Russia (+7)", name: "Russia" },
+    { code: "+34", label: "🇪🇸 Spain (+34)", name: "Spain" },
+    { code: "+46", label: "🇸🇪 Sweden (+46)", name: "Sweden" },
+    { code: "+41", label: "🇨🇭 Switzerland (+41)", name: "Switzerland" },
+    { code: "+31", label: "🇳🇱 Netherlands (+31)", name: "Netherlands" },
+    { code: "+55", label: "🇧🇷 Brazil (+55)", name: "Brazil" },
+    { code: "+27", label: "🇿🇦 South Africa (+27)", name: "South Africa" },
+    { code: "+84", label: "🇻🇳 Vietnam (+84)", name: "Vietnam" },
+    { code: "+62", label: "🇮🇩 Indonesia (+62)", name: "Indonesia" },
+    { code: "+971", label: "🇦🇪 UAE (+971)", name: "United Arab Emirates" },
+    { code: "+92", label: "🇵🇰 Pakistan (+92)", name: "Pakistan" },
+    { code: "+60", label: "🇲🇾 Malaysia (+60)", name: "Malaysia" },
+    { code: "+63", label: "🇵🇭 Philippines (+63)", name: "Philippines" },
+    { code: "+66", label: "🇹🇭 Thailand (+66)", name: "Thailand" },
+    { code: "+65", label: "🇸🇬 Singapore (+65)", name: "Singapore" },
+    { code: "+90", label: "🇹🇷 Turkey (+90)", name: "Turkey" },
+    { code: "+82", label: "🇰🇷 South Korea (+82)", name: "South Korea" },
+    { code: "+1", label: "🇨🇦 Canada (+1)", name: "Canada" },
+    { code: "+52", label: "🇲🇽 Mexico (+52)", name: "Mexico" },
+    { code: "+20", label: "🇪🇬 Egypt (+20)", name: "Egypt" },
+    { code: "+234", label: "🇳🇬 Nigeria (+234)", name: "Nigeria" },
+    { code: "+966", label: "🇸🇦 Saudi Arabia (+966)", name: "Saudi Arabia" },
+    { code: "+254", label: "🇰🇪 Kenya (+254)", name: "Kenya" },
+    { code: "+27", label: "🇿🇦 South Africa (+27)", name: "South Africa" },
+    { code: "+54", label: "🇦🇷 Argentina (+54)", name: "Argentina" },
+    { code: "+56", label: "🇨🇱 Chile (+56)", name: "Chile" },
+    { code: "+64", label: "🇳🇿 New Zealand (+64)", name: "New Zealand" },
+    { code: "+47", label: "🇳🇴 Norway (+47)", name: "Norway" },
+    { code: "+45", label: "🇩🇰 Denmark (+45)", name: "Denmark" },
+    { code: "+358", label: "🇫🇮 Finland (+358)", name: "Finland" },
+    { code: "+351", label: "🇵🇹 Portugal (+351)", name: "Portugal" },
+    { code: "+30", label: "🇬🇷 Greece (+30)", name: "Greece" },
+    { code: "+353", label: "🇮🇪 Ireland (+353)", name: "Ireland" },
+    { code: "+48", label: "🇵🇱 Poland (+48)", name: "Poland" },
+    { code: "+420", label: "🇨🇿 Czech Rep. (+420)", name: "Czech Republic" },
+    { code: "+36", label: "🇭🇺 Hungary (+36)", name: "Hungary" },
+    { code: "+40", label: "🇷🇴 Romania (+40)", name: "Romania" },
+    { code: "+372", label: "🇪🇪 Estonia (+372)", name: "Estonia" },
+    { code: "+371", label: "🇱🇻 Latvia (+371)", name: "Latvia" },
+    { code: "+370", label: "🇱🇹 Lithuania (+370)", name: "Lithuania" },
+    { code: "+352", label: "🇱🇺 Luxembourg (+352)", name: "Luxembourg" },
+    { code: "+356", label: "🇲🇹 Malta (+356)", name: "Malta" },
+    { code: "+359", label: "🇧🇬 Bulgaria (+359)", name: "Bulgaria" },
+    { code: "+385", label: "🇭🇷 Croatia (+385)", name: "Croatia" },
+    { code: "+381", label: "🇷🇸 Serbia (+381)", name: "Serbia" },
+    { code: "+380", label: "🇺🇦 Ukraine (+380)", name: "Ukraine" },
+    { code: "+7", label: "🇰🇿 Kazakhstan (+7)", name: "Kazakhstan" },
+    { code: "+972", label: "🇮🇱 Israel (+972)", name: "Israel" },
+    { code: "+961", label: "🇱🇧 Lebanon (+961)", name: "Lebanon" },
+    { code: "+962", label: "🇯🇴 Jordan (+962)", name: "Jordan" },
+    { code: "+964", label: "🇮🇶 Iraq (+964)", name: "Iraq" },
+    { code: "+963", label: "🇸🇾 Syria (+963)", name: "Syria" },
+    { code: "+967", label: "🇾🇪 Yemen (+967)", name: "Yemen" },
+    { code: "+968", label: "🇴🇲 Oman (+968)", name: "Oman" },
+    { code: "+974", label: "🇶🇦 Qatar (+974)", name: "Qatar" },
+    { code: "+973", label: "🇧🇭 Bahrain (+973)", name: "Bahrain" },
+    { code: "+94", label: "🇱🇰 Sri Lanka (+94)", name: "Sri Lanka" },
+    { code: "+880", label: "🇧🇩 Bangladesh (+880)", name: "Bangladesh" },
+    { code: "+977", label: "🇳🇵 Nepal (+977)", name: "Nepal" }
+];
+
+const countries = [
+    "Afghanistan", "Albania", "Algeria", "Andorra", "Angola", "Antigua and Barbuda", "Argentina", "Armenia", "Australia", "Austria", "Azerbaijan",
+    "Bahamas", "Bahrain", "Bangladesh", "Barbados", "Belarus", "Belgium", "Belize", "Benin", "Bhutan", "Bolivia", "Bosnia and Herzegovina", "Botswana", "Brazil", "Brunei", "Bulgaria", "Burkina Faso", "Burundi",
+    "Cabo Verde", "Cambodia", "Cameroon", "Canada", "Central African Republic", "Chad", "Chile", "China", "Colombia", "Comoros", "Congo", "Costa Rica", "Croatia", "Cuba", "Cyprus", "Czech Republic",
+    "Denmark", "Djibouti", "Dominica", "Dominican Republic", "Ecuador", "Egypt", "El Salvador", "Equatorial Guinea", "Eritrea", "Estonia", "Eswatini", "Ethiopia",
+    "Fiji", "Finland", "France", "Gabon", "Gambia", "Georgia", "Germany", "Ghana", "Greece", "Grenada", "Guatemala", "Guinea", "Guinea-Bissau", "Guyana",
+    "Haiti", "Honduras", "Hungary", "Iceland", "India", "Indonesia", "Iran", "Iraq", "Ireland", "Israel", "Italy",
+    "Jamaica", "Japan", "Jordan", "Kazakhstan", "Kenya", "Kiribati", "Kuwait", "Kyrgyzstan", "Laos", "Latvia", "Lebanon", "Lesotho", "Liberia", "Libya", "Liechtenstein", "Lithuania", "Luxembourg",
+    "Madagascar", "Malawi", "Malaysia", "Maldives", "Mali", "Malta", "Marshall Islands", "Mauritania", "Mauritius", "Mexico", "Micronesia", "Moldova", "Monaco", "Mongolia", "Montenegro", "Morocco", "Mozambique", "Myanmar",
+    "Namibia", "Nauru", "Nepal", "Netherlands", "New Zealand", "Nicaragua", "Niger", "Nigeria", "North Korea", "North Macedonia", "Norway", "Oman",
+    "Pakistan", "Palau", "Palestine", "Panama", "Papua New Guinea", "Paraguay", "Peru", "Philippines", "Poland", "Portugal", "Qatar",
+    "Romania", "Russia", "Rwanda", "Saint Kitts and Nevis", "Saint Lucia", "Saint Vincent and the Grenadines", "Samoa", "San Marino", "Sao Tome and Principe", "Saudi Arabia", "Senegal", "Serbia", "Seychelles", "Sierra Leone", "Singapore", "Slovakia", "Slovenia", "Solomon Islands", "Somalia", "South Africa", "South Korea", "South Sudan", "Spain", "Sri Lanka", "Sudan", "Suriname", "Sweden", "Switzerland", "Syria",
+    "Taiwan", "Tajikistan", "Tanzania", "Thailand", "Timor-Leste", "Togo", "Tonga", "Trinidad and Tobago", "Tunisia", "Turkey", "Turkmenistan", "Tuvalu",
+    "Uganda", "Ukraine", "United Arab Emirates", "United Kingdom", "United States", "Uruguay", "Uzbekistan", "Vanuatu", "Vatican City", "Venezuela", "Vietnam", "Yemen", "Zambia", "Zimbabwe"
+];
+
+const translations = {
+    english: {
+        welcome: 'Create Account',
+        subtitle: 'Sign up to start your trading journey.',
+        email: 'Email',
+        emailPlaceholder: 'Input your email',
+        mobile: 'Mobile Number',
+        mobilePlaceholder: 'Enter mobile number',
+        country: 'Country',
+        countryPlaceholder: 'Select your country',
+        password: 'Password',
+        passwordPlaceholder: 'Create a password',
+        confirmPassword: 'Confirm Password',
+        confirmPlaceholder: 'Re-enter your password',
+        accountType: 'Account Category',
+        signup: 'Sign Up',
+        hasAccount: 'Already have an account?',
+        login: 'Login here',
+        promoH1: 'Trade Smarter. \nExecute Faster. \nProfit Anywhere.',
+        promoP: 'From rapid market execution to deep institutional analytics, our powerful trading engine lets you work seamlessly across all your devices.',
+        live: 'Live',
+        demo: 'Demo',
+        standard: 'Standard Account',
+        classic: 'Classic Account',
+        vip: 'VIP Account'
+    },
+    hindi: {
+        welcome: 'खाता बनाएं',
+        subtitle: 'अपनी ट्रेडिंग यात्रा शुरू करने के लिए साइन अप करें।',
+        email: 'ईमेल',
+        emailPlaceholder: 'अपना ईमेल डालें',
+        mobile: 'मोबाइल नंबर',
+        mobilePlaceholder: 'मोबाइल नंबर डालें',
+        country: 'देश',
+        countryPlaceholder: 'अपना देश चुनें',
+        password: 'पासवर्ड',
+        passwordPlaceholder: 'पासवर्ड बनाएं',
+        confirmPassword: 'पासवर्ड की पुष्टि करें',
+        confirmPlaceholder: 'दोबारा पासवर्ड डालें',
+        accountType: 'खाते की श्रेणी',
+        signup: 'साइन अप करें',
+        hasAccount: 'क्या आपके पास पहले से खाता है?',
+        login: 'यहाँ लॉग इन करें',
+        promoH1: 'तेजी से ट्रेड करें। \nबेहतर लाभ और \nसुविधाजनक अनुभव।',
+        promoP: 'रैपिड मार्केट निष्पादन से लेकर गहन संस्थागत विश्लेषण तक, हमारा शक्तिशाली ट्रेडिंग इंजन आपको निर्बाض रूप से काम करने देता है।',
+        live: 'लाइव',
+        demo: 'डेमो',
+        standard: 'स्टैंडर्ड खाता',
+        classic: 'क्लासिक खाता',
+        vip: 'VIP खाता'
+    },
+    vietnam: {
+        welcome: 'Tạo tài khoản',
+        subtitle: 'Đăng ký để bắt đầu hành trình giao dịch của bạn.',
+        email: 'Email',
+        emailPlaceholder: 'Nhập email của bạn',
+        mobile: 'Số điện thoại',
+        mobilePlaceholder: 'Nhập số điện thoại',
+        country: 'Quốc gia',
+        countryPlaceholder: 'Chọn quốc gia',
+        password: 'Mật khẩu',
+        passwordPlaceholder: 'Tạo mật khẩu',
+        confirmPassword: 'Xác nhận mật khẩu',
+        confirmPlaceholder: 'Nhập lại mật khẩu',
+        accountType: 'Phân loại tài khoản',
+        signup: 'Đăng ký',
+        hasAccount: 'Đã có tài khoản?',
+        login: 'Đăng nhập tại đây',
+        promoH1: 'Giao dịch Thông minh. \nThực thi Nhanh hơn. \nLợi nhuận Mọi nơi.',
+        promoP: 'Từ việc khớp lệnh thị trường nhanh chóng đến các phân tích chuyên sâu, công cụ giao dịch mạnh mẽ của chúng tôi giúp bạn làm việc mượt mà.',
+        live: 'Thực',
+        demo: 'Demo',
+        standard: 'Tài khoản Standard',
+        classic: 'Tài khoản Classic',
+        vip: 'Tài khoản VIP'
+    },
+    indonesian: {
+        welcome: 'Buat Akun',
+        subtitle: 'Daftar untuk memulai perjalanan trading Anda.',
+        email: 'Email',
+        emailPlaceholder: 'Masukkan email Anda',
+        mobile: 'Nomor Telepon',
+        mobilePlaceholder: 'Masukkan nomor telepon',
+        country: 'Negara',
+        countryPlaceholder: 'Pilih negara',
+        password: 'Kata Sandi',
+        passwordPlaceholder: 'Buat kata sandi',
+        confirmPassword: 'Konfirmasi Kata Sandi',
+        confirmPlaceholder: 'Masukkan kembali kata sandi',
+        accountType: 'Kategori Akun',
+        signup: 'Daftar',
+        hasAccount: 'Sudah punya akun?',
+        login: 'Login di sini',
+        promoH1: 'Trading Lebih Pintar. \nEksekusi Lebih Cepat. \nProfit di Mana Saja.',
+        promoP: 'Dari eksekusi pasar yang cepat hingga analitik institusional yang mendalam, mesin trading kami memungkinkan Anda bekerja tanpa hambatan.',
+        live: 'Live',
+        demo: 'Demo',
+        standard: 'Akun Standar',
+        classic: 'Akun Klasik',
+        vip: 'Akun VIP'
+    },
+    arabic: {
+        welcome: 'إنشاء حساب',
+        subtitle: 'سجل الآن لبدء رحلة التداول الخاصة بك.',
+        email: 'البريد الإلكتروني',
+        emailPlaceholder: 'أدخل بريدك الإلكتروني',
+        mobile: 'رقم الهاتف',
+        mobilePlaceholder: 'أدخل رقم الهاتف',
+        country: 'الدولة',
+        countryPlaceholder: 'اختر دولتك',
+        password: 'كلمة المرور',
+        passwordPlaceholder: 'أنشئ كلمة مرور',
+        confirmPassword: 'تأكيد كلمة المرور',
+        confirmPlaceholder: 'أعد إدخال كلمة المرور',
+        accountType: 'نوع الحساب',
+        signup: 'تسجيل',
+        hasAccount: 'لديك حساب بالفعل؟',
+        login: 'سجل دخول هنا',
+        promoH1: 'تداول بذكاء. \nنفذ أسرع. \nاربح في كل مكان.',
+        promoP: 'من تنفيذ السوق بسرعة إلى التحليلات المؤسسية العميقة، يتيح لك محرك التداول المطور لدينا العمل بسلاسة.',
+        live: 'حقيقي',
+        demo: 'تجريبي',
+        standard: 'حساب ستاندرد',
+        classic: 'حساب كلاسيك',
+        vip: 'حساب VIP'
+    },
+    urdu: {
+        welcome: 'اکاؤنٹ بنائیں',
+        subtitle: 'اپنا ٹریڈنگ کا سفر شروع کرنے کے لیے سائن اپ کریں۔',
+        email: 'ای ای میل',
+        emailPlaceholder: 'اپنا ای میل درج کریں',
+        mobile: 'موبائل نمبر',
+        mobilePlaceholder: 'اپنا موبائل نمبر درج کریں',
+        country: 'ملک',
+        countryPlaceholder: 'اپنا ملک منتخب کریں',
+        password: 'پاس ورڈ',
+        passwordPlaceholder: 'پاس ورڈ بنائیں',
+        confirmPassword: 'پاس ورڈ کی تصدیق کریں',
+        confirmPlaceholder: 'دوبارہ پاس ورڈ درج کریں',
+        accountType: 'اکاؤنٹ کا زمرہ',
+        signup: 'سائن اپ کریں',
+        hasAccount: 'پہلے سے اکاؤنٹ ہے؟',
+        login: 'یہاں لاگ ان کریں',
+        promoH1: 'تیزی سے ٹریڈ کریں۔ \nبہتر منافع اور \nآسان تجربہ۔',
+        promoP: 'ریپڈ مارکیٹ پروسیسنگ سے لے کر گہرائی سے تجزیوں تک، ہمارا طاقتور ٹریڈنگ انجن آپ کو بغیر کسی رکاوٹ کے کام کرنے دیتا ہے۔',
+        live: 'لائیو',
+        demo: 'ڈیمو',
+        standard: 'سٹینڈرڈ اکاؤنٹ',
+        classic: 'کلاسک اکاؤنٹ',
+        vip: 'VIP اکاؤنٹ'
+    }
+};
+
+export default function Signup() {
+    const [showPassword, setShowPassword] = useState(false);
+    const [lang, setLang] = useState('english');
+    const [showLangMenu, setShowLangMenu] = useState(false);
+    const [accountKind, setAccountKind] = useState('live'); // 'live' or 'demo'
+    const [formData, setFormData] = useState({
+        email: '',
+        phoneCode: '+1',
+        mobile: '',
+        country: 'United States',
+        password: '',
+        confirmPassword: '',
+        accountType: 'standard'
+    });
+
+    const [showPhoneDropdown, setShowPhoneDropdown] = useState(false);
+    const [phoneSearch, setPhoneSearch] = useState('');
+    const [showCountryDropdown, setShowCountryDropdown] = useState(false);
+    const [countrySearch, setCountrySearch] = useState('');
+
+    const phoneDropdownRef = useRef(null);
+    const countryDropdownRef = useRef(null);
+
+    // Handle clicks outside dropdowns to close them
+    useEffect(() => {
+        function handleClickOutside(event) {
+            if (phoneDropdownRef.current && !phoneDropdownRef.current.contains(event.target)) {
+                setShowPhoneDropdown(false);
+            }
+            if (countryDropdownRef.current && !countryDropdownRef.current.contains(event.target)) {
+                setShowCountryDropdown(false);
+            }
+        }
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => document.removeEventListener("mousedown", handleClickOutside);
+    }, []);
+
+    // Function to toggle phone dropdown and close others
+    const togglePhoneDropdown = () => {
+        setShowPhoneDropdown(!showPhoneDropdown);
+        setShowCountryDropdown(false);
+    };
+
+    // Function to toggle country dropdown and close others
+    const toggleCountryDropdown = () => {
+        setShowCountryDropdown(!showCountryDropdown);
+        setShowPhoneDropdown(false);
+    };
+
+    const t = translations[lang];
+    const isRTL = ['arabic', 'urdu'].includes(lang);
+
+    const languages = [
+        { code: 'english', label: 'English' },
+        { code: 'hindi', label: 'Hindi' },
+        { code: 'vietnam', label: 'Vietnam' },
+        { code: 'indonesian', label: 'Indonesian' },
+        { code: 'arabic', label: 'Arabic' },
+        { code: 'urdu', label: 'Urdu' }
+    ];
+
+    return (
+        <div className={`login-page ${isRTL ? 'rtl' : ''}`}>
+            {/* Left Side Visual Section */}
+            <div 
+                className="login-left" 
+                style={{ backgroundImage: `url('/classic_trading_bg.png')` }}
+            >
+                <div className="login-brand">
+                    <span className="brand-name">Live <span className="brand-accent">Fx</span> Hub</span>
+                </div>
+
+                <div className="login-promo">
+                    <h1 style={{ whiteSpace: 'pre-line' }}>{t.promoH1}</h1>
+                    <p>{t.promoP}</p>
+                </div>
+
+                <div className="login-footer-dots">
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                        <div style={{ width: '20px', height: '4px', background: 'white', borderRadius: '2px' }}></div>
+                        <div style={{ width: '4px', height: '4px', background: 'rgba(255,255,255,0.3)', borderRadius: '2px' }}></div>
+                        <div style={{ width: '4px', height: '4px', background: 'rgba(255,255,255,0.3)', borderRadius: '2px' }}></div>
+                    </div>
+                </div>
+            </div>
+
+            {/* Right Side Signup Form */}
+            <div className="login-right scrollable-form">
+                <div className="login-top-actions">
+                    <div className="account-kind-toggle">
+                        <button 
+                            className={`toggle-btn ${accountKind === 'live' ? 'active live' : ''}`}
+                            onClick={() => setAccountKind('live')}
+                        >
+                            {t.live}
+                        </button>
+                        <button 
+                            className={`toggle-btn ${accountKind === 'demo' ? 'active demo' : ''}`}
+                            onClick={() => setAccountKind('demo')}
+                        >
+                            {t.demo}
+                        </button>
+                    </div>
+                    
+                    <div className="lang-selector-wrapper">
+                        <button className="lang-btn" onClick={() => setShowLangMenu(!showLangMenu)}>
+                            <Globe size={16} />
+                            {languages.find(l => l.code === lang).label}
+                            <ChevronDown size={14} className={showLangMenu ? 'rotate' : ''} />
+                        </button>
+                        {showLangMenu && (
+                            <div className="lang-dropdown">
+                                {languages.map((l) => (
+                                    <div 
+                                        key={l.code} 
+                                        className={`lang-option ${lang === l.code ? 'active' : ''}`}
+                                        onClick={() => {
+                                            setLang(l.code);
+                                            setShowLangMenu(false);
+                                        }}
+                                    >
+                                        {l.label}
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                </div>
+
+                <div className="compact-login-container signup-view">
+
+                    <h2>{t.welcome}</h2>
+                    <p className="login-subtitle">{t.subtitle}</p>
+
+                    <form onSubmit={(e) => e.preventDefault()}>
+                        <div className="form-group">
+                            <label>{t.email}</label>
+                            <input 
+                                type="email" 
+                                placeholder={t.emailPlaceholder}
+                                value={formData.email}
+                                onChange={(e) => setFormData({...formData, email: e.target.value})}
+                            />
+                        </div>
+
+                        <div className="form-group">
+                            <label>{t.mobile}</label>
+                            <div className="phone-input-row">
+                                <div className="custom-searchable-dropdown" ref={phoneDropdownRef}>
+                                    <div 
+                                        className={`dropdown-selected phone-code-trigger ${showPhoneDropdown ? 'active' : ''}`}
+                                        onClick={togglePhoneDropdown}
+                                    >
+                                        <span>{countryCodes.find(c => c.code === formData.phoneCode)?.label || formData.phoneCode}</span>
+                                        <ChevronDown size={14} className={showPhoneDropdown ? 'rotate' : ''} />
+                                    </div>
+                                    
+                                    {showPhoneDropdown && (
+                                        <div className="dropdown-menu phone-code-menu">
+                                            <div className="dropdown-search-wrapper">
+                                                <input 
+                                                    type="text" 
+                                                    placeholder="Search code..." 
+                                                    value={phoneSearch}
+                                                    onChange={(e) => setPhoneSearch(e.target.value)}
+                                                    autoFocus
+                                                />
+                                                {phoneSearch && <X size={14} className="clear-search" onClick={() => setPhoneSearch('')} />}
+                                            </div>
+                                            <div className="dropdown-options">
+                                                {countryCodes
+                                                    .filter(c => 
+                                                        c.label.toLowerCase().includes(phoneSearch.toLowerCase()) || 
+                                                        c.code.includes(phoneSearch) ||
+                                                        c.name?.toLowerCase().includes(phoneSearch.toLowerCase())
+                                                    )
+                                                    .map(c => (
+                                                        <div 
+                                                            key={`${c.code}-${c.name}`} 
+                                                            className={`dropdown-option ${formData.phoneCode === c.code ? 'selected' : ''}`}
+                                                            onClick={() => {
+                                                                setFormData({...formData, phoneCode: c.code});
+                                                                setShowPhoneDropdown(false);
+                                                                setPhoneSearch('');
+                                                            }}
+                                                        >
+                                                            <span>{c.label}</span>
+                                                            {formData.phoneCode === c.code && <Check size={14} className="check-icon" />}
+                                                        </div>
+                                                    ))
+                                                }
+                                                {countryCodes.filter(c => 
+                                                        c.label.toLowerCase().includes(phoneSearch.toLowerCase()) || 
+                                                        c.code.includes(phoneSearch) ||
+                                                        c.name?.toLowerCase().includes(phoneSearch.toLowerCase())
+                                                    ).length === 0 && (
+                                                    <div className="no-results">No countries found</div>
+                                                )}
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                                <input 
+                                    type="tel" 
+                                    className="phone-number-field"
+                                    placeholder={t.mobilePlaceholder}
+                                    value={formData.mobile}
+                                    onChange={(e) => setFormData({...formData, mobile: e.target.value})}
+                                />
+                            </div>
+                        </div>
+
+                        <div className="form-group">
+                            <label>{t.password}</label>
+                            <div className="password-input-wrapper">
+                                <input 
+                                    type={showPassword ? "text" : "password"} 
+                                    placeholder={t.passwordPlaceholder}
+                                    value={formData.password}
+                                    onChange={(e) => setFormData({...formData, password: e.target.value})}
+                                />
+                                <div className="password-toggle" onClick={() => setShowPassword(!showPassword)}>
+                                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="form-group">
+                            <label>{t.confirmPassword}</label>
+                            <input 
+                                type={showPassword ? "text" : "password"} 
+                                placeholder={t.confirmPlaceholder}
+                                value={formData.confirmPassword}
+                                onChange={(e) => setFormData({...formData, confirmPassword: e.target.value})}
+                            />
+                        </div>
+
+                        <div className="form-group">
+                            <label>{t.accountType}</label>
+                            <select 
+                                value={formData.accountType}
+                                onChange={(e) => setFormData({...formData, accountType: e.target.value})}
+                            >
+                                <option value="standard">{t.standard}</option>
+                                <option value="classic">{t.classic}</option>
+                                <option value="vip">{t.vip}</option>
+                            </select>
+                        </div>
+
+                        <div className="form-group">
+                            <label>{t.country}</label>
+                            <div className="custom-searchable-dropdown full-width" ref={countryDropdownRef}>
+                                <div 
+                                    className={`dropdown-selected country-trigger ${showCountryDropdown ? 'active' : ''}`}
+                                    onClick={toggleCountryDropdown}
+                                >
+                                    <span>{formData.country}</span>
+                                    <ChevronDown size={14} className={showCountryDropdown ? 'rotate' : ''} />
+                                </div>
+                                
+                                {showCountryDropdown && (
+                                    <div className="dropdown-menu">
+                                        <div className="dropdown-search-wrapper">
+                                            <input 
+                                                type="text" 
+                                                placeholder="Search country..." 
+                                                value={countrySearch}
+                                                onChange={(e) => setCountrySearch(e.target.value)}
+                                                autoFocus
+                                            />
+                                            {countrySearch && <X size={14} className="clear-search" onClick={() => setCountrySearch('')} />}
+                                        </div>
+                                        <div className="dropdown-options">
+                                            {countries
+                                                .filter(c => c.toLowerCase().includes(countrySearch.toLowerCase()))
+                                                .map(country => (
+                                                    <div 
+                                                        key={country} 
+                                                        className={`dropdown-option ${formData.country === country ? 'selected' : ''}`}
+                                                        onClick={() => {
+                                                            setFormData({...formData, country: country});
+                                                            setShowCountryDropdown(false);
+                                                            setCountrySearch('');
+                                                        }}
+                                                    >
+                                                        <span>{country}</span>
+                                                        {formData.country === country && <Check size={14} className="check-icon" />}
+                                                    </div>
+                                                ))
+                                            }
+                                            {countries.filter(c => c.toLowerCase().includes(countrySearch.toLowerCase())).length === 0 && (
+                                                <div className="no-results">No results found</div>
+                                            )}
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+
+                        <button className="login-submit-btn" style={{ marginTop: '10px' }}>{t.signup}</button>
+
+                        <p className="signup-prompt">
+                            {t.hasAccount} <Link to="/login">{t.login}</Link>
+                        </p>
+                    </form>
+                </div>
+            </div>
+        </div>
+    );
+}

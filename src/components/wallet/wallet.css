@@ -1,0 +1,594 @@
+.wallet-content {
+    background-color: var(--bg-color);
+    min-height: calc(100vh - 80px);
+    transition: background-color 0.3s ease;
+    width: 100%;
+}
+
+.wallet-header {
+    margin-bottom: 32px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.wallet-header h1 {
+    font-size: 1.75rem;
+    font-weight: 600;
+    color: var(--text-main);
+    margin: 0;
+}
+
+.header-actions {
+    display: flex;
+    gap: 12px;
+}
+
+.header-action-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.header-action-btn.deposit {
+    background: var(--primary);
+    color: #fff;
+}
+
+.header-action-btn.deposit:hover {
+    background: var(--primary-hover);
+}
+
+.header-action-btn.withdraw {
+    background: transparent;
+    color: var(--text-main);
+    border: 1px solid var(--border-color);
+}
+
+.header-action-btn.withdraw:hover {
+    background: var(--account-bg-hover);
+}
+
+/* Filter Bar */
+.filter-bar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 60px;
+}
+
+/* Custom Dropdown Styling */
+.custom-dropdown-container {
+    position: relative;
+}
+
+.custom-dropdown-btn {
+    display: flex;
+    align-items: center;
+    background: #6c8395;
+    /* Muted blue-grey like the image */
+    border: none;
+    border-radius: 50px;
+    height: 36px;
+    padding: 0 16px;
+    color: #fff;
+    cursor: pointer;
+    font-size: 0.85rem;
+    font-weight: 500;
+    gap: 8px;
+    transition: all 0.2s ease;
+    min-width: 140px;
+    justify-content: space-between;
+}
+
+.custom-dropdown-btn:hover {
+    background: #5a7181;
+}
+
+.custom-dropdown-btn.active {
+    background: #5a7181;
+}
+
+.dropdown-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.dropdown-value {
+    flex: 1;
+    text-align: left;
+    white-space: nowrap;
+}
+
+.dropdown-chevron {
+    opacity: 0.8;
+}
+
+/* Menu styling */
+.custom-dropdown-menu {
+    position: absolute;
+    top: calc(100% + 8px);
+    left: 0;
+    background: var(--surface);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    min-width: 220px;
+    padding: 6px;
+    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.15), 0 5px 15px rgba(0, 0, 0, 0.05);
+    z-index: 1000;
+    display: flex;
+    flex-direction: column;
+}
+
+[data-theme='light'] .custom-dropdown-menu {
+    background: #fff;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+}
+
+[data-theme='dark'] .custom-dropdown-menu {
+    background: #1e222d;
+    border-color: #30363d;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+}
+
+.custom-dropdown-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 16px;
+    border-radius: 8px;
+    color: var(--text-main);
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.custom-dropdown-item:hover {
+    background: rgba(0, 0, 0, 0.03);
+}
+
+[data-theme='dark'] .custom-dropdown-item:hover {
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.custom-dropdown-item.selected {
+    background: var(--account-bg-hover);
+    font-weight: 600;
+}
+
+.submenu-indicator {
+    opacity: 0.6;
+}
+
+/* Hide the old filter-dropdown styles we're not using anymore */
+.filter-dropdown {
+    display: none;
+}
+
+/* Transaction Container */
+.transaction-container {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 100px 0;
+}
+
+/* Empty State */
+.empty-state {
+    text-align: center;
+    max-width: 400px;
+}
+
+.empty-state-icon-wrapper {
+    margin: 0 auto 20px;
+    width: 80px;
+    height: 80px;
+    background: rgba(255, 255, 255, 0.02);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.empty-state-icon {
+    color: #4a4d5e;
+}
+
+.empty-state h2 {
+    color: var(--text-main);
+    font-size: 1.15rem;
+    font-weight: 600;
+    margin-bottom: 8px;
+}
+
+.empty-state p {
+    color: var(--text-muted);
+    font-size: 0.9rem;
+    line-height: 1.5;
+    margin-bottom: 24px;
+}
+
+.reset-filters-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    background: var(--primary);
+    color: #fff;
+    border: none;
+    padding: 8px 20px;
+    border-radius: 6px;
+    font-weight: 600;
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: transform 0.2s ease, background 0.2s ease;
+    margin: 0 auto;
+}
+
+.reset-filters-btn:hover {
+    background: var(--primary-hover);
+    transform: translateY(-2px);
+}
+
+.reset-filters-btn:active {
+    transform: translateY(0);
+}
+
+/* Deposit & Withdraw Styles */
+.wallet-tab-content {
+    width: 100%;
+}
+
+/* New Payment View Design (Grid) used for Deposit */
+.payment-view-container {
+    max-width: 1040px;
+    margin: 0 auto;
+}
+
+.payment-view-header {
+    margin-bottom: 24px;
+}
+
+.payment-view-header h2 {
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: var(--text-main);
+    margin-bottom: 4px;
+}
+
+.payment-view-header p {
+    color: var(--text-muted);
+    font-size: 0.95rem;
+}
+
+.payment-methods-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 20px;
+}
+
+.payment-method-card {
+    background: var(--surface);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 24px;
+    transition: all 0.2s ease;
+}
+
+.payment-method-card:hover {
+    border-color: var(--primary);
+    background: var(--account-bg-hover);
+    transform: translateY(-2px);
+}
+
+.card-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.method-identity {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.method-icon-circle {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.method-name {
+    font-size: 1.05rem;
+    font-weight: 600;
+    color: var(--text-main);
+}
+
+.recommended-badge {
+    background: rgba(34, 197, 94, 0.1);
+    color: #22c55e;
+    font-size: 0.75rem;
+    font-weight: 600;
+    padding: 4px 10px;
+    border-radius: 20px;
+}
+
+.card-details {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.detail-row {
+    display: flex;
+    gap: 8px;
+    font-size: 0.85rem;
+}
+
+.detail-row .label {
+    color: var(--text-muted);
+}
+
+.detail-row .value {
+    color: var(--text-main);
+    font-weight: 500;
+}
+
+/* Withdraw List Design */
+.withdraw-view-container {
+    max-width: 1040px;
+    margin: 0 auto;
+}
+
+.balance-overview-card {
+    background: linear-gradient(135deg, var(--primary), #3b82f6);
+    border-radius: 24px;
+    padding: 40px;
+    margin-bottom: 48px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    color: #fff;
+    box-shadow: 0 20px 40px rgba(var(--primary-rgb), 0.2);
+    position: relative;
+    overflow: hidden;
+}
+
+.balance-overview-card::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    right: -10%;
+    width: 300px;
+    height: 300px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 50%;
+    pointer-events: none;
+}
+
+.total-label {
+    font-size: 1rem;
+    opacity: 0.9;
+    font-weight: 500;
+    margin-bottom: 8px;
+}
+
+.total-amount {
+    font-size: 2.75rem;
+    font-weight: 700;
+    margin-bottom: 24px;
+    letter-spacing: -1px;
+}
+
+.balance-stats {
+    display: flex;
+    gap: 48px;
+}
+
+.stat {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.stat-label {
+    font-size: 0.85rem;
+    opacity: 0.8;
+}
+
+.stat-value {
+    font-size: 1.15rem;
+    font-weight: 600;
+}
+
+.balance-icon-bg {
+    width: 96px;
+    height: 96px;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(10px);
+}
+
+.withdraw-list-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+}
+
+.withdraw-list-header h2 {
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: var(--text-main);
+}
+
+.info-badge {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: rgba(var(--primary-rgb), 0.08);
+    color: var(--primary);
+    padding: 10px 20px;
+    border-radius: 50px;
+    font-size: 0.8rem;
+    font-weight: 600;
+}
+
+.withdraw-methods-list {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.withdraw-list-item {
+    background: var(--surface);
+    border: 1px solid var(--border-color);
+    border-radius: 20px;
+    padding: 24px 32px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.withdraw-list-item:hover {
+    border-color: var(--primary);
+    transform: translateX(8px);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.04);
+}
+
+.item-main {
+    display: flex;
+    align-items: center;
+    gap: 24px;
+    flex: 1;
+}
+
+.method-icon-circle-box {
+    width: 56px;
+    height: 56px;
+    border-radius: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.item-info {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.withdrawal-method-name {
+    font-size: 1.15rem;
+    font-weight: 600;
+    color: var(--text-main);
+}
+
+.withdrawal-method-processed {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+}
+
+.item-meta {
+    display: flex;
+    gap: 64px;
+    margin: 0 48px;
+}
+
+.meta-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.meta-group .label {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+}
+
+.meta-group .value {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--text-main);
+}
+
+.meta-group .value.free {
+    color: #22c55e;
+}
+
+.withdraw-btn-action {
+    background: var(--bg-color);
+    border: 1px solid var(--border-color);
+    color: var(--text-main);
+    padding: 12px 32px;
+    border-radius: 12px;
+    font-size: 0.95rem;
+    font-weight: 700;
+    transition: all 0.2s ease;
+    min-width: 140px;
+}
+
+.withdraw-btn-action:hover {
+    background: var(--primary);
+    border-color: var(--primary);
+    color: #fff;
+    box-shadow: 0 10px 20px rgba(var(--primary-rgb), 0.2);
+}
+
+@media (max-width: 950px) {
+    .item-meta {
+        gap: 32px;
+        margin: 0 24px;
+    }
+}
+
+@media (max-width: 850px) {
+    .withdraw-list-item {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 24px;
+    }
+
+    .item-meta {
+        margin: 0;
+        width: 100%;
+        justify-content: space-between;
+    }
+
+    .withdraw-btn-action {
+        width: 100%;
+    }
+}
+
+/* Existing Responsive */
+@media (max-width: 768px) {
+    .filter-bar {
+        flex-direction: column;
+    }
+
+    .filter-dropdown {
+        width: 100%;
+    }
+
+    .wallet-header h1 {
+        font-size: 2rem;
+    }
+}

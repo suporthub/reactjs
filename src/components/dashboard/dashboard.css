@@ -1,0 +1,72 @@
+/* Dashboard Specific Styles */
+.dashboard-content {
+  gap: 20px;
+}
+
+.welcome-card {
+  background: linear-gradient(135deg, #e4e3ff 0%, #f6f5ff 100%);
+  border-radius: 12px;
+  padding: 32px 40px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  position: relative;
+  overflow: visible;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+  margin-top: 10px;
+}
+
+[data-theme='dark'] .welcome-card {
+  background: linear-gradient(135deg, #2b2d42 0%, #1f2133 100%);
+}
+
+.welcome-text {
+  flex: 1;
+  z-index: 2;
+}
+
+.welcome-text h1 {
+  font-size: 32px;
+  font-family: serif;
+  font-weight: 700;
+  color: #1a1a24;
+  margin: 0 0 8px 0;
+  letter-spacing: -0.5px;
+}
+
+[data-theme='dark'] .welcome-text h1 {
+  color: #ffffff;
+}
+
+.welcome-text p {
+  font-size: 15px;
+  color: #4a4a5e;
+  margin: 0;
+}
+
+[data-theme='dark'] .welcome-text p {
+  color: #a0a0b8;
+}
+
+.welcome-illustration {
+  z-index: 2;
+  position: absolute;
+  right: 20px;
+  bottom: 0px;
+  /* Align desk to slightly below bottom edge */
+  display: flex;
+  align-items: flex-end;
+  height: 100%;
+}
+
+.welcome-illustration img,
+.welcome-img {
+  margin-bottom: -15px;
+  /* Pushes the bottom edge of the image out of the card below */
+  height: calc(100% + 60px);
+  /* Taller than card to jut out top */
+  width: auto;
+  max-width: none;
+  object-fit: contain;
+  filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.1));
+}

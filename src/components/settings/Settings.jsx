@@ -1,0 +1,68 @@
+import React, { useState } from 'react';
+import { LogOut } from 'lucide-react';
+import Profile from './Profile';
+import Security from './Security';
+import DeleteAccount from './DeleteAccount';
+import { useTranslation } from 'react-i18next';
+import './settings.css';
+
+export default function Settings() {
+    const { t } = useTranslation();
+    const [activeTab, setActiveTab] = useState('Profile');
+
+    const renderContent = () => {
+        switch (activeTab) {
+            case 'Profile':
+                return <Profile />;
+            case 'Security':
+                return <Security />;
+            case 'Delete':
+                return <DeleteAccount />;
+            default:
+                return <Profile />;
+        }
+    };
+
+    return (
+        <div className="settings-container">
+            <div className="settings-header">
+                <h1>{t('Account Settings')}</h1>
+            </div>
+
+            <div className="settings-layout">
+                <div className="settings-sidebar">
+                    <div className="settings-nav">
+                        <button 
+                            className={`settings-nav-item ${activeTab === 'Profile' ? 'active' : ''}`}
+                            onClick={() => setActiveTab('Profile')}
+                        >
+                            {t('My Profile')}
+                        </button>
+                        <button 
+                            className={`settings-nav-item ${activeTab === 'Security' ? 'active' : ''}`}
+                            onClick={() => setActiveTab('Security')}
+                        >
+                            {t('Security')}
+                        </button>
+                        
+                        <button 
+                            className={`settings-nav-item delete-tab ${activeTab === 'Delete' ? 'active' : ''}`}
+                            onClick={() => setActiveTab('Delete')}
+                        >
+                            {t('Delete Account')}
+                        </button>
+                    </div>
+
+                    <button className="settings-logout-btn">
+                        <LogOut size={18} />
+                        {t('Logout')}
+                    </button>
+                </div>
+
+                <div className="settings-content">
+                    {renderContent()}
+                </div>
+            </div>
+        </div>
+    );
+}

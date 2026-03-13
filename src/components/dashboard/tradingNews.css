@@ -1,0 +1,166 @@
+.trading-news-container {
+    margin-top: 24px;
+    width: 100%;
+}
+
+.news-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.news-header h2 {
+    color: #ffffff;
+    font-size: 1.25rem;
+    font-weight: 600;
+    margin: 0;
+}
+
+[data-theme='light'] .news-header h2 {
+    color: #000000;
+}
+
+
+.news-marquee {
+    overflow: hidden;
+    width: 100%;
+    position: relative;
+    /* optional: mask-image to fade edges */
+    -webkit-mask-image: linear-gradient(to right, transparent, black 5%, black 95%, transparent);
+    mask-image: linear-gradient(to right, transparent, black 5%, black 95%, transparent);
+}
+
+.news-track {
+    display: flex;
+    gap: 20px;
+    width: max-content;
+    animation: scroll 30s linear infinite;
+}
+
+.news-track:hover {
+    animation-play-state: paused;
+}
+
+@keyframes scroll {
+    0% {
+        transform: translateX(0);
+    }
+
+    100% {
+        /* Since we duplicated the array of 5 items, we scroll by exactly half of the track length.
+           Each item has a set width + the 20px gap. We translate by 50%.
+           Since the gap after the last element in the first half is also 50% spacing, we translate by -50% 
+           - 10px (half gap) to be precise, or just use calc(-50% - 10px). */
+        transform: translateX(calc(-50% - 10px));
+    }
+}
+
+.news-card {
+    background-color: #1a1c29;
+    border-radius: 12px;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+    cursor: pointer;
+    width: 320px;
+    flex-shrink: 0;
+}
+
+[data-theme='light'] .news-card {
+    background-color: #ffffff;
+    border: 1px solid #e1e4e8;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+}
+
+
+.news-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+}
+
+.news-category {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    padding: 4px 10px;
+    border-radius: 20px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* Category Specific Styles */
+.news-category.crypto {
+    background-color: rgba(247, 147, 26, 0.1);
+    color: #f7931a;
+}
+
+.news-category.forex {
+    background-color: rgba(33, 150, 243, 0.1);
+    color: #2196f3;
+}
+
+.news-category.stocks {
+    background-color: rgba(76, 175, 80, 0.1);
+    color: #4caf50;
+}
+
+.news-icon {
+    margin-right: -2px;
+}
+
+.news-meta {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: #8b92a5;
+    font-size: 0.8rem;
+}
+
+.news-title {
+    color: #ffffff;
+    font-size: 1.1rem;
+    font-weight: 600;
+    line-height: 1.4;
+    margin: 0 0 12px 0;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+[data-theme='light'] .news-title {
+    color: #000000;
+}
+
+.news-summary {
+    color: #a3a8b3;
+    font-size: 0.9rem;
+    line-height: 1.5;
+    margin: 0 0 20px 0;
+    flex-grow: 1;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+[data-theme='light'] .news-summary {
+    color: #444444;
+}
+
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .news-card {
+        width: 280px;
+    }
+}

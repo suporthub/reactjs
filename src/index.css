@@ -1,0 +1,71 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+:root {
+  --primary: #58a6ff;
+  --primary-hover: #4a8ee0;
+  --primary-rgb: 88, 166, 255;
+
+  /* Light Theme Variables */
+  --bg-color: #fafafa;
+  --surface: #ffffff;
+  --text-main: #111827;
+  --text-muted: #6b7280;
+  --border-color: #e5e7eb;
+
+  --sidebar-w: 260px;
+  --sidebar-collapsed-w: 72px;
+  --banner-bg: #e9e3df;
+  --invite-bg-1: #f4ebff;
+  --invite-bg-2: #e9ddff;
+  --account-bg-hover: #f9fafb;
+}
+
+[data-theme='dark'] {
+  --bg-color: #0d1117;
+  --surface: #161b22;
+  --text-main: #c9d1d9;
+  --text-muted: #8b949e;
+  --border-color: #30363d;
+  --banner-bg: #21262d;
+  --invite-bg-1: #1f2937;
+  --invite-bg-2: #111827;
+  --account-bg-hover: #21262d;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  background-color: var(--bg-color);
+  color: var(--text-main);
+  -webkit-font-smoothing: antialiased;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+button {
+  cursor: pointer;
+  border: none;
+  background: none;
+  font-family: inherit;
+  font-weight: 500;
+  transition: all 0.2s ease-in-out;
+}
+
+li {
+  list-style: none;
+}
+
+a {
+  text-decoration: none;
+  color: inherit;
+}

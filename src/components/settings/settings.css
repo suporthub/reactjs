@@ -1,0 +1,283 @@
+.settings-container {
+    padding: 30px;
+    height: 100%;
+    width: 100%;
+    overflow-y: auto;
+    background-color: var(--bg-color);
+}
+
+.settings-header {
+    margin-bottom: 25px;
+}
+
+.settings-header h1 {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: var(--text-main);
+}
+
+.settings-layout {
+    display: flex;
+    gap: 30px;
+    background: var(--surface);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    min-height: 600px;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+}
+
+/* Sidebar Styling */
+.settings-sidebar {
+    width: 240px;
+    padding: 30px 20px;
+    border-right: 1px solid var(--border-color);
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+}
+
+.settings-nav {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.settings-nav-item {
+    padding: 10px 16px;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: var(--text-muted);
+    background: transparent;
+    cursor: pointer;
+    text-align: left;
+    transition: all 0.2s;
+    border: none;
+    outline: none;
+}
+
+.settings-nav-item:hover {
+    background: var(--account-bg-hover);
+    color: var(--text-main);
+}
+
+.settings-nav-item.active {
+    background: rgba(88, 166, 255, 0.1);
+    color: var(--primary);
+}
+
+[data-theme='light'] .settings-nav-item.active {
+    background: rgba(54, 135, 237, 0.08);
+}
+
+.settings-nav-item.delete-tab {
+    color: #DA5244;
+    margin-top: 10px;
+}
+
+.settings-nav-item.delete-tab:hover {
+    background: rgba(218, 82, 68, 0.08);
+}
+
+.settings-logout-btn {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 16px;
+    color: #DA5244;
+    background: transparent;
+    border: none;
+    font-weight: 600;
+    font-size: 0.9rem;
+    cursor: pointer;
+    margin-top: auto;
+    border-radius: 8px;
+    transition: background 0.2s;
+}
+
+.settings-logout-btn:hover {
+    background: rgba(218, 82, 68, 0.08);
+}
+
+/* Content Area */
+.settings-content {
+    flex: 1;
+    padding: 30px 40px;
+    overflow-y: auto;
+}
+
+.settings-content h2 {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--text-main);
+    margin-bottom: 25px;
+}
+
+/* Profile Section & Cards */
+.settings-section-card {
+    background: var(--bg-color);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 24px;
+    margin-bottom: 24px;
+    position: relative;
+}
+
+.card-header-with-action {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+}
+
+.profile-main-info {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+}
+
+.profile-avatar-large {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    object-fit: cover;
+    background: var(--primary);
+}
+
+.profile-details-text h3 {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--text-main);
+    margin-bottom: 4px;
+}
+
+.profile-details-text p {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    margin: 2px 0;
+}
+
+.settings-edit-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    border: 1px solid var(--border-color);
+    background: var(--surface);
+    border-radius: 6px;
+    font-size: 0.8rem;
+    color: var(--text-main);
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.settings-edit-btn:hover {
+    border-color: var(--primary);
+    color: var(--primary);
+}
+
+.info-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 24px;
+    margin-top: 20px;
+}
+
+.info-field-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.info-label {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    font-weight: 500;
+}
+
+.info-value {
+    font-size: 0.9rem;
+    color: var(--text-main);
+    font-weight: 600;
+}
+
+/* Security Styles */
+.security-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 0;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.security-item:last-child {
+    border-bottom: none;
+}
+
+.security-info h4 {
+    font-size: 0.95rem;
+    color: var(--text-main);
+    margin-bottom: 4px;
+}
+
+.security-info p {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+}
+
+.security-action-btn {
+    padding: 8px 16px;
+    background: var(--surface);
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    font-size: 0.85rem;
+    color: var(--text-main);
+    cursor: pointer;
+}
+
+/* Delete Account Styles */
+.delete-account-warning {
+    padding: 20px;
+    background: rgba(218, 82, 68, 0.05);
+    border: 1px solid rgba(218, 82, 68, 0.2);
+    border-radius: 8px;
+    margin-bottom: 25px;
+}
+
+.delete-account-warning p {
+    color: #DA5244;
+    font-size: 0.9rem;
+    line-height: 1.5;
+}
+
+.delete-confirm-btn {
+    padding: 12px 24px;
+    background: #DA5244;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.delete-confirm-btn:hover {
+    background: #c53c2e;
+}
+
+@media (max-width: 992px) {
+    .settings-layout {
+        flex-direction: column;
+    }
+
+    .settings-sidebar {
+        width: 100%;
+        border-right: none;
+        border-bottom: 1px solid var(--border-color);
+        padding: 20px;
+    }
+
+    .settings-nav {
+        flex-direction: row;
+        overflow-x: auto;
+    }
+}
