@@ -129,6 +129,7 @@ export default function TradingTerminal() {
                         selectedSymbol={selectedSymbol}
                         selectedTimeframe={selectedTimeframe}
                         setSelectedTimeframe={setSelectedTimeframe}
+                        onSelectSymbol={setSelectedSymbol}
                     />
                 </div>
 

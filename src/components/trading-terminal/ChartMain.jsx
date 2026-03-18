@@ -1,311 +1,224 @@
-import React, { useState, useEffect, useRef
-} from 'react';
-import {
-    Crosshair, Minus, Plus, RotateCcw, RotateCw,
-    Maximize2, Settings, Camera, Clock, TrendingUp,
-    BarChart2, PenTool, Ruler, Type, Layers
-} from 'lucide-react';
+import React, { useEffect, useRef, useCallback, useState, useMemo } from 'react';
+import { Clock } from 'lucide-react';
+import { createDatafeed } from './datafeed';
 
-const TIMEFRAMES = ['1m', '5m', '15m', '30m', '1H', '4H', '1D', '1W'];
+// ── Symbols and timeframes ────────────────────────────────────
+export const CHART_SYMBOLS = ['XAUUSD', 'XAGUSD', 'BTCUSD', 'AUDCAD', 'AUDJPY', 'JPN225'];
 
-// Generate fake candlestick data
-function generateCandleData(count = 80) {
-    const data = [];
-    let basePrice = 0.9500;
-    const now = Date.now();
-    for (let i = 0; i < count; i++) {
-        const open = basePrice + (Math.random() - 0.48) * 0.005;
-        const close = open + (Math.random() - 0.48) * 0.008;
-        const high = Math.max(open, close) + Math.random() * 0.003;
-        const low = Math.min(open, close) - Math.random() * 0.003;
-        data.push({
-            time: now - (count - i) * 1800000,
-            open, high, low, close,
-            volume: Math.floor(Math.random() * 500) + 100
-        });
-        basePrice = close;
-    }
-    return data;
+const TIMEFRAMES = [
+    { label: '1s',  tv: '1S'  },
+    { label: '5s',  tv: '5S'  },
+    { label: '15s', tv: '15S' },
+    { label: '30s', tv: '30S' },
+    { label: '1m',  tv: '1'   },
+    { label: '5m',  tv: '5'   },
+    { label: '15m', tv: '15'  },
+    { label: '30m', tv: '30'  },
+    { label: '1H',  tv: '60'  },
+    { label: '2H',  tv: '120' },
+    { label: '4H',  tv: '240' },
+    { label: '8H',  tv: '480' },
+    { label: '1D',  tv: '1D'  },
+    { label: '1W',  tv: '1W'  },
+    { label: '1M',  tv: '1M'  },
+];
+
+// ── TradingView chart loader ──────────────────────────────────
+function loadTradingViewScript() {
+    return new Promise((resolve, reject) => {
+        if (window.TradingView) { resolve(); return; }
+        const existing = document.getElementById('tv-charting-lib');
+        if (existing) {
+            existing.onload = resolve;
+            existing.onerror = reject;
+            return;
+        }
+        const script = document.createElement('script');
+        script.id = 'tv-charting-lib';
+        script.src = '/trading-view/charting_library/charting_library.standalone.js';
+        script.async = true;
+        script.onload = resolve;
+        script.onerror = () => reject(new Error('Failed to load TradingView charting library'));
+        document.head.appendChild(script);
+    });
 }
 
-function drawChart(canvas, data, hoveredIndex) {
-    const ctx = canvas.getContext('2d');
-    const { width, height } = canvas;
-    ctx.clearRect(0, 0, width, height);
-
-    const chartTop = 30;
-    const chartBottom = height - 30;
-    const chartLeft = 0;
-    const chartRight = width - 70;
-    const chartHeight = chartBottom - chartTop;
-    const chartWidth = chartRight - chartLeft;
-
-    // Find price range
-    let minPrice = Infinity, maxPrice = -Infinity;
-    data.forEach(d => {
-        if (d.low < minPrice) minPrice = d.low;
-        if (d.high > maxPrice) maxPrice = d.high;
-    });
-    const priceRange = maxPrice - minPrice;
-    const padding = priceRange * 0.1;
-    minPrice -= padding;
-    maxPrice += padding;
-    const totalRange = maxPrice - minPrice;
-
-    const priceToY = (price) => chartTop + (1 - (price - minPrice) / totalRange) * chartHeight;
-    const candleWidth = Math.max(2, (chartWidth / data.length) * 0.6);
-    const candleGap = chartWidth / data.length;
-
-    // Grid lines
-    ctx.strokeStyle = 'rgba(48, 54, 61, 0.4)';
-    ctx.lineWidth = 0.5;
-    const gridLines = 6;
-    for (let i = 0; i <= gridLines; i++) {
-        const y = chartTop + (i / gridLines) * chartHeight;
-        ctx.beginPath();
-        ctx.moveTo(chartLeft, y);
-        ctx.lineTo(chartRight, y);
-        ctx.stroke();
-
-        // Price labels
-        const price = maxPrice - (i / gridLines) * totalRange;
-        ctx.fillStyle = '#8b949e';
-        ctx.font = '11px Inter';
-        ctx.textAlign = 'left';
-        ctx.fillText(price.toFixed(4), chartRight + 8, y + 4);
-    }
-
-    // Draw candles
-    data.forEach((d, i) => {
-        const x = chartLeft + i * candleGap + candleGap / 2;
-        const isGreen = d.close >= d.open;
-        const color = isGreen ? '#3687ED' : '#DA5244';
-
-        // Wick
-        ctx.strokeStyle = color;
-        ctx.lineWidth = 1;
-        ctx.beginPath();
-        ctx.moveTo(x, priceToY(d.high));
-        ctx.lineTo(x, priceToY(d.low));
-        ctx.stroke();
-
-        // Body
-        const bodyTop = priceToY(Math.max(d.open, d.close));
-        const bodyBottom = priceToY(Math.min(d.open, d.close));
-        const bodyHeight = Math.max(1, bodyBottom - bodyTop);
-
-        ctx.fillStyle = color;
-        ctx.fillRect(x - candleWidth / 2, bodyTop, candleWidth, bodyHeight);
-    });
-
-    // Current price line
-    const lastCandle = data[data.length - 1];
-    const lastY = priceToY(lastCandle.close);
-    ctx.setLineDash([4, 4]);
-    ctx.strokeStyle = lastCandle.close >= lastCandle.open ? '#3687ED' : '#DA5244';
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    ctx.moveTo(chartLeft, lastY);
-    ctx.lineTo(chartRight, lastY);
-    ctx.stroke();
-    ctx.setLineDash([]);
-
-    // Current price label
-    const priceLabelColor = lastCandle.close >= lastCandle.open ? '#3687ED' : '#DA5244';
-    ctx.fillStyle = priceLabelColor;
-    const labelWidth = 65;
-    const labelHeight = 20;
-    ctx.fillRect(chartRight, lastY - labelHeight / 2, labelWidth, labelHeight);
-    ctx.fillStyle = '#fff';
-    ctx.font = 'bold 11px Inter';
-    ctx.textAlign = 'center';
-    ctx.fillText(lastCandle.close.toFixed(5), chartRight + labelWidth / 2, lastY + 4);
-
-    // Crosshair on hover
-    if (hoveredIndex !== null && hoveredIndex >= 0 && hoveredIndex < data.length) {
-        const hx = chartLeft + hoveredIndex * candleGap + candleGap / 2;
-        ctx.strokeStyle = 'rgba(139, 148, 158, 0.5)';
-        ctx.lineWidth = 0.5;
-        ctx.setLineDash([2, 2]);
-        ctx.beginPath();
-        ctx.moveTo(hx, chartTop);
-        ctx.lineTo(hx, chartBottom);
-        ctx.stroke();
-        ctx.setLineDash([]);
-    }
-
-    // Volume bars (small at the bottom)
-    const volMax = Math.max(...data.map(d => d.volume));
-    const volHeight = 40;
-    data.forEach((d, i) => {
-        const x = chartLeft + i * candleGap + candleGap / 2;
-        const isGreen = d.close >= d.open;
-        const barH = (d.volume / volMax) * volHeight;
-        ctx.fillStyle = isGreen ? 'rgba(34, 197, 94, 0.25)' : 'rgba(239, 68, 68, 0.25)';
-        ctx.fillRect(x - candleWidth / 2, chartBottom - barH, candleWidth, barH);
-    });
-
-    // Time labels
-    ctx.fillStyle = '#8b949e';
-    ctx.font = '10px Inter';
-    ctx.textAlign = 'center';
-    const timeStep = Math.floor(data.length / 6);
-    for (let i = 0; i < data.length; i += timeStep) {
-        const x = chartLeft + i * candleGap + candleGap / 2;
-        const date = new Date(data[i].time);
-        const label = `${date.getHours()}:${String(date.getMinutes()).padStart(2, '0')}`;
-        ctx.fillText(label, x, height - 8);
-    }
-}
-
-export default function ChartMain({ selectedSymbol, selectedTimeframe, setSelectedTimeframe }) {
-    const canvasRef = useRef(null);
+// ── Main ChartMain component ─────────────────────────────────
+export default function ChartMain({ selectedSymbol, selectedTimeframe, setSelectedTimeframe, onSelectSymbol }) {
     const containerRef = useRef(null);
-    const [candleData] = useState(() => generateCandleData(80));
-    const [hoveredIndex, setHoveredIndex] = useState(null);
+    const widgetRef    = useRef(null);
+    const [utcTime, setUtcTime] = useState('');
+    const [loading, setLoading] = useState(true);
+    const [error, setError]     = useState(null);
 
-    // Get OHLC info for header
-    const lastCandle = candleData[candleData.length - 1];
-    const changeVal = lastCandle.close - candleData[0].open;
-    const changePct = ((changeVal / candleData[0].open) * 100).toFixed(2);
+    // Singleton datafeed — preserves WSS connection across widget rebuilds
+    const datafeed = useMemo(() => createDatafeed(), []);
+
+    // Active TradingView resolution (maps from label → TV format)
+    const activeTf = TIMEFRAMES.find(t => t.label === selectedTimeframe)?.tv || '30';
+
+    // ── Clock ──────────────────────────────────────────────────
+    useEffect(() => {
+        const tick = () => {
+            setUtcTime(new Date().toLocaleTimeString('en-US', { hour12: false, timeZone: 'UTC' }));
+        };
+        tick();
+        const id = setInterval(tick, 1000);
+        return () => clearInterval(id);
+    }, []);
+
+    // ── Build / rebuild widget when symbol or timeframe changes ─
+    const buildWidget = useCallback(async () => {
+        if (!containerRef.current) return;
+        setLoading(true);
+        setError(null);
+
+        try {
+            await loadTradingViewScript();
+
+            // Destroy previous widget
+            if (widgetRef.current) {
+                try { widgetRef.current.remove(); } catch (_) {}
+                widgetRef.current = null;
+            }
+
+            widgetRef.current = new window.TradingView.widget({
+                // Container
+                container: containerRef.current,
+                library_path: '/trading-view/charting_library/',
+                locale: 'en',
+
+                // Symbol & interval
+                symbol:    selectedSymbol || 'XAUUSD',
+                interval:  activeTf,
+
+                // Datafeed
+                datafeed: datafeed,
+
+                // Style
+                theme: 'Dark',
+                style: '1',   // candlestick
+                toolbar_bg: '#0d1117',
+                overrides: {
+                    'mainSeriesProperties.candleStyle.upColor':        '#3687ED',
+                    'mainSeriesProperties.candleStyle.downColor':      '#DA5244',
+                    'mainSeriesProperties.candleStyle.wickUpColor':    '#3687ED',
+                    'mainSeriesProperties.candleStyle.wickDownColor':  '#DA5244',
+                    'mainSeriesProperties.candleStyle.borderUpColor':  '#3687ED',
+                    'mainSeriesProperties.candleStyle.borderDownColor':'#DA5244',
+                    'paneProperties.background':                       '#0d1117',
+                    'paneProperties.backgroundType':                   'solid',
+                    'scalesProperties.textColor':                      '#8b949e',
+                    'scalesProperties.lineColor':                      '#21262d',
+                    'paneProperties.vertGridProperties.color':         '#21262d',
+                    'paneProperties.horzGridProperties.color':         '#21262d',
+                },
+
+                // UI features
+                fullscreen: false,
+                autosize:   true,
+                disabled_features: [
+                    'header_symbol_search',   // we handle symbol from sidebar
+                    'header_compare',
+                    'display_market_status',
+                    'header_screenshot',
+                    'go_to_date',
+                ],
+                enabled_features: [
+                    'side_toolbar_in_fullscreen_mode',
+                    'header_fullscreen_button',
+                    'hide_last_na_study_output',
+                    'move_logo_to_main_pane',
+                    'seconds_resolution',              // Enable native seconds dropdown support
+                    'use_localstorage_for_settings',   // persist user layout per device
+                    'save_chart_properties_to_local_storage',
+                ],
+
+                // Defines the intervals in the top resolution dropdown
+                custom_resolutions: true,
+                favorites: {
+                    intervals: ['1S','5S','15S','30S','1','5','15','30','60','120','240','480','1D','1W','1M'],
+                },
+
+                // Saved layouts per user session (localStorage key includes symbol)
+                charts_storage_url: undefined,
+                client_id:   'livefxhub',
+                user_id:     'public',
+                load_last_chart: true,
+            });
+
+            widgetRef.current.onChartReady(() => {
+                setLoading(false);
+            });
+
+        } catch (err) {
+            console.error('[ChartMain] widget error:', err);
+            setError(err.message);
+            setLoading(false);
+        }
+    }, [selectedSymbol, activeTf]);
 
     useEffect(() => {
-        const canvas = canvasRef.current;
-        const container = containerRef.current;
-        if (!canvas || !container) return;
-
-        const resize = () => {
-            const dpr = window.devicePixelRatio || 1;
-            const rect = container.getBoundingClientRect();
-            canvas.width = rect.width * dpr;
-            canvas.height = rect.height * dpr;
-            canvas.style.width = rect.width + 'px';
-            canvas.style.height = rect.height + 'px';
-            const ctx = canvas.getContext('2d');
-            ctx.scale(dpr, dpr);
-            canvas.logicalWidth = rect.width;
-            canvas.logicalHeight = rect.height;
-            drawChart(canvas, candleData, hoveredIndex);
+        buildWidget();
+        return () => {
+            if (widgetRef.current) {
+                try { widgetRef.current.remove(); } catch (_) {}
+                widgetRef.current = null;
+            }
         };
+    }, [buildWidget]);
 
-        resize();
-        
-        const observer = new ResizeObserver(() => {
-            window.requestAnimationFrame(resize);
-        });
-        observer.observe(container);
-        
-        return () => observer.disconnect();
-    }, [candleData, hoveredIndex]);
-
-    const handleMouseMove = (e) => {
-        const canvas = canvasRef.current;
-        if (!canvas) return;
-        const rect = canvas.getBoundingClientRect();
-        const x = e.clientX - rect.left;
-        const chartRight = (canvas.logicalWidth || rect.width) - 70;
-        const candleGap = chartRight / candleData.length;
-        const idx = Math.floor(x / candleGap);
-        setHoveredIndex(idx >= 0 && idx < candleData.length ? idx : null);
-    };
-
-    const handleMouseLeave = () => setHoveredIndex(null);
+    // ── Timeframe change — update chart without full rebuild ───
+    const handleTimeframeChange = useCallback((tf) => {
+        setSelectedTimeframe(tf.label);
+        if (widgetRef.current && widgetRef.current.chart) {
+            try {
+                widgetRef.current.chart().setResolution(tf.tv, () => {});
+            } catch (_) {
+                // If chart not ready yet, the buildWidget effect will handle it
+            }
+        }
+    }, [setSelectedTimeframe]);
 
     return (
         <div className="chart-main">
-            {/* Chart Toolbar */}
-            <div className="chart-toolbar">
-                <div className="chart-toolbar-left">
-                    {TIMEFRAMES.map(tf => (
-                        <button
-                            key={tf}
-                            className={`chart-tf-btn ${selectedTimeframe === tf ? 'active' : ''}`}
-                            onClick={() => setSelectedTimeframe(tf)}
-                        >
-                            {tf}
-                        </button>
-                    ))}
-                    <div className="chart-toolbar-divider"></div>
-                    <button className="chart-tool-btn" title="Crosshair">
-                        <Crosshair size={15} />
-                    </button>
-                    <button className="chart-tool-btn" title="Indicators">
-                        <Layers size={15} />
-                        <span>Indicators</span>
-                    </button>
-                </div>
-                <div className="chart-toolbar-right">
-                    <span className="chart-save-label">Save</span>
-                    <div className="chart-toolbar-divider"></div>
-                    <button className="chart-tool-btn" title="Undo">
-                        <RotateCcw size={14} />
-                    </button>
-                    <button className="chart-tool-btn" title="Redo">
-                        <RotateCw size={14} />
-                    </button>
-                    <div className="chart-toolbar-divider"></div>
-                    <button className="chart-tool-btn" title="Screenshot">
-                        <Camera size={14} />
-                    </button>
-                    <button className="chart-tool-btn" title="Settings">
-                        <Settings size={14} />
-                    </button>
-                    <button className="chart-tool-btn" title="Fullscreen">
-                        <Maximize2 size={14} />
-                    </button>
-                </div>
-            </div>
-
-            {/* OHLC Info Bar */}
-            <div className="chart-info-bar">
-                <span className="chart-symbol-label">{selectedSymbol} · {selectedTimeframe.toUpperCase()}</span>
-                <span className="chart-ohlc-dot" style={{ color: '#3687ED' }}>●</span>
-                <span className="chart-ohlc-item">O<span className="chart-ohlc-val">{lastCandle.open.toFixed(5)}</span></span>
-                <span className="chart-ohlc-item">H<span className="chart-ohlc-val">{lastCandle.high.toFixed(5)}</span></span>
-                <span className="chart-ohlc-item">L<span className="chart-ohlc-val">{lastCandle.low.toFixed(5)}</span></span>
-                <span className="chart-ohlc-item">C<span className="chart-ohlc-val">{lastCandle.close.toFixed(5)}</span></span>
-                <span className={`chart-ohlc-change ${changeVal >= 0 ? 'positive' : 'negative'}`}>
-                    {changeVal >= 0 ? '+' : ''}{changeVal.toFixed(5)} ({changePct}%)
-                </span>
-            </div>
-
-            {/* Drawing Tools (Left Side) */}
-            <div className="chart-area-wrapper">
-                <div className="chart-drawing-tools">
-                    <button className="chart-draw-btn" title="Crosshair"><Crosshair size={16} /></button>
-                    <button className="chart-draw-btn" title="Trend Line"><TrendingUp size={16} /></button>
-                    <button className="chart-draw-btn" title="Horizontal Line"><Minus size={16} /></button>
-                    <button className="chart-draw-btn" title="Ruler"><Ruler size={16} /></button>
-                    <button className="chart-draw-btn" title="Pen"><PenTool size={16} /></button>
-                    <button className="chart-draw-btn" title="Text"><Type size={16} /></button>
-                    <div className="chart-draw-divider"></div>
-                    <button className="chart-draw-btn" title="Bar Chart"><BarChart2 size={16} /></button>
-                    <button className="chart-draw-btn" title="Settings"><Settings size={16} /></button>
-                </div>
-
-                {/* Canvas Chart */}
-                <div className="chart-canvas-container" ref={containerRef}>
-                    <canvas
-                        ref={canvasRef}
-                        onMouseMove={handleMouseMove}
-                        onMouseLeave={handleMouseLeave}
-                        className="chart-canvas"
-                    />
-                    {/* TradingView watermark */}
-                    <div className="chart-watermark">
-                        <span className="chart-tv-logo">Tᐯ</span>
-                    </div>
-                </div>
-            </div>
-
-            {/* Symbol Tabs */}
+            {/* Removed custom Timeframe Toolbar — relying on native TradingView header dropdown */}            {/* Symbol Tab Strip */}
             <div className="chart-symbol-tabs">
-                <button className="chart-symbol-tab active">{selectedSymbol}</button>
-                <button className="chart-symbol-tab-add">+</button>
-                <div className="chart-time-utc">
-                    <Clock size={12} />
-                    <span>{new Date().toLocaleTimeString('en-US', { hour12: false, timeZone: 'UTC' })} (UTC)</span>
-                </div>
+                {CHART_SYMBOLS.map(sym => (
+                    <button
+                        key={sym}
+                        className={`chart-symbol-tab ${selectedSymbol === sym ? 'active' : ''}`}
+                        onClick={() => {
+                            // Propagate to parent state + update chart in-place
+                            if (onSelectSymbol) onSelectSymbol(sym);
+                            if (widgetRef.current?.chart) {
+                                try {
+                                    widgetRef.current.chart().setSymbol(sym, () => {});
+                                } catch (_) {}
+                            }
+                        }}
+                    >
+                        {sym}
+                    </button>
+                ))}
+            </div>
+
+            {/* TradingView Chart Container */}
+            <div className="chart-canvas-container" style={{ position: 'relative', flex: 1, minHeight: 0 }}>
+                {loading && (
+                    <div className="chart-loading-overlay">
+                        <div className="chart-loading-spinner" />
+                        <span>Loading chart…</span>
+                    </div>
+                )}
+                {error && (
+                    <div className="chart-error-overlay">
+                        <span>⚠ {error}</span>
+                        <button onClick={buildWidget}>Retry</button>
+                    </div>
+                )}
+                {/* TradingView mounts into this div */}
+                <div ref={containerRef} style={{ width: '100%', height: '100%' }} />
             </div>
         </div>
     );
