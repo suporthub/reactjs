@@ -16,11 +16,15 @@ jobs:
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SERVER_SSH_KEY }}
           script: |
+            set -e
             cd /v3/reactjs
-            git pull origin main
             
-            # Build the Vite React app + NGINX container natively
-            docker build -t reactjs:latest .
+            # Force server to match GitHub exactly, bypassing any local modifications
+            git fetch origin
+            git reset --hard origin/${{ github.ref_name }}
+            
+            # Build the Vite React app + NGINX container natively (no cache to ensure updates)
+            docker build --no-cache -t reactjs:latest .
             
             # Import image to local k3s registry
             docker save reactjs:latest | sudo k3s ctr images import -
