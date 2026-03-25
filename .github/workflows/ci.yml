@@ -1,0 +1,29 @@
+name: ci
+
+on:
+  push:
+    branches: [main, develop]
+
+jobs:
+  deploy-to-k3s:
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - name: Deploy securely over SSH (Direct Build)
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.SERVER_IP }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          script: |
+            cd /v3/reactjs
+            git pull origin main
+            
+            # Build the Vite React app + NGINX container natively
+            docker build -t reactjs:latest .
+            
+            # Import image to local k3s registry
+            docker save reactjs:latest | sudo k3s ctr images import -
+            
+            # Restart the deployment to serve the newly built web app
+            kubectl rollout restart deployment/reactjs -n default
