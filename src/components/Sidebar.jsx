@@ -92,7 +92,7 @@ export default function Sidebar({ sidebarOpen, activePage, setActivePage, copyTr
                         </div>
                     </a>
 
-                    <a href="#" className="nav-item">
+                    <a href="#" className={`nav-item ${activePage === 'Calendar' ? 'active' : ''}`} onClick={(e) => { e.preventDefault(); setActivePage('Calendar'); }}>
                         <div className="nav-item-left">
                             <Calendar className="nav-icon" size={20} />
                             <span className="nav-text">{t('Calendar')}</span>

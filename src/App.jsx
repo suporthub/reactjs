@@ -9,6 +9,7 @@ import Wallet from './components/wallet/Wallet';
 import ReferAndEarn from './components/refer-and-earn/ReferAndEarn';
 import Support from './components/support/Support';
 import Settings from './components/settings/Settings';
+import Calendar from './components/calendar/Calendar';
 import Login from './components/auth/Login';
 import Signup from './components/auth/Signup';
 import TradingTerminal from './components/trading-terminal/TradingTerminal';
@@ -26,6 +27,7 @@ const routeToPage = {
   '/refer-and-earn': 'ReferAndEarn',
   '/settings': 'Settings',
   '/support': 'Support',
+  '/calendar': 'Calendar',
 };
 
 // Map page names to route paths for navigation
@@ -37,6 +39,7 @@ const pageToRoute = {
   'ReferAndEarn': '/refer-and-earn',
   'Settings': '/settings',
   'Support': '/support',
+  'Calendar': '/calendar',
 };
 
 function DashboardLayout() {
@@ -94,6 +97,7 @@ function DashboardLayout() {
           <Route path="/wallet" element={<Wallet activeTab={walletTab} setActiveTab={setWalletTab} />} />
           <Route path="/refer-and-earn" element={<ReferAndEarn />} />
           <Route path="/support" element={<Support />} />
+          <Route path="/calendar" element={<Calendar />} />
           <Route path="/settings" element={<Settings />} />
         </Routes>
       </div>

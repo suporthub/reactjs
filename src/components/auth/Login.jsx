@@ -133,18 +133,66 @@ export default function Login() {
     const [showForgotModal, setShowForgotModal] = useState(false);
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
+    const [loading, setLoading] = useState(false);
+    const [message, setMessage] = useState({ text: '', type: '' });
 
     const t = translations[lang];
     const togglePassword = () => setShowPassword(!showPassword);
 
     const languages = [
         { code: 'english', label: 'English' },
-        { code: 'hindi', label: 'Hindi' },
-        { code: 'vietnam', label: 'Vietnam' },
-        { code: 'indonesian', label: 'Indonesian' },
-        { code: 'arabic', label: 'Arabic' },
-        { code: 'urdu', label: 'Urdu' }
+        { code: 'hindi', label: 'हिन्दी' },
+        { code: 'vietnam', label: 'Tiếng Việt' },
+        { code: 'indonesian', label: 'Bahasa Indonesia' },
+        { code: 'arabic', label: 'العربية' },
+        { code: 'urdu', label: 'اردو' }
     ];
+
+    const setCookie = (name, value, days) => {
+        let expires = "";
+        if (days) {
+            const date = new Date();
+            date.setTime(date.getTime() + (days * 24 * 60 * 60 * 1000));
+            expires = "; expires=" + date.toUTCString();
+        }
+        document.cookie = name + "=" + (value || "") + expires + "; path=/; SameSite=Strict; Secure";
+    };
+
+    const handleLogin = async (e) => {
+        e.preventDefault();
+        setLoading(true);
+        setMessage({ text: '', type: '' });
+
+        try {
+            const response = await fetch('https://v3.livefxhub.com:8444/api/live/login', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ email, password }),
+            });
+
+            const result = await response.json();
+
+            if (result.success) {
+                // Success Case
+                localStorage.setItem('accessToken', result.data.accessToken);
+                setCookie('refreshToken', result.data.refreshToken, 7); // Store for 7 days or as needed
+                setMessage({ text: result.data.status || 'Login successful', type: 'success' });
+                
+                // Optional: Redirect after success
+                // setTimeout(() => navigate('/dashboard'), 1500);
+            } else {
+                // Failure Case
+                setMessage({ text: result.message || 'Login failed', type: 'error' });
+            }
+        } catch (error) {
+            setMessage({ text: 'Something went wrong. Please try again.', type: 'error' });
+            console.error('Login error:', error);
+        } finally {
+            setLoading(false);
+        }
+    };
 
     const isRTL = ['arabic', 'urdu'].includes(lang);
 
@@ -206,7 +254,7 @@ export default function Login() {
                     <h2>{t.welcome}</h2>
                     <p className="login-subtitle">{t.subtitle}</p>
 
-                    <form onSubmit={(e) => e.preventDefault()}>
+                    <form onSubmit={handleLogin}>
                         <div className="form-group">
                             <label>{t.email}</label>
                             <input 
@@ -246,7 +294,21 @@ export default function Login() {
                             </button>
                         </div>
 
-                        <button className="login-submit-btn">{t.login}</button>
+                        {message.text && (
+                            <div className={`login-status-message ${message.type}`}>
+                                {message.text}
+                            </div>
+                        )}
+
+                        <button 
+                            type="submit" 
+                            className={`login-submit-btn ${loading ? 'loading' : ''}`}
+                            disabled={loading}
+                        >
+                            {loading ? (
+                                <div className="loader-inner"></div>
+                            ) : t.login}
+                        </button>
 
                         <p className="signup-prompt">
                             {t.noAccount} <Link to="/signup">{t.signup}</Link>

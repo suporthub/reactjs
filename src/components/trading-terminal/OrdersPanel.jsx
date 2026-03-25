@@ -5,20 +5,6 @@ const TABS = ['Open Positions', 'Pending Orders', 'Rejected Orders', 'History'];
 
 const OPEN_POSITIONS_DATA = [
     {
-        orderId: '9056158141000',
-        symbolName: 'AUDCNH',
-        orderTime: '2026-02-26T07:23:01.002Z',
-        orderType: 'BUY',
-        quantity: 0.01,
-        openPrice: 4.87280,
-        marketPrice: 4.85730,
-        commission: 0.10,
-        swap: 0.01,
-        stopLoss: null,
-        takeProfit: null,
-        profitLoss: 2.36,
-    },
-    {
         orderId: '8990041241000',
         symbolName: 'AUDCAD',
         orderTime: '2026-02-28T07:11:48.002Z',
@@ -31,6 +17,20 @@ const OPEN_POSITIONS_DATA = [
         stopLoss: null,
         takeProfit: null,
         profitLoss: -3342.17,
+    },
+    {
+        orderId: '9056158141000',
+        symbolName: 'AUDCNH',
+        orderTime: '2026-02-26T07:23:01.002Z',
+        orderType: 'BUY',
+        quantity: 0.01,
+        openPrice: 4.87280,
+        marketPrice: 4.85730,
+        commission: 0.10,
+        swap: 0.01,
+        stopLoss: null,
+        takeProfit: null,
+        profitLoss: 2.36,
     }
 ];
 

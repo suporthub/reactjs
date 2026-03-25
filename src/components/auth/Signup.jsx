@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Eye, EyeOff, Globe, ChevronDown, Search, Check, X } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import countriesLib, { getCountriesForLanguage } from '../../utils/countries';
 import './login.css';
 
 const countryCodes = [
@@ -74,21 +75,7 @@ const countryCodes = [
     { code: "+977", label: "🇳🇵 Nepal (+977)", name: "Nepal" }
 ];
 
-const countries = [
-    "Afghanistan", "Albania", "Algeria", "Andorra", "Angola", "Antigua and Barbuda", "Argentina", "Armenia", "Australia", "Austria", "Azerbaijan",
-    "Bahamas", "Bahrain", "Bangladesh", "Barbados", "Belarus", "Belgium", "Belize", "Benin", "Bhutan", "Bolivia", "Bosnia and Herzegovina", "Botswana", "Brazil", "Brunei", "Bulgaria", "Burkina Faso", "Burundi",
-    "Cabo Verde", "Cambodia", "Cameroon", "Canada", "Central African Republic", "Chad", "Chile", "China", "Colombia", "Comoros", "Congo", "Costa Rica", "Croatia", "Cuba", "Cyprus", "Czech Republic",
-    "Denmark", "Djibouti", "Dominica", "Dominican Republic", "Ecuador", "Egypt", "El Salvador", "Equatorial Guinea", "Eritrea", "Estonia", "Eswatini", "Ethiopia",
-    "Fiji", "Finland", "France", "Gabon", "Gambia", "Georgia", "Germany", "Ghana", "Greece", "Grenada", "Guatemala", "Guinea", "Guinea-Bissau", "Guyana",
-    "Haiti", "Honduras", "Hungary", "Iceland", "India", "Indonesia", "Iran", "Iraq", "Ireland", "Israel", "Italy",
-    "Jamaica", "Japan", "Jordan", "Kazakhstan", "Kenya", "Kiribati", "Kuwait", "Kyrgyzstan", "Laos", "Latvia", "Lebanon", "Lesotho", "Liberia", "Libya", "Liechtenstein", "Lithuania", "Luxembourg",
-    "Madagascar", "Malawi", "Malaysia", "Maldives", "Mali", "Malta", "Marshall Islands", "Mauritania", "Mauritius", "Mexico", "Micronesia", "Moldova", "Monaco", "Mongolia", "Montenegro", "Morocco", "Mozambique", "Myanmar",
-    "Namibia", "Nauru", "Nepal", "Netherlands", "New Zealand", "Nicaragua", "Niger", "Nigeria", "North Korea", "North Macedonia", "Norway", "Oman",
-    "Pakistan", "Palau", "Palestine", "Panama", "Papua New Guinea", "Paraguay", "Peru", "Philippines", "Poland", "Portugal", "Qatar",
-    "Romania", "Russia", "Rwanda", "Saint Kitts and Nevis", "Saint Lucia", "Saint Vincent and the Grenadines", "Samoa", "San Marino", "Sao Tome and Principe", "Saudi Arabia", "Senegal", "Serbia", "Seychelles", "Sierra Leone", "Singapore", "Slovakia", "Slovenia", "Solomon Islands", "Somalia", "South Africa", "South Korea", "South Sudan", "Spain", "Sri Lanka", "Sudan", "Suriname", "Sweden", "Switzerland", "Syria",
-    "Taiwan", "Tajikistan", "Tanzania", "Thailand", "Timor-Leste", "Togo", "Tonga", "Trinidad and Tobago", "Tunisia", "Turkey", "Turkmenistan", "Tuvalu",
-    "Uganda", "Ukraine", "United Arab Emirates", "United Kingdom", "United States", "Uruguay", "Uzbekistan", "Vanuatu", "Vatican City", "Venezuela", "Vietnam", "Yemen", "Zambia", "Zimbabwe"
-];
+
 
 const translations = {
     english: {
@@ -112,9 +99,14 @@ const translations = {
         promoP: 'From rapid market execution to deep institutional analytics, our powerful trading engine lets you work seamlessly across all your devices.',
         live: 'Live',
         demo: 'Demo',
-        standard: 'Standard Account',
-        classic: 'Classic Account',
-        vip: 'VIP Account'
+        standard: 'Standard',
+        classic: 'Classic',
+        royalPlus: 'Royal+',
+        ecn: 'ECN',
+        vip: 'VIP',
+        elite: 'Elite',
+        referralId: 'Referral ID',
+        referralPlaceholder: 'Enter referral ID (optional)'
     },
     hindi: {
         welcome: 'खाता बनाएं',
@@ -137,9 +129,14 @@ const translations = {
         promoP: 'रैपिड मार्केट निष्पादन से लेकर गहन संस्थागत विश्लेषण तक, हमारा शक्तिशाली ट्रेडिंग इंजन आपको निर्बाض रूप से काम करने देता है।',
         live: 'लाइव',
         demo: 'डेमो',
-        standard: 'स्टैंडर्ड खाता',
-        classic: 'क्लासिक खाता',
-        vip: 'VIP खाता'
+        standard: 'Standard',
+        classic: 'Classic',
+        royalPlus: 'Royal+',
+        ecn: 'ECN',
+        vip: 'VIP',
+        elite: 'Elite',
+        referralId: 'रेफरल आईडी',
+        referralPlaceholder: 'रेफरल आईडी दर्ज करें (वैकल्पिक)'
     },
     vietnam: {
         welcome: 'Tạo tài khoản',
@@ -162,9 +159,14 @@ const translations = {
         promoP: 'Từ việc khớp lệnh thị trường nhanh chóng đến các phân tích chuyên sâu, công cụ giao dịch mạnh mẽ của chúng tôi giúp bạn làm việc mượt mà.',
         live: 'Thực',
         demo: 'Demo',
-        standard: 'Tài khoản Standard',
-        classic: 'Tài khoản Classic',
-        vip: 'Tài khoản VIP'
+        standard: 'Standard',
+        classic: 'Classic',
+        royalPlus: 'Royal+',
+        ecn: 'ECN',
+        vip: 'VIP',
+        elite: 'Elite',
+        referralId: 'ID người giới thiệu',
+        referralPlaceholder: 'Nhập ID người giới thiệu (tùy chọn)'
     },
     indonesian: {
         welcome: 'Buat Akun',
@@ -187,9 +189,14 @@ const translations = {
         promoP: 'Dari eksekusi pasar yang cepat hingga analitik institusional yang mendalam, mesin trading kami memungkinkan Anda bekerja tanpa hambatan.',
         live: 'Live',
         demo: 'Demo',
-        standard: 'Akun Standar',
-        classic: 'Akun Klasik',
-        vip: 'Akun VIP'
+        standard: 'Standard',
+        classic: 'Classic',
+        royalPlus: 'Royal+',
+        ecn: 'ECN',
+        vip: 'VIP',
+        elite: 'Elite',
+        referralId: 'ID Referal',
+        referralPlaceholder: 'Masukkan ID referal (opsional)'
     },
     arabic: {
         welcome: 'إنشاء حساب',
@@ -212,9 +219,14 @@ const translations = {
         promoP: 'من تنفيذ السوق بسرعة إلى التحليلات المؤسسية العميقة، يتيح لك محرك التداول المطور لدينا العمل بسلاسة.',
         live: 'حقيقي',
         demo: 'تجريبي',
-        standard: 'حساب ستاندرد',
-        classic: 'حساب كلاسيك',
-        vip: 'حساب VIP'
+        standard: 'Standard',
+        classic: 'Classic',
+        royalPlus: 'Royal+',
+        ecn: 'ECN',
+        vip: 'VIP',
+        elite: 'Elite',
+        referralId: 'معرف الإحالة',
+        referralPlaceholder: 'أدخل معرف الإحالة (اختياري)'
     },
     urdu: {
         welcome: 'اکاؤنٹ بنائیں',
@@ -237,9 +249,14 @@ const translations = {
         promoP: 'ریپڈ مارکیٹ پروسیسنگ سے لے کر گہرائی سے تجزیوں تک، ہمارا طاقتور ٹریڈنگ انجن آپ کو بغیر کسی رکاوٹ کے کام کرنے دیتا ہے۔',
         live: 'لائیو',
         demo: 'ڈیمو',
-        standard: 'سٹینڈرڈ اکاؤنٹ',
-        classic: 'کلاسک اکاؤنٹ',
-        vip: 'VIP اکاؤنٹ'
+        standard: 'Standard',
+        classic: 'Classic',
+        royalPlus: 'Royal+',
+        ecn: 'ECN',
+        vip: 'VIP',
+        elite: 'Elite',
+        referralId: 'ریفرل آئی ڈی',
+        referralPlaceholder: 'ریفرل آئی ڈی درج کریں (اختیاری)'
     }
 };
 
@@ -255,6 +272,7 @@ export default function Signup() {
         country: 'United States',
         password: '',
         confirmPassword: '',
+        referralId: '',
         accountType: 'standard'
     });
 
@@ -263,8 +281,18 @@ export default function Signup() {
     const [showCountryDropdown, setShowCountryDropdown] = useState(false);
     const [countrySearch, setCountrySearch] = useState('');
 
+    // Dynamically get countries based on selected language
+    const dynamicCountries = getCountriesForLanguage(lang);
+
     const phoneDropdownRef = useRef(null);
     const countryDropdownRef = useRef(null);
+
+    // Update country name in formData if language changes
+    useEffect(() => {
+        // If we want to keep the selected country but translate its name
+        // We might need to store the country code in formData instead of the name
+        // For now, let's just make sure the initial selection works
+    }, [lang]);
 
     // Handle clicks outside dropdowns to close them
     useEffect(() => {
@@ -297,11 +325,11 @@ export default function Signup() {
 
     const languages = [
         { code: 'english', label: 'English' },
-        { code: 'hindi', label: 'Hindi' },
-        { code: 'vietnam', label: 'Vietnam' },
-        { code: 'indonesian', label: 'Indonesian' },
-        { code: 'arabic', label: 'Arabic' },
-        { code: 'urdu', label: 'Urdu' }
+        { code: 'hindi', label: 'हिन्दी' },
+        { code: 'vietnam', label: 'Tiếng Việt' },
+        { code: 'indonesian', label: 'Bahasa Indonesia' },
+        { code: 'arabic', label: 'العربية' },
+        { code: 'urdu', label: 'اردو' }
     ];
 
     return (
@@ -335,13 +363,21 @@ export default function Signup() {
                     <div className="account-kind-toggle">
                         <button 
                             className={`toggle-btn ${accountKind === 'live' ? 'active live' : ''}`}
-                            onClick={() => setAccountKind('live')}
+                            onClick={() => {
+                                setAccountKind('live');
+                                if (formData.accountType === 'demo') {
+                                    setFormData({...formData, accountType: 'standard'});
+                                }
+                            }}
                         >
                             {t.live}
                         </button>
                         <button 
                             className={`toggle-btn ${accountKind === 'demo' ? 'active demo' : ''}`}
-                            onClick={() => setAccountKind('demo')}
+                            onClick={() => {
+                                setAccountKind('demo');
+                                setFormData({...formData, accountType: 'demo'});
+                            }}
                         >
                             {t.demo}
                         </button>
@@ -450,7 +486,10 @@ export default function Signup() {
                                     className="phone-number-field"
                                     placeholder={t.mobilePlaceholder}
                                     value={formData.mobile}
-                                    onChange={(e) => setFormData({...formData, mobile: e.target.value})}
+                                    onChange={(e) => {
+                                        const value = e.target.value.replace(/\D/g, '');
+                                        setFormData({...formData, mobile: value});
+                                    }}
                                 />
                             </div>
                         </div>
@@ -480,16 +519,40 @@ export default function Signup() {
                             />
                         </div>
 
+                        {accountKind === 'live' && (
+                            <div className="form-group">
+                                <label>{t.referralId}</label>
+                                <input 
+                                    type="text" 
+                                    placeholder={t.referralPlaceholder}
+                                    value={formData.referralId}
+                                    onChange={(e) => setFormData({...formData, referralId: e.target.value})}
+                                />
+                            </div>
+                        )}
+
                         <div className="form-group">
                             <label>{t.accountType}</label>
-                            <select 
-                                value={formData.accountType}
-                                onChange={(e) => setFormData({...formData, accountType: e.target.value})}
-                            >
-                                <option value="standard">{t.standard}</option>
-                                <option value="classic">{t.classic}</option>
-                                <option value="vip">{t.vip}</option>
-                            </select>
+                            {accountKind === 'live' ? (
+                                <select 
+                                    value={formData.accountType}
+                                    onChange={(e) => setFormData({...formData, accountType: e.target.value})}
+                                >
+                                    <option value="standard">{t.standard}</option>
+                                    <option value="classic">{t.classic}</option>
+                                    <option value="royalPlus">{t.royalPlus}</option>
+                                    <option value="ecn">{t.ecn}</option>
+                                    <option value="vip">{t.vip}</option>
+                                    <option value="elite">{t.elite}</option>
+                                </select>
+                            ) : (
+                                <input 
+                                    type="text" 
+                                    value={t.demo} 
+                                    readOnly 
+                                    className="readonly-input"
+                                />
+                            )}
                         </div>
 
                         <div className="form-group">
@@ -516,24 +579,24 @@ export default function Signup() {
                                             {countrySearch && <X size={14} className="clear-search" onClick={() => setCountrySearch('')} />}
                                         </div>
                                         <div className="dropdown-options">
-                                            {countries
-                                                .filter(c => c.toLowerCase().includes(countrySearch.toLowerCase()))
+                                            {dynamicCountries
+                                                .filter(c => c.name.toLowerCase().includes(countrySearch.toLowerCase()))
                                                 .map(country => (
                                                     <div 
-                                                        key={country} 
-                                                        className={`dropdown-option ${formData.country === country ? 'selected' : ''}`}
+                                                        key={country.code} 
+                                                        className={`dropdown-option ${formData.country === country.name ? 'selected' : ''}`}
                                                         onClick={() => {
-                                                            setFormData({...formData, country: country});
+                                                            setFormData({...formData, country: country.name});
                                                             setShowCountryDropdown(false);
                                                             setCountrySearch('');
                                                         }}
                                                     >
-                                                        <span>{country}</span>
-                                                        {formData.country === country && <Check size={14} className="check-icon" />}
+                                                        <span>{country.name}</span>
+                                                        {formData.country === country.name && <Check size={14} className="check-icon" />}
                                                     </div>
                                                 ))
                                             }
-                                            {countries.filter(c => c.toLowerCase().includes(countrySearch.toLowerCase())).length === 0 && (
+                                            {dynamicCountries.filter(c => c.name.toLowerCase().includes(countrySearch.toLowerCase())).length === 0 && (
                                                 <div className="no-results">No results found</div>
                                             )}
                                         </div>

@@ -4,11 +4,11 @@ import { useTranslation } from 'react-i18next';
 
 const languages = [
     { code: 'en', label: 'English' },
-    { code: 'hi', label: 'Hindi' },
-    { code: 'vi', label: 'Vietnam' },
-    { code: 'id', label: 'Indonesian' },
-    { code: 'ar', label: 'Arabic' },
-    { code: 'ur', label: 'Urdu' }
+    { code: 'hi', label: 'हिन्दी' },
+    { code: 'vi', label: 'Tiếng Việt' },
+    { code: 'id', label: 'Bahasa Indonesia' },
+    { code: 'ar', label: 'العربية' },
+    { code: 'ur', label: 'اردو' }
 ];
 
 export default function Topbar({ theme, toggleTheme }) {
