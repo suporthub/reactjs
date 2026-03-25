@@ -270,11 +270,19 @@ export default function Signup() {
         phoneCode: '+1',
         mobile: '',
         country: 'United States',
+        countryISO2: 'US',
         password: '',
         confirmPassword: '',
         referralId: '',
         accountType: 'standard'
     });
+
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState('');
+    const [showOtpModal, setShowOtpModal] = useState(false);
+    const [accountInfo, setAccountInfo] = useState({ accountNumber: '', message: '' });
+    const [otp, setOtp] = useState(['', '', '', '', '', '']);
+    const otpInputs = useRef([]);
 
     const [showPhoneDropdown, setShowPhoneDropdown] = useState(false);
     const [phoneSearch, setPhoneSearch] = useState('');
@@ -335,8 +343,8 @@ export default function Signup() {
     return (
         <div className={`login-page ${isRTL ? 'rtl' : ''}`}>
             {/* Left Side Visual Section */}
-            <div 
-                className="login-left" 
+            <div
+                className="login-left"
                 style={{ backgroundImage: `url('/classic_trading_bg.png')` }}
             >
                 <div className="login-brand">
@@ -361,28 +369,30 @@ export default function Signup() {
             <div className="login-right scrollable-form">
                 <div className="login-top-actions">
                     <div className="account-kind-toggle">
-                        <button 
+                        <button
                             className={`toggle-btn ${accountKind === 'live' ? 'active live' : ''}`}
                             onClick={() => {
                                 setAccountKind('live');
+                                setError('');
                                 if (formData.accountType === 'demo') {
-                                    setFormData({...formData, accountType: 'standard'});
+                                    setFormData({ ...formData, accountType: 'standard' });
                                 }
                             }}
                         >
                             {t.live}
                         </button>
-                        <button 
+                        <button
                             className={`toggle-btn ${accountKind === 'demo' ? 'active demo' : ''}`}
                             onClick={() => {
                                 setAccountKind('demo');
-                                setFormData({...formData, accountType: 'demo'});
+                                setError('');
+                                setFormData({ ...formData, accountType: 'demo' });
                             }}
                         >
                             {t.demo}
                         </button>
                     </div>
-                    
+
                     <div className="lang-selector-wrapper">
                         <button className="lang-btn" onClick={() => setShowLangMenu(!showLangMenu)}>
                             <Globe size={16} />
@@ -392,8 +402,8 @@ export default function Signup() {
                         {showLangMenu && (
                             <div className="lang-dropdown">
                                 {languages.map((l) => (
-                                    <div 
-                                        key={l.code} 
+                                    <div
+                                        key={l.code}
                                         className={`lang-option ${lang === l.code ? 'active' : ''}`}
                                         onClick={() => {
                                             setLang(l.code);
@@ -416,11 +426,11 @@ export default function Signup() {
                     <form onSubmit={(e) => e.preventDefault()}>
                         <div className="form-group">
                             <label>{t.email}</label>
-                            <input 
-                                type="email" 
+                            <input
+                                type="email"
                                 placeholder={t.emailPlaceholder}
                                 value={formData.email}
-                                onChange={(e) => setFormData({...formData, email: e.target.value})}
+                                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                             />
                         </div>
 
@@ -428,20 +438,20 @@ export default function Signup() {
                             <label>{t.mobile}</label>
                             <div className="phone-input-row">
                                 <div className="custom-searchable-dropdown" ref={phoneDropdownRef}>
-                                    <div 
+                                    <div
                                         className={`dropdown-selected phone-code-trigger ${showPhoneDropdown ? 'active' : ''}`}
                                         onClick={togglePhoneDropdown}
                                     >
                                         <span>{countryCodes.find(c => c.code === formData.phoneCode)?.label || formData.phoneCode}</span>
                                         <ChevronDown size={14} className={showPhoneDropdown ? 'rotate' : ''} />
                                     </div>
-                                    
+
                                     {showPhoneDropdown && (
                                         <div className="dropdown-menu phone-code-menu">
                                             <div className="dropdown-search-wrapper">
-                                                <input 
-                                                    type="text" 
-                                                    placeholder="Search code..." 
+                                                <input
+                                                    type="text"
+                                                    placeholder="Search code..."
                                                     value={phoneSearch}
                                                     onChange={(e) => setPhoneSearch(e.target.value)}
                                                     autoFocus
@@ -450,17 +460,17 @@ export default function Signup() {
                                             </div>
                                             <div className="dropdown-options">
                                                 {countryCodes
-                                                    .filter(c => 
-                                                        c.label.toLowerCase().includes(phoneSearch.toLowerCase()) || 
+                                                    .filter(c =>
+                                                        c.label.toLowerCase().includes(phoneSearch.toLowerCase()) ||
                                                         c.code.includes(phoneSearch) ||
                                                         c.name?.toLowerCase().includes(phoneSearch.toLowerCase())
                                                     )
                                                     .map(c => (
-                                                        <div 
-                                                            key={`${c.code}-${c.name}`} 
+                                                        <div
+                                                            key={`${c.code}-${c.name}`}
                                                             className={`dropdown-option ${formData.phoneCode === c.code ? 'selected' : ''}`}
                                                             onClick={() => {
-                                                                setFormData({...formData, phoneCode: c.code});
+                                                                setFormData({ ...formData, phoneCode: c.code });
                                                                 setShowPhoneDropdown(false);
                                                                 setPhoneSearch('');
                                                             }}
@@ -470,25 +480,25 @@ export default function Signup() {
                                                         </div>
                                                     ))
                                                 }
-                                                {countryCodes.filter(c => 
-                                                        c.label.toLowerCase().includes(phoneSearch.toLowerCase()) || 
-                                                        c.code.includes(phoneSearch) ||
-                                                        c.name?.toLowerCase().includes(phoneSearch.toLowerCase())
-                                                    ).length === 0 && (
-                                                    <div className="no-results">No countries found</div>
-                                                )}
+                                                {countryCodes.filter(c =>
+                                                    c.label.toLowerCase().includes(phoneSearch.toLowerCase()) ||
+                                                    c.code.includes(phoneSearch) ||
+                                                    c.name?.toLowerCase().includes(phoneSearch.toLowerCase())
+                                                ).length === 0 && (
+                                                        <div className="no-results">No countries found</div>
+                                                    )}
                                             </div>
                                         </div>
                                     )}
                                 </div>
-                                <input 
-                                    type="tel" 
+                                <input
+                                    type="tel"
                                     className="phone-number-field"
                                     placeholder={t.mobilePlaceholder}
                                     value={formData.mobile}
                                     onChange={(e) => {
                                         const value = e.target.value.replace(/\D/g, '');
-                                        setFormData({...formData, mobile: value});
+                                        setFormData({ ...formData, mobile: value });
                                     }}
                                 />
                             </div>
@@ -497,11 +507,11 @@ export default function Signup() {
                         <div className="form-group">
                             <label>{t.password}</label>
                             <div className="password-input-wrapper">
-                                <input 
-                                    type={showPassword ? "text" : "password"} 
+                                <input
+                                    type={showPassword ? "text" : "password"}
                                     placeholder={t.passwordPlaceholder}
                                     value={formData.password}
-                                    onChange={(e) => setFormData({...formData, password: e.target.value})}
+                                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                                 />
                                 <div className="password-toggle" onClick={() => setShowPassword(!showPassword)}>
                                     {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
@@ -511,22 +521,22 @@ export default function Signup() {
 
                         <div className="form-group">
                             <label>{t.confirmPassword}</label>
-                            <input 
-                                type={showPassword ? "text" : "password"} 
+                            <input
+                                type={showPassword ? "text" : "password"}
                                 placeholder={t.confirmPlaceholder}
                                 value={formData.confirmPassword}
-                                onChange={(e) => setFormData({...formData, confirmPassword: e.target.value})}
+                                onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
                             />
                         </div>
 
                         {accountKind === 'live' && (
                             <div className="form-group">
                                 <label>{t.referralId}</label>
-                                <input 
-                                    type="text" 
+                                <input
+                                    type="text"
                                     placeholder={t.referralPlaceholder}
                                     value={formData.referralId}
-                                    onChange={(e) => setFormData({...formData, referralId: e.target.value})}
+                                    onChange={(e) => setFormData({ ...formData, referralId: e.target.value })}
                                 />
                             </div>
                         )}
@@ -534,9 +544,9 @@ export default function Signup() {
                         <div className="form-group">
                             <label>{t.accountType}</label>
                             {accountKind === 'live' ? (
-                                <select 
+                                <select
                                     value={formData.accountType}
-                                    onChange={(e) => setFormData({...formData, accountType: e.target.value})}
+                                    onChange={(e) => setFormData({ ...formData, accountType: e.target.value })}
                                 >
                                     <option value="standard">{t.standard}</option>
                                     <option value="classic">{t.classic}</option>
@@ -546,10 +556,10 @@ export default function Signup() {
                                     <option value="elite">{t.elite}</option>
                                 </select>
                             ) : (
-                                <input 
-                                    type="text" 
-                                    value={t.demo} 
-                                    readOnly 
+                                <input
+                                    type="text"
+                                    value={t.demo}
+                                    readOnly
                                     className="readonly-input"
                                 />
                             )}
@@ -558,20 +568,20 @@ export default function Signup() {
                         <div className="form-group">
                             <label>{t.country}</label>
                             <div className="custom-searchable-dropdown full-width" ref={countryDropdownRef}>
-                                <div 
+                                <div
                                     className={`dropdown-selected country-trigger ${showCountryDropdown ? 'active' : ''}`}
                                     onClick={toggleCountryDropdown}
                                 >
                                     <span>{formData.country}</span>
                                     <ChevronDown size={14} className={showCountryDropdown ? 'rotate' : ''} />
                                 </div>
-                                
+
                                 {showCountryDropdown && (
                                     <div className="dropdown-menu">
                                         <div className="dropdown-search-wrapper">
-                                            <input 
-                                                type="text" 
-                                                placeholder="Search country..." 
+                                            <input
+                                                type="text"
+                                                placeholder="Search country..."
                                                 value={countrySearch}
                                                 onChange={(e) => setCountrySearch(e.target.value)}
                                                 autoFocus
@@ -582,11 +592,15 @@ export default function Signup() {
                                             {dynamicCountries
                                                 .filter(c => c.name.toLowerCase().includes(countrySearch.toLowerCase()))
                                                 .map(country => (
-                                                    <div 
-                                                        key={country.code} 
+                                                    <div
+                                                        key={country.code}
                                                         className={`dropdown-option ${formData.country === country.name ? 'selected' : ''}`}
                                                         onClick={() => {
-                                                            setFormData({...formData, country: country.name});
+                                                            setFormData({
+                                                                ...formData,
+                                                                country: country.name,
+                                                                countryISO2: country.code
+                                                            });
                                                             setShowCountryDropdown(false);
                                                             setCountrySearch('');
                                                         }}
@@ -605,7 +619,65 @@ export default function Signup() {
                             </div>
                         </div>
 
-                        <button className="login-submit-btn" style={{ marginTop: '10px' }}>{t.signup}</button>
+                        {error && (
+                            <div className="login-status-message error">
+                                <X size={16} />
+                                <span>{error}</span>
+                            </div>
+                        )}
+
+                        <button
+                            className="login-submit-btn"
+                            style={{ marginTop: '10px' }}
+                            onClick={async (e) => {
+                                e.preventDefault();
+                                setError('');
+                                if (formData.password !== formData.confirmPassword) {
+                                    setError("Passwords do not match");
+                                    return;
+                                }
+
+                                setLoading(true);
+                                try {
+                                    const endpoint = accountKind === 'live' ? 'https://v3.livefxhub.com:8444/api/live/register' : 'https://v3.livefxhub.com:8444/api/demo/register';
+                                    const payload = {
+                                        email: formData.email,
+                                        phoneNumber: `${formData.phoneCode}${formData.mobile}`,
+                                        password: formData.password,
+                                        country: formData.countryISO2,
+                                        groupName: formData.accountType.charAt(0).toUpperCase() + formData.accountType.slice(1),
+                                        currency: "USD",
+                                        leverage: 100
+                                    };
+
+                                    const response = await fetch(endpoint, {
+                                        method: 'POST',
+                                        headers: { 'Content-Type': 'application/json' },
+                                        body: JSON.stringify(payload)
+                                    });
+
+                                    const data = await response.json();
+
+                                    if (data.success) {
+                                        setAccountInfo({
+                                            accountNumber: data.accountNumber,
+                                            message: data.message
+                                        });
+                                        setShowOtpModal(true);
+                                    } else {
+                                        setError(data.message || "Registration failed");
+                                    }
+                                } catch (error) {
+                                    console.error("Registration error:", error);
+                                    setError("An error occurred. Please try again.");
+                                } finally {
+                                    setLoading(false);
+                                }
+                            }}
+                            disabled={loading}
+                        >
+                            {loading ? "Registering..." : t.signup}
+                        </button>
 
                         <p className="signup-prompt">
                             {t.hasAccount} <Link to="/login">{t.login}</Link>
@@ -613,6 +685,63 @@ export default function Signup() {
                     </form>
                 </div>
             </div>
+            {/* OTP Modal */}
+            {showOtpModal && (
+                <div className="otp-modal-overlay">
+                    <div className="otp-modal-content">
+                        <button className="modal-close" onClick={() => setShowOtpModal(false)}>
+                            <X size={20} />
+                        </button>
+
+                        <div className="otp-header">
+                            <div className="success-icon-wrapper">
+                                <Check size={32} />
+                            </div>
+                            <h3>Verify Your Email</h3>
+                            <p className="otp-msg">{accountInfo.message}</p>
+                            <div className="acc-badge">
+                                <span>Account No: </span>
+                                <strong>{accountInfo.accountNumber}</strong>
+                            </div>
+                        </div>
+
+                        <div className="otp-input-container">
+                            {otp.map((digit, idx) => (
+                                <input
+                                    key={idx}
+                                    type="text"
+                                    maxLength="1"
+                                    value={digit}
+                                    ref={el => otpInputs.current[idx] = el}
+                                    onChange={(e) => {
+                                        const val = e.target.value.replace(/\D/g, '');
+                                        const newOtp = [...otp];
+                                        newOtp[idx] = val;
+                                        setOtp(newOtp);
+
+                                        // Move focus to next input
+                                        if (val && idx < 5) {
+                                            otpInputs.current[idx + 1].focus();
+                                        }
+                                    }}
+                                    onKeyDown={(e) => {
+                                        if (e.key === 'Backspace' && !otp[idx] && idx > 0) {
+                                            otpInputs.current[idx - 1].focus();
+                                        }
+                                    }}
+                                />
+                            ))}
+                        </div>
+
+                        <button className="otp-verify-btn">Verify & Complete</button>
+
+                        <div className="otp-footer">
+                            <p>Didn't receive the code?</p>
+                            <button className="resend-btn">Resend OTP</button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
