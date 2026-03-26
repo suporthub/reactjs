@@ -843,11 +843,11 @@
 .otp-modal-content {
     background: white;
     width: 90%;
-    max-width: 440px;
-    border-radius: 24px;
-    padding: 40px;
+    max-width: 380px;
+    border-radius: 28px;
+    padding: 30px 24px;
     position: relative;
-    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+    box-shadow: 0 25px 60px -12px rgba(0, 0, 0, 0.3);
     text-align: center;
     animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1);
 }
@@ -994,6 +994,29 @@
 
 .resend-btn:hover {
     color: #2563eb;
+}
+
+/* Compact status messages for modal */
+.login-status-message.compact {
+    margin-bottom: 20px;
+    padding: 10px 12px;
+    font-size: 0.8rem;
+}
+
+/* Loading state for OTP button */
+.otp-verify-btn.loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #2a2d3d;
+    cursor: not-allowed;
+}
+
+.otp-verify-btn .loader-inner {
+    width: 20px;
+    height: 20px;
+    border: 3px solid rgba(255, 255, 255, 0.3);
+    border-top-color: #fff;
 }
 
 @media (max-width: 480px) {

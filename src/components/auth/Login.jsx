@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Eye, EyeOff, Globe, ChevronDown, X, Lock } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import './login.css';
 
 const translations = {
@@ -38,7 +38,7 @@ const translations = {
         signup: 'यहाँ साइन अप करें',
         backToWeb: 'वेबसाइट पर वापस जाएं',
         promoH1: 'तेजी से ट्रेड करें। \nबेहतर लाभ और \nसुविधाजनक अनुभव।',
-        promoP: 'रैपिड मार्केट निष्पादन से लेकर गहन संस्थागत विश्लेषण तक, हमारा शक्तिशाली ट्रेडिंग इंजन आपको अपने सभी उपकरणों पर निर्बाض रूप से काम करने देता है।',
+        promoP: 'रैपिड मार्केट निष्पादन से लेकर गहन संस्थागत विश्लेषण तक, हमारा शक्तिशाली ट्रेडिंग इंजन आपको अपने सभी उपकरणों पर निर्बाズ रूप से काम करने देता है।',
         resetTitle: 'पासवर्ड रीसेट करें',
         resetSubtitle: 'अपना ईमेल पता दर्ज करें और हम आपको पासवर्ड रीसेट करने के निर्देश भेजेंगे।',
         sendBtn: 'निर्देश भेजें',
@@ -81,7 +81,7 @@ const translations = {
         promoP: 'Dari eksekusi pasar yang cepat hingga analitik institusional yang mendalam, mesin trading kami yang kuat memungkinkan Anda bekerja tanpa hambatan di semua perangkat Anda.',
         resetTitle: 'Atur Ulang Kata Sandi',
         resetSubtitle: 'Masukkan alamat email Anda dan kami akan mengirimkan instruksi untuk mengatur ulang kata sandi Anda.',
-        sendBtn: 'Kirim Instruksi',
+        sendBtn: 'Girim Instruksi',
         close: 'Tutup'
     },
     arabic: {
@@ -127,6 +127,7 @@ const translations = {
 };
 
 export default function Login() {
+    const navigate = useNavigate();
     const [showPassword, setShowPassword] = useState(false);
     const [lang, setLang] = useState('english');
     const [showLangMenu, setShowLangMenu] = useState(false);
@@ -174,14 +175,21 @@ export default function Login() {
 
             const result = await response.json();
 
-            if (result.success) {
+            if (result.success || result.status === 'success') {
                 // Success Case
-                localStorage.setItem('accessToken', result.data.accessToken);
-                setCookie('refreshToken', result.data.refreshToken, 7); // Store for 7 days or as needed
-                setMessage({ text: result.data.status || 'Login successful', type: 'success' });
+                if (result.data) {
+                    localStorage.setItem('accessToken', result.data.accessToken || '');
+                    localStorage.setItem('portalToken', result.data.portalToken || '');
+                    localStorage.setItem('accounts', JSON.stringify(result.data.accounts || []));
+                    setCookie('refreshToken', result.data.refreshToken, 7);
+                }
                 
-                // Optional: Redirect after success
-                // setTimeout(() => navigate('/dashboard'), 1500);
+                setMessage({ text: 'Login successful! Redirecting...', type: 'success' });
+                
+                // Redirect after success
+                setTimeout(() => {
+                    navigate('/dashboard');
+                }, 1500);
             } else {
                 // Failure Case
                 setMessage({ text: result.message || 'Login failed', type: 'error' });
@@ -262,6 +270,7 @@ export default function Login() {
                                 placeholder={t.emailPlaceholder}
                                 value={email}
                                 onChange={(e) => setEmail(e.target.value)}
+                                required
                             />
                         </div>
 
@@ -273,6 +282,7 @@ export default function Login() {
                                     placeholder={t.passwordPlaceholder}
                                     value={password}
                                     onChange={(e) => setPassword(e.target.value)}
+                                    required
                                 />
                                 <div className="password-toggle" onClick={togglePassword}>
                                     {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}

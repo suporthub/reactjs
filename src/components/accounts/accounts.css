@@ -1,7 +1,7 @@
 /* Banner */
 .partner-banner {
-  background: var(--banner-bg);
-  border-radius: 8px;
+  background: #58a6ff;
+  border-radius: 12px;
   padding: 24px 32px;
   display: flex;
   justify-content: space-between;
@@ -19,15 +19,16 @@
 }
 
 .banner-content h2 {
-  font-size: 22px;
-  font-weight: 500;
-  margin-bottom: 4px;
-  color: var(--text-main);
+  font-size: 24px;
+  font-weight: 700;
+  margin-bottom: 6px;
+  color: #ffffff;
 }
 
 .banner-content p {
-  color: var(--text-muted);
-  font-size: 14px;
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 15px;
+  font-weight: 500;
 }
 
 .banner-shapes {
@@ -45,9 +46,9 @@
 .shape-circle {
   width: 80px;
   height: 80px;
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.7), rgba(255, 255, 255, 0.1));
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.4), rgba(255, 255, 255, 0.1));
   border-radius: 50%;
-  box-shadow: -10px 10px 20px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
   position: absolute;
   backdrop-filter: blur(4px);
 }

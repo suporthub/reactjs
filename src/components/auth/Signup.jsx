@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Eye, EyeOff, Globe, ChevronDown, Search, Check, X } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Eye, EyeOff, Globe, ChevronDown, Check, X, ArrowRight } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
 import countriesLib, { getCountriesForLanguage } from '../../utils/countries';
 import './login.css';
 
@@ -86,12 +86,13 @@ const translations = {
         mobile: 'Mobile Number',
         mobilePlaceholder: 'Enter mobile number',
         country: 'Country',
-        countryPlaceholder: 'Select your country',
+        countryPlaceholder: 'Select country',
         password: 'Password',
         passwordPlaceholder: 'Create a password',
         confirmPassword: 'Confirm Password',
         confirmPlaceholder: 'Re-enter your password',
         accountType: 'Account Category',
+        selectAccount: 'Select Account',
         signup: 'Sign Up',
         hasAccount: 'Already have an account?',
         login: 'Login here',
@@ -116,17 +117,18 @@ const translations = {
         mobile: 'मोबाइल नंबर',
         mobilePlaceholder: 'मोबाइल नंबर डालें',
         country: 'देश',
-        countryPlaceholder: 'अपना देश चुनें',
+        countryPlaceholder: 'देश चुनें',
         password: 'पासवर्ड',
         passwordPlaceholder: 'पासवर्ड बनाएं',
         confirmPassword: 'पासवर्ड की पुष्टि करें',
         confirmPlaceholder: 'दोबारा पासवर्ड डालें',
         accountType: 'खाते की श्रेणी',
+        selectAccount: 'खाता चुनें',
         signup: 'साइन अप करें',
         hasAccount: 'क्या आपके पास पहले से खाता है?',
         login: 'यहाँ लॉग इन करें',
         promoH1: 'तेजी से ट्रेड करें। \nबेहतर लाभ और \nसुविधाजनक अनुभव।',
-        promoP: 'रैपिड मार्केट निष्पादन से लेकर गहन संस्थागत विश्लेषण तक, हमारा शक्तिशाली ट्रेडिंग इंजन आपको निर्बाض रूप से काम करने देता है।',
+        promoP: 'रैपिड मार्केट निष्पादन से लेकर गहन संस्थागत विश्लेषण तक, हमारा शक्तिशाली ट्रेडिंग इंजन आपको निर्बाध रूप से काम करने देता है।',
         live: 'लाइव',
         demo: 'डेमो',
         standard: 'Standard',
@@ -152,6 +154,7 @@ const translations = {
         confirmPassword: 'Xác nhận mật khẩu',
         confirmPlaceholder: 'Nhập lại mật khẩu',
         accountType: 'Phân loại tài khoản',
+        selectAccount: 'Chọn loại tài khoản',
         signup: 'Đăng ký',
         hasAccount: 'Đã có tài khoản?',
         login: 'Đăng nhập tại đây',
@@ -182,6 +185,7 @@ const translations = {
         confirmPassword: 'Konfirmasi Kata Sandi',
         confirmPlaceholder: 'Masukkan kembali kata sandi',
         accountType: 'Kategori Akun',
+        selectAccount: 'Pilih Akun',
         signup: 'Daftar',
         hasAccount: 'Sudah punya akun?',
         login: 'Login di sini',
@@ -206,12 +210,13 @@ const translations = {
         mobile: 'رقم الهاتف',
         mobilePlaceholder: 'أدخل رقم الهاتف',
         country: 'الدولة',
-        countryPlaceholder: 'اختر دولتك',
+        countryPlaceholder: 'اختر الدولة',
         password: 'كلمة المرور',
         passwordPlaceholder: 'أنشئ كلمة مرور',
         confirmPassword: 'تأكيد كلمة المرور',
         confirmPlaceholder: 'أعد إدخال كلمة المرور',
         accountType: 'نوع الحساب',
+        selectAccount: 'اختر نوع الحساب',
         signup: 'تسجيل',
         hasAccount: 'لديك حساب بالفعل؟',
         login: 'سجل دخول هنا',
@@ -236,17 +241,18 @@ const translations = {
         mobile: 'موبائل نمبر',
         mobilePlaceholder: 'اپنا موبائل نمبر درج کریں',
         country: 'ملک',
-        countryPlaceholder: 'اپنا ملک منتخب کریں',
+        countryPlaceholder: 'ملک منتخب کریں',
         password: 'پاس ورڈ',
         passwordPlaceholder: 'پاس ورڈ بنائیں',
         confirmPassword: 'پاس ورڈ کی تصدیق کریں',
         confirmPlaceholder: 'دوبارہ پاس ورڈ درج کریں',
         accountType: 'اکاؤنٹ کا زمرہ',
+        selectAccount: 'اکاؤنٹ منتخب کریں',
         signup: 'سائن اپ کریں',
         hasAccount: 'پہلے سے اکاؤنٹ ہے؟',
         login: 'یہاں لاگ ان کریں',
-        promoH1: 'تیزی سے ٹریڈ کریں۔ \nبہتر منافع اور \nآسان تجربہ۔',
-        promoP: 'ریپڈ مارکیٹ پروسیسنگ سے لے کر گہرائی سے تجزیوں تک، ہمارا طاقتور ٹریڈنگ انجن آپ کو بغیر کسی رکاوٹ کے کام کرنے دیتا ہے۔',
+        promoH1: 'تیزی سے ٹریڈ کریں۔ \nبہتر منافع اور \nآسان تجربہ।',
+        promoP: 'ریپڈ مارکیٹ परोसिसिंग से लेकर गहराई से विश्लेषणों तक, हमारा शक्तिशाली ट्रेडिंग इंजन आपको बगैर किसी रुकावट के काम करने देता है।',
         live: 'لائیو',
         demo: 'ڈیمو',
         standard: 'Standard',
@@ -261,25 +267,45 @@ const translations = {
 };
 
 export default function Signup() {
+    const navigate = useNavigate();
     const [showPassword, setShowPassword] = useState(false);
     const [lang, setLang] = useState('english');
     const [showLangMenu, setShowLangMenu] = useState(false);
     const [accountKind, setAccountKind] = useState('live'); // 'live' or 'demo'
-    const [formData, setFormData] = useState({
+    
+    // Separate State for Live and Demo
+    const [liveData, setLiveData] = useState({
         email: '',
         phoneCode: '+1',
         mobile: '',
-        country: 'United States',
-        countryISO2: 'US',
+        country: '',
+        countryISO2: '',
         password: '',
         confirmPassword: '',
         referralId: '',
-        accountType: 'standard'
+        accountType: '' // Initial state empty
+    });
+
+    const [demoData, setDemoData] = useState({
+        email: '',
+        phoneCode: '+1',
+        mobile: '',
+        country: '',
+        countryISO2: '',
+        password: '',
+        confirmPassword: '',
+        referralId: '',
+        accountType: 'demo'
     });
 
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
+    
+    // OTP Related States
     const [showOtpModal, setShowOtpModal] = useState(false);
+    const [submittingOtp, setSubmittingOtp] = useState(false);
+    const [otpError, setOtpError] = useState('');
+    const [otpSuccess, setOtpSuccess] = useState('');
     const [accountInfo, setAccountInfo] = useState({ accountNumber: '', message: '' });
     const [otp, setOtp] = useState(['', '', '', '', '', '']);
     const otpInputs = useRef([]);
@@ -289,20 +315,14 @@ export default function Signup() {
     const [showCountryDropdown, setShowCountryDropdown] = useState(false);
     const [countrySearch, setCountrySearch] = useState('');
 
-    // Dynamically get countries based on selected language
     const dynamicCountries = getCountriesForLanguage(lang);
-
     const phoneDropdownRef = useRef(null);
     const countryDropdownRef = useRef(null);
 
-    // Update country name in formData if language changes
-    useEffect(() => {
-        // If we want to keep the selected country but translate its name
-        // We might need to store the country code in formData instead of the name
-        // For now, let's just make sure the initial selection works
-    }, [lang]);
+    // Get Active Data based on accountKind
+    const formData = accountKind === 'live' ? liveData : demoData;
+    const setFormData = accountKind === 'live' ? setLiveData : setDemoData;
 
-    // Handle clicks outside dropdowns to close them
     useEffect(() => {
         function handleClickOutside(event) {
             if (phoneDropdownRef.current && !phoneDropdownRef.current.contains(event.target)) {
@@ -316,13 +336,11 @@ export default function Signup() {
         return () => document.removeEventListener("mousedown", handleClickOutside);
     }, []);
 
-    // Function to toggle phone dropdown and close others
     const togglePhoneDropdown = () => {
         setShowPhoneDropdown(!showPhoneDropdown);
         setShowCountryDropdown(false);
     };
 
-    // Function to toggle country dropdown and close others
     const toggleCountryDropdown = () => {
         setShowCountryDropdown(!showCountryDropdown);
         setShowPhoneDropdown(false);
@@ -339,6 +357,102 @@ export default function Signup() {
         { code: 'arabic', label: 'العربية' },
         { code: 'urdu', label: 'اردو' }
     ];
+
+    const handleSignup = async (e) => {
+        e.preventDefault();
+        setError('');
+        
+        if (!formData.accountType) {
+            setError("Please select an account type");
+            return;
+        }
+
+        if (formData.password !== formData.confirmPassword) {
+            setError("Passwords do not match");
+            return;
+        }
+
+        setLoading(true);
+        try {
+            const endpoint = accountKind === 'live' ? 'https://v3.livefxhub.com:8444/api/live/register' : 'https://v3.livefxhub.com:8444/api/demo/register';
+            const payload = {
+                email: formData.email,
+                phoneNumber: `${formData.phoneCode}${formData.mobile}`,
+                password: formData.password,
+                country: formData.countryISO2,
+                groupName: formData.accountType.charAt(0).toUpperCase() + formData.accountType.slice(1),
+                currency: "USD",
+                leverage: 100
+            };
+
+            const response = await fetch(endpoint, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            const data = await response.json();
+
+            if (data.status === 'success' || data.success) {
+                if (accountKind === 'demo') {
+                    // Redirect to login after demo signup
+                    navigate('/login');
+                } else {
+                    setAccountInfo({
+                        accountNumber: data.accountNumber,
+                        message: data.message
+                    });
+                    setShowOtpModal(true);
+                }
+            } else {
+                setError(data.message || "Registration failed");
+            }
+        } catch (error) {
+            console.error("Registration error:", error);
+            setError("An error occurred. Please try again.");
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleVerifyOtp = async () => {
+        const otpString = otp.join('');
+        if (otpString.length < 6) {
+            setOtpError("Please enter the full 6-digit code.");
+            return;
+        }
+
+        setSubmittingOtp(true);
+        setOtpError('');
+        setOtpSuccess('');
+
+        try {
+            const response = await fetch('https://v3.livefxhub.com:8444/api/auth/verify-email', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    accountNumber: accountInfo.accountNumber,
+                    otp: otpString
+                })
+            });
+
+            const data = await response.json();
+
+            if (data.status === 'success' || data.success) {
+                setOtpSuccess(data.message || "Email verified successfully!");
+                setTimeout(() => {
+                    navigate('/login'); // Redirect to login after verification
+                }, 1500);
+            } else {
+                setOtpError(data.message || "Invalid OTP. Please try again.");
+            }
+        } catch (err) {
+            console.error("OTP Verification error:", err);
+            setOtpError("Verification failed. Please try again.");
+        } finally {
+            setSubmittingOtp(false);
+        }
+    };
 
     return (
         <div className={`login-page ${isRTL ? 'rtl' : ''}`}>
@@ -374,9 +488,6 @@ export default function Signup() {
                             onClick={() => {
                                 setAccountKind('live');
                                 setError('');
-                                if (formData.accountType === 'demo') {
-                                    setFormData({ ...formData, accountType: 'standard' });
-                                }
                             }}
                         >
                             {t.live}
@@ -386,7 +497,6 @@ export default function Signup() {
                             onClick={() => {
                                 setAccountKind('demo');
                                 setError('');
-                                setFormData({ ...formData, accountType: 'demo' });
                             }}
                         >
                             {t.demo}
@@ -423,7 +533,7 @@ export default function Signup() {
                     <h2>{t.welcome}</h2>
                     <p className="login-subtitle">{t.subtitle}</p>
 
-                    <form onSubmit={(e) => e.preventDefault()}>
+                    <form onSubmit={handleSignup}>
                         <div className="form-group">
                             <label>{t.email}</label>
                             <input
@@ -431,6 +541,7 @@ export default function Signup() {
                                 placeholder={t.emailPlaceholder}
                                 value={formData.email}
                                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                                required
                             />
                         </div>
 
@@ -442,7 +553,7 @@ export default function Signup() {
                                         className={`dropdown-selected phone-code-trigger ${showPhoneDropdown ? 'active' : ''}`}
                                         onClick={togglePhoneDropdown}
                                     >
-                                        <span>{countryCodes.find(c => c.code === formData.phoneCode)?.label || formData.phoneCode}</span>
+                                        <span>{countryCodes.find(c => c.code === formData.phoneCode)?.label.split(' ')[0]} {formData.phoneCode}</span>
                                         <ChevronDown size={14} className={showPhoneDropdown ? 'rotate' : ''} />
                                     </div>
 
@@ -500,6 +611,7 @@ export default function Signup() {
                                         const value = e.target.value.replace(/\D/g, '');
                                         setFormData({ ...formData, mobile: value });
                                     }}
+                                    required
                                 />
                             </div>
                         </div>
@@ -512,6 +624,7 @@ export default function Signup() {
                                     placeholder={t.passwordPlaceholder}
                                     value={formData.password}
                                     onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                                    required
                                 />
                                 <div className="password-toggle" onClick={() => setShowPassword(!showPassword)}>
                                     {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
@@ -526,6 +639,7 @@ export default function Signup() {
                                 placeholder={t.confirmPlaceholder}
                                 value={formData.confirmPassword}
                                 onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
+                                required
                             />
                         </div>
 
@@ -547,7 +661,9 @@ export default function Signup() {
                                 <select
                                     value={formData.accountType}
                                     onChange={(e) => setFormData({ ...formData, accountType: e.target.value })}
+                                    required
                                 >
+                                    <option value="" disabled>{t.selectAccount}</option>
                                     <option value="standard">{t.standard}</option>
                                     <option value="classic">{t.classic}</option>
                                     <option value="royalPlus">{t.royalPlus}</option>
@@ -572,7 +688,9 @@ export default function Signup() {
                                     className={`dropdown-selected country-trigger ${showCountryDropdown ? 'active' : ''}`}
                                     onClick={toggleCountryDropdown}
                                 >
-                                    <span>{formData.country}</span>
+                                    <span style={{ color: !formData.country ? '#94a3b8' : 'inherit' }}>
+                                        {formData.country || t.countryPlaceholder}
+                                    </span>
                                     <ChevronDown size={14} className={showCountryDropdown ? 'rotate' : ''} />
                                 </div>
 
@@ -627,56 +745,19 @@ export default function Signup() {
                         )}
 
                         <button
-                            className="login-submit-btn"
+                            type="submit"
+                            className={`login-submit-btn ${loading ? 'loading' : ''}`}
                             style={{ marginTop: '10px' }}
-                            onClick={async (e) => {
-                                e.preventDefault();
-                                setError('');
-                                if (formData.password !== formData.confirmPassword) {
-                                    setError("Passwords do not match");
-                                    return;
-                                }
-
-                                setLoading(true);
-                                try {
-                                    const endpoint = accountKind === 'live' ? 'https://v3.livefxhub.com:8444/api/live/register' : 'https://v3.livefxhub.com:8444/api/demo/register';
-                                    const payload = {
-                                        email: formData.email,
-                                        phoneNumber: `${formData.phoneCode}${formData.mobile}`,
-                                        password: formData.password,
-                                        country: formData.countryISO2,
-                                        groupName: formData.accountType.charAt(0).toUpperCase() + formData.accountType.slice(1),
-                                        currency: "USD",
-                                        leverage: 100
-                                    };
-
-                                    const response = await fetch(endpoint, {
-                                        method: 'POST',
-                                        headers: { 'Content-Type': 'application/json' },
-                                        body: JSON.stringify(payload)
-                                    });
-
-                                    const data = await response.json();
-
-                                    if (data.success) {
-                                        setAccountInfo({
-                                            accountNumber: data.accountNumber,
-                                            message: data.message
-                                        });
-                                        setShowOtpModal(true);
-                                    } else {
-                                        setError(data.message || "Registration failed");
-                                    }
-                                } catch (error) {
-                                    console.error("Registration error:", error);
-                                    setError("An error occurred. Please try again.");
-                                } finally {
-                                    setLoading(false);
-                                }
-                            }}
                             disabled={loading}
                         >
-                            {loading ? "Registering..." : t.signup}
+                            {loading ? (
+                                <div className="loader-inner"></div>
+                            ) : (
+                                <>
+                                    <span>{t.signup}</span>
+                                    <ArrowRight size={18} />
+                                </>
+                            )}
                         </button>
 
                         <p className="signup-prompt">
@@ -685,6 +766,7 @@ export default function Signup() {
                     </form>
                 </div>
             </div>
+
             {/* OTP Modal */}
             {showOtpModal && (
                 <div className="otp-modal-overlay">
@@ -705,6 +787,17 @@ export default function Signup() {
                             </div>
                         </div>
 
+                        {otpError && (
+                            <div className="login-status-message error compact">
+                                <span>{otpError}</span>
+                            </div>
+                        )}
+                        {otpSuccess && (
+                            <div className="login-status-message success compact">
+                                <span>{otpSuccess}</span>
+                            </div>
+                        )}
+
                         <div className="otp-input-container">
                             {otp.map((digit, idx) => (
                                 <input
@@ -719,7 +812,6 @@ export default function Signup() {
                                         newOtp[idx] = val;
                                         setOtp(newOtp);
 
-                                        // Move focus to next input
                                         if (val && idx < 5) {
                                             otpInputs.current[idx + 1].focus();
                                         }
@@ -733,7 +825,13 @@ export default function Signup() {
                             ))}
                         </div>
 
-                        <button className="otp-verify-btn">Verify & Complete</button>
+                        <button 
+                            className={`otp-verify-btn ${submittingOtp ? 'loading' : ''}`}
+                            onClick={handleVerifyOtp}
+                            disabled={submittingOtp}
+                        >
+                            {submittingOtp ? <div className="loader-inner"></div> : "Verify & Complete"}
+                        </button>
 
                         <div className="otp-footer">
                             <p>Didn't receive the code?</p>

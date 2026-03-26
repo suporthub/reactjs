@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './accounts.css';
 import {
@@ -10,8 +10,27 @@ import { useTranslation } from 'react-i18next';
 export default function Accounts() {
     const { t } = useTranslation();
     const navigate = useNavigate();
-    const [activeTab, setActiveTab] = useState('Real');
+    const [activeTab, setActiveTab] = useState('Live'); // Changed 'Real' to 'Live'
     const [viewMode, setViewMode] = useState('list');
+    const [accounts, setAccounts] = useState([]);
+
+    // Load accounts from localStorage
+    useEffect(() => {
+        const storedAccounts = localStorage.getItem('accounts');
+        if (storedAccounts) {
+            try {
+                setAccounts(JSON.parse(storedAccounts));
+            } catch (e) {
+                console.error("Failed to parse accounts from localStorage", e);
+            }
+        }
+    }, []);
+
+    // Filter accounts based on activeTab
+    // Using string comparison: 'Live' maps to 'live', 'Demo' maps to 'demo'
+    const filteredAccounts = accounts.filter(acc => 
+        acc.type === activeTab.toLowerCase()
+    );
 
     return (
         <main className="main-content">
@@ -43,10 +62,10 @@ export default function Accounts() {
                     <div className="tabs-container">
                         <div className="tabs">
                             <button
-                                className={`tab-button ${activeTab === 'Real' ? 'active' : ''}`}
-                                onClick={() => setActiveTab('Real')}
+                                className={`tab-button ${activeTab === 'Live' ? 'active' : ''}`}
+                                onClick={() => setActiveTab('Live')}
                             >
-                                {t('Real')}
+                                {t('Live')}
                             </button>
                             <button
                                 className={`tab-button ${activeTab === 'Demo' ? 'active' : ''}`}
@@ -82,44 +101,52 @@ export default function Accounts() {
                     </div>
                 </div>
 
-                {/* Account Card (Active) */}
-                <div className="account-card">
-                    <div className="account-header">
-                        <div className="account-tags">
-                            <span className="tag">Real</span>
-                            <span className="tag">Live Fx Hub</span>
-                            <span className="tag">Pro</span>
-                            <span className="account-id"># 20000037084</span>
-                            <span className="account-type">Pro</span>
-                        </div>
-                        <ChevronDown size={20} color="var(--text-muted)" />
-                    </div>
+                {/* Dynamic Account Cards */}
+                <div className={`accounts-list-container ${viewMode}`}>
+                    {filteredAccounts.length > 0 ? (
+                        filteredAccounts.map((acc, index) => (
+                            <div key={acc.accountNumber || index} className="account-card">
+                                <div className="account-header">
+                                    <div className="account-tags">
+                                        <span className="tag">Live Fx Hub</span>
+                                        <span className="tag">{acc.groupName || 'Pro'}</span>
+                                        <span className="account-id"># {acc.accountNumber}</span>
+                                    </div>
+                                </div>
 
-                    <div className="account-body">
-                        <div className="amount">
-                            <span className="amount-whole">0</span>
-                            <span className="amount-decimal">.00</span>
-                            <span className="currency">USD</span>
-                        </div>
+                                <div className="account-body">
+                                    <div className="amount">
+                                        <span className="amount-whole">0</span>
+                                        <span className="amount-decimal">.00</span>
+                                        <span className="currency">{acc.currency || 'USD'}</span>
+                                    </div>
 
-                        <div className="account-actions">
-                            <button className="btn-action btn-trade" onClick={() => window.open('/trading-terminal', '_blank')}>
-                                <span style={{ transform: 'rotate(90deg)', display: 'inline-block' }}>&#x21c4;</span>
-                                {t('Trade')}
-                            </button>
-                            <button className="btn-action">
-                                <ArrowDownToLine size={16} />
-                                {t('Deposit')}
-                            </button>
-                            <button className="btn-action">
-                                <ArrowUpToLine size={16} />
-                                {t('Withdraw')}
-                            </button>
-                            <button className="btn-icon">
-                                <MoreVertical size={18} />
-                            </button>
+                                    <div className="account-actions">
+                                        <button className="btn-action btn-trade" onClick={() => window.open('/trading-terminal', '_blank')}>
+                                            <span style={{ transform: 'rotate(90deg)', display: 'inline-block' }}>&#x21c4;</span>
+                                            {t('Trade')}
+                                        </button>
+                                        <button className="btn-action">
+                                            <ArrowDownToLine size={16} />
+                                            {t('Deposit')}
+                                        </button>
+                                        <button className="btn-action">
+                                            <ArrowUpToLine size={16} />
+                                            {t('Withdraw')}
+                                        </button>
+                                        <button className="btn-icon">
+                                            <MoreVertical size={18} />
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        ))
+                    ) : (
+                        <div className="no-accounts">
+                            <Info size={40} color="var(--text-muted)" />
+                            <p>No {activeTab} accounts found.</p>
                         </div>
-                    </div>
+                    )}
                 </div>
             </div>
         </main>
