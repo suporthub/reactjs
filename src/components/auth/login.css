@@ -875,125 +875,170 @@
     transform: rotate(90deg);
 }
 
-.otp-header {
-    margin-bottom: 30px;
+.otp-modal-content {
+    background: white;
+    padding: 30px;
+    border-radius: 28px;
+    width: 90%;
+    max-width: 400px;
+    position: relative;
+    text-align: center;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
 }
 
-.success-icon-wrapper {
-    width: 70px;
-    height: 70px;
-    background: #ecfdf5;
-    color: #10b981;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    margin: 0 auto 20px;
-    box-shadow: 0 10px 15px -3px rgba(16, 185, 129, 0.1);
+.otp-modal-content.compact-conflict {
+    padding: 24px;
+    max-width: 360px;
+}
+
+.otp-header {
+    margin-bottom: 20px;
 }
 
 .otp-header h3 {
     font-size: 1.5rem;
-    font-weight: 800;
-    color: #1e293b;
+    color: #1a1c29;
+    margin-top: 15px;
+    margin-bottom: 10px;
+    font-weight: 700;
+}
+
+.compact-conflict .otp-header h3 {
+    font-size: 1.35rem;
+    margin-top: 10px;
     margin-bottom: 8px;
 }
 
+.success-icon-wrapper {
+    width: 60px;
+    height: 60px;
+    background: #ecfdf5;
+    color: #059669;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto;
+}
+
+.compact-conflict .success-icon-wrapper {
+    width: 50px;
+    height: 50px;
+}
+
 .otp-msg {
+    color: #475569;
     font-size: 0.9rem;
-    color: #64748b;
     line-height: 1.5;
     margin-bottom: 15px;
 }
 
-.acc-badge {
-    background: #f8fafc;
-    border: 1px dashed #cbd5e1;
-    padding: 8px 16px;
-    border-radius: 12px;
-    display: inline-block;
-    font-size: 0.85rem;
-    color: #475569;
+.compact-conflict .otp-msg {
+    font-size: 0.82rem;
+    margin-bottom: 12px;
 }
 
-.acc-badge strong {
+.acc-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    background: #f8fafc;
+    border-radius: 12px;
+    border: 1px dashed #e2e8f0;
+    font-size: 0.85rem;
+    margin-bottom: 20px;
     color: #1e293b;
-    margin-left: 4px;
+}
+
+.compact-conflict .acc-badge {
+    padding: 6px 14px;
+    margin-bottom: 16px;
+    font-size: 0.8rem;
 }
 
 .otp-input-container {
     display: flex;
     gap: 12px;
     justify-content: center;
-    margin: 30px 0;
+    margin-bottom: 25px;
+}
+
+.compact-conflict .otp-input-container {
+    gap: 8px;
+    margin-bottom: 18px;
 }
 
 .otp-input-container input {
-    width: 50px;
-    height: 60px;
-    border: 2px solid #e2e8f0;
+    width: 48px;
+    height: 52px;
+    border: 1px solid #e2e8f0;
     border-radius: 12px;
     text-align: center;
-    font-size: 1.5rem;
+    font-size: 1.25rem;
     font-weight: 700;
-    color: #1e293b;
+    color: #0f172a;
     transition: all 0.2s;
     background: #f8fafc;
 }
 
-.otp-input-container input:focus {
-    border-color: #3687ED;
-    background: white;
-    box-shadow: 0 0 0 4px rgba(54, 135, 237, 0.1);
-    outline: none;
+.compact-conflict .otp-input-container input {
+    height: 46px;
+    width: 42px;
+    font-size: 1.1rem;
 }
 
 .otp-verify-btn {
     width: 100%;
     background: #1a1c29;
     color: white;
-    padding: 16px;
+    padding: 14px;
     border: none;
     border-radius: 50px;
     font-size: 1rem;
     font-weight: 700;
     cursor: pointer;
     transition: all 0.3s;
-    margin-bottom: 20px;
+    margin-bottom: 15px;
     box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
 }
 
-.otp-verify-btn:hover {
-    background: #2a2d3d;
-    transform: translateY(-2px);
-    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+.compact-conflict .otp-verify-btn {
+    padding: 12px;
+    font-size: 0.95rem;
+    margin-bottom: 10px;
 }
 
 .otp-footer {
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    gap: 4px;
     align-items: center;
 }
 
 .otp-footer p {
-    font-size: 0.85rem;
+    font-size: 0.8rem;
     color: #64748b;
+    margin: 0;
 }
 
 .resend-btn {
     background: none;
     border: none;
     color: #3687ED;
-    font-weight: 700;
+    font-weight: 600;
     font-size: 0.85rem;
     cursor: pointer;
-    transition: color 0.2s;
     text-decoration: underline;
 }
 
-.resend-btn:hover {
-    color: #2563eb;
+.resend-timer {
+    font-size: 0.8rem;
+    color: #94a3b8;
+}
+
+.resend-timer strong {
+    color: #475569;
 }
 
 /* Compact status messages for modal */
@@ -1017,6 +1062,68 @@
     height: 20px;
     border: 3px solid rgba(255, 255, 255, 0.3);
     border-top-color: #fff;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+}
+
+/* Compact design for email conflict cases */
+.otp-modal-content.compact-conflict {
+    padding: 30px;
+    max-width: 380px;
+}
+
+.otp-modal-content.compact-conflict .otp-header h3 {
+    font-size: 1.35rem;
+    margin-bottom: 10px;
+}
+
+.otp-modal-content.compact-conflict .otp-msg {
+    font-size: 0.85rem;
+    line-height: 1.4;
+    margin-bottom: 20px;
+    color: #475569;
+}
+
+.otp-modal-content.compact-conflict .acc-badge {
+    padding: 6px 14px;
+    margin-bottom: 25px;
+}
+
+.email-badge-label {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.email-badge-label span {
+    color: #64748b;
+    font-size: 11px;
+}
+
+.email-badge-label strong {
+    color: #1e293b;
+    word-break: break-all;
+    max-width: 180px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.otp-modal-content.compact-conflict .otp-input-container {
+    gap: 10px;
+    margin-bottom: 25px;
+}
+
+.otp-modal-content.compact-conflict .otp-input-container input {
+    height: 48px;
+    width: 44px;
+    font-size: 1.1rem;
+}
+
+.otp-modal-content.compact-conflict .otp-verify-btn {
+    padding: 14px;
+    font-size: 0.95rem;
+    margin-bottom: 15px;
 }
 
 @media (max-width: 480px) {

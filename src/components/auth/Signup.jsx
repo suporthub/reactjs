@@ -272,7 +272,7 @@ export default function Signup() {
     const [lang, setLang] = useState('english');
     const [showLangMenu, setShowLangMenu] = useState(false);
     const [accountKind, setAccountKind] = useState('live'); // 'live' or 'demo'
-    
+
     // Separate State for Live and Demo
     const [liveData, setLiveData] = useState({
         email: '',
@@ -300,7 +300,7 @@ export default function Signup() {
 
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
-    
+
     // OTP Related States
     const [showOtpModal, setShowOtpModal] = useState(false);
     const [submittingOtp, setSubmittingOtp] = useState(false);
@@ -361,7 +361,7 @@ export default function Signup() {
     const handleSignup = async (e) => {
         e.preventDefault();
         setError('');
-        
+
         if (!formData.accountType) {
             setError("Please select an account type");
             return;
@@ -400,10 +400,21 @@ export default function Signup() {
                 } else {
                     setAccountInfo({
                         accountNumber: data.accountNumber,
-                        message: data.message
+                        email: formData.email,
+                        message: data.message,
+                        isConflict: false
                     });
                     setShowOtpModal(true);
                 }
+            } else if (data.code === 'EMAIL_PENDING_VERIFICATION') {
+                // User already registered but not verified
+                setAccountInfo({
+                    accountNumber: data.accountNumber || data.data?.accountNumber || '',
+                    email: formData.email,
+                    message: data.message,
+                    isConflict: true
+                });
+                setShowOtpModal(true);
             } else {
                 setError(data.message || "Registration failed");
             }
@@ -412,6 +423,54 @@ export default function Signup() {
             setError("An error occurred. Please try again.");
         } finally {
             setLoading(false);
+        }
+    };
+
+    const [resendCooldown, setResendCooldown] = useState(0);
+
+    // Timer effect for resend cooldown
+    useEffect(() => {
+        let timer;
+        if (resendCooldown > 0) {
+            timer = setInterval(() => {
+                setResendCooldown((prev) => prev - 1);
+            }, 1000);
+        }
+        return () => clearInterval(timer);
+    }, [resendCooldown]);
+
+    const formatTime = (seconds) => {
+        const mins = Math.floor(seconds / 60);
+        const secs = seconds % 60;
+        return `${mins}:${secs.toString().padStart(2, '0')}`;
+    };
+
+    const handleResendOtp = async () => {
+        if (resendCooldown > 0) return;
+
+        setSubmittingOtp(true);
+        setOtpError('');
+        setOtpSuccess('');
+        try {
+            const response = await fetch('https://v3.livefxhub.com:8444/api/auth/otp/send', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    email: accountInfo.email,
+                    purpose: "email_verify"
+                })
+            });
+            const data = await response.json();
+            if (data.success || data.status === 'success') {
+                setOtpSuccess("Verification code resent successfully!");
+                setResendCooldown(120); // Start 2 minute timer
+            } else {
+                setOtpError(data.message || "Failed to resend OTP.");
+            }
+        } catch (err) {
+            setOtpError("Network error. Please try again.");
+        } finally {
+            setSubmittingOtp(false);
         }
     };
 
@@ -427,13 +486,16 @@ export default function Signup() {
         setOtpSuccess('');
 
         try {
+            // Always use email as the identifier for verification
+            const payload = {
+                email: accountInfo.email,
+                otp: otpString
+            };
+
             const response = await fetch('https://v3.livefxhub.com:8444/api/auth/verify-email', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    accountNumber: accountInfo.accountNumber,
-                    otp: otpString
-                })
+                body: JSON.stringify(payload)
             });
 
             const data = await response.json();
@@ -770,7 +832,7 @@ export default function Signup() {
             {/* OTP Modal */}
             {showOtpModal && (
                 <div className="otp-modal-overlay">
-                    <div className="otp-modal-content">
+                    <div className={`otp-modal-content ${accountInfo.isConflict ? 'compact-conflict' : ''}`}>
                         <button className="modal-close" onClick={() => setShowOtpModal(false)}>
                             <X size={20} />
                         </button>
@@ -782,8 +844,10 @@ export default function Signup() {
                             <h3>Verify Your Email</h3>
                             <p className="otp-msg">{accountInfo.message}</p>
                             <div className="acc-badge">
-                                <span>Account No: </span>
-                                <strong>{accountInfo.accountNumber}</strong>
+                                <div className="email-badge-label">
+                                    <span>Email: </span>
+                                    <strong style={{ fontSize: '12px' }}>{accountInfo.email}</strong>
+                                </div>
                             </div>
                         </div>
 
@@ -825,7 +889,7 @@ export default function Signup() {
                             ))}
                         </div>
 
-                        <button 
+                        <button
                             className={`otp-verify-btn ${submittingOtp ? 'loading' : ''}`}
                             onClick={handleVerifyOtp}
                             disabled={submittingOtp}
@@ -835,7 +899,11 @@ export default function Signup() {
 
                         <div className="otp-footer">
                             <p>Didn't receive the code?</p>
-                            <button className="resend-btn">Resend OTP</button>
+                            {resendCooldown > 0 ? (
+                                <span className="resend-timer">Resend OTP in <strong>{formatTime(resendCooldown)}</strong></span>
+                            ) : (
+                                <button className="resend-btn" onClick={handleResendOtp}>Resend OTP</button>
+                            )}
                         </div>
                     </div>
                 </div>

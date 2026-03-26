@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Eye, EyeOff, Globe, ChevronDown, X, Lock } from 'lucide-react';
+import React, { useState, useRef, useEffect } from 'react';
+import { Eye, EyeOff, Globe, ChevronDown, X, Lock, Check, ArrowRight } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import './login.css';
 
@@ -22,7 +22,14 @@ const translations = {
         resetTitle: 'Reset Password',
         resetSubtitle: 'Enter your email address and we will send you instructions to reset your password.',
         sendBtn: 'Send Instructions',
-        close: 'Close'
+        close: 'Close',
+        verifyTitle: 'Verify OTP',
+        verifySubtitle: 'Enter the 6-digit code sent to your email.',
+        updateTitle: 'New Password',
+        updateSubtitle: 'Create a strong password with at least 8 characters.',
+        updateBtn: 'Update Password',
+        newPasswordPlaceholder: 'Enter new password',
+        confirmPasswordPlaceholder: 'Confirm new password'
     },
     hindi: {
         welcome: 'वापसी पर स्वागत है!',
@@ -42,7 +49,14 @@ const translations = {
         resetTitle: 'पासवर्ड रीसेट करें',
         resetSubtitle: 'अपना ईमेल पता दर्ज करें और हम आपको पासवर्ड रीसेट करने के निर्देश भेजेंगे।',
         sendBtn: 'निर्देश भेजें',
-        close: 'बंद करें'
+        close: 'बंद करें',
+        verifyTitle: 'ओटीपी सत्यापित करें',
+        verifySubtitle: 'अपने ईमेल पर भेजा गया 6-अंकीय कोड दर्ज करें।',
+        updateTitle: 'नया पासवर्ड',
+        updateSubtitle: 'कम से कम 8 अक्षरों वाला एक मजबूत पासवर्ड बनाएं।',
+        updateBtn: 'पासवर्ड अपडेट करें',
+        newPasswordPlaceholder: 'नया पासवर्ड डालें',
+        confirmPasswordPlaceholder: 'पासवर्ड की पुष्टि करें'
     },
     vietnam: {
         welcome: 'Chào mừng trở lại!',
@@ -62,7 +76,14 @@ const translations = {
         resetTitle: 'Đặt lại mật khẩu',
         resetSubtitle: 'Nhập địa chỉ email của bạn và chúng tôi sẽ gửi cho bạn hướng dẫn để đặt lại mật khẩu.',
         sendBtn: 'Gửi hướng dẫn',
-        close: 'Đóng'
+        close: 'Đóng',
+        verifyTitle: 'Xác minh OTP',
+        verifySubtitle: 'Nhập mã 6 chữ số được gửi đến email của bạn.',
+        updateTitle: 'Mật khẩu mới',
+        updateSubtitle: 'Tạo mật khẩu mạnh với ít nhất 8 ký tự.',
+        updateBtn: 'Cập nhật mật khẩu',
+        newPasswordPlaceholder: 'Nhập mật khẩu mới',
+        confirmPasswordPlaceholder: 'Xác nhận mật khẩu mới'
     },
     indonesian: {
         welcome: 'Selamat Datang Kembali!',
@@ -82,7 +103,14 @@ const translations = {
         resetTitle: 'Atur Ulang Kata Sandi',
         resetSubtitle: 'Masukkan alamat email Anda dan kami akan mengirimkan instruksi untuk mengatur ulang kata sandi Anda.',
         sendBtn: 'Girim Instruksi',
-        close: 'Tutup'
+        close: 'Tutup',
+        verifyTitle: 'Verifikasi OTP',
+        verifySubtitle: 'Masukkan 6 digit kode yang dikirim ke email Anda.',
+        updateTitle: 'Kata Sandi Baru',
+        updateSubtitle: 'Buat kata sandi yang kuat minimal 8 karakter.',
+        updateBtn: 'Perbarui Kata Sandi',
+        newPasswordPlaceholder: 'Masukkan kata sandi baru',
+        confirmPasswordPlaceholder: 'Konfirmasi kata sandi baru'
     },
     arabic: {
         welcome: 'أهلاً بك مجدداً!',
@@ -102,7 +130,14 @@ const translations = {
         resetTitle: 'إعادة تعيين كلمة المرور',
         resetSubtitle: 'أدخل عنوان بريدك الإلكتروني وسنرسل لك تعليمات لإعادة تعيين كلمة مرورك.',
         sendBtn: 'إرسال التعليمات',
-        close: 'إغلاق'
+        close: 'إغلاق',
+        verifyTitle: 'تفعيل الرمز',
+        verifySubtitle: 'أدخل الرمز المكون من 6 أرقام المرسل إلى بريدك.',
+        updateTitle: 'كلمة مرور جديدة',
+        updateSubtitle: 'أنشئ كلمة مرور قوية مكونة من 8 أحرف على الأقل.',
+        updateBtn: 'تحديث كلمة المرور',
+        newPasswordPlaceholder: 'أدخل كلمة المرور الجديدة',
+        confirmPasswordPlaceholder: 'تأكيد كلمة المرور الجديدة'
     },
     urdu: {
         welcome: 'خوش آمدید!',
@@ -118,11 +153,18 @@ const translations = {
         signup: 'یہاں سائن اپ کریں',
         backToWeb: 'ویب سائٹ پر واپس جائیں',
         promoH1: 'تیزی سے ٹریڈ کریں۔ \nبہتر منافع اور \nآسان تجربہ۔',
-        promoP: 'ریپڈ مارکیٹ پروسیسنگ سے لے کر گہرائی سے تجزیوں تک، ہمارا طاقتور ٹریڈنگ انجن آپ کو اپنے تمام آلات پر بغیر کسی رکاوٹ کے کام کرنے دیتا ہے۔',
+        promoP: 'ریپڈ مارکیٹ پروسیسنگ سے لے کر گہرائی سے تجزیوں تک، ہمارا طاقتور ٹریڈنگ انجن آپ کو اپنے آلات پر بغیر کسی رکاوٹ کے کام کرنے دیتا ہے۔',
         resetTitle: 'پاس ورڈ دوبارہ ترتیب دیں',
-        resetSubtitle: 'اپنا ای میل پتہ درج کریں اور ہم آپ کو پاس ورڈ دوبارہ ترتیب دینے کی ہدایات بھیجیں گے۔',
+        resetSubtitle: 'اپنا ای میل پتہ درج کریں اور ہم آپ کو ای میل کریں گے۔',
         sendBtn: 'ہدایات بھیجیں',
-        close: 'بند کریں'
+        close: 'بند کریں',
+        verifyTitle: 'OTP کی تصدیق کریں',
+        verifySubtitle: 'اپنے ای میل پر بھیجا گیا 6 ہندسی کوڈ درج کریں۔',
+        updateTitle: 'نیا پاس ورڈ',
+        updateSubtitle: 'کم از کم 8 حروف والا مضبوط پاس ورڈ بنائیں۔',
+        updateBtn: 'پاس ورڈ اپ ڈیٹ کریں',
+        newPasswordPlaceholder: 'نیا پاس ورڈ درج کریں',
+        confirmPasswordPlaceholder: 'پاس ورڈ کی تصدیق کریں'
     }
 };
 
@@ -132,12 +174,37 @@ export default function Login() {
     const [lang, setLang] = useState('english');
     const [showLangMenu, setShowLangMenu] = useState(false);
     const [showForgotModal, setShowForgotModal] = useState(false);
+    const [forgotStep, setForgotStep] = useState(1); // 1: Email, 2: OTP, 3: New Password
+    
+    // Login State
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
+    
+    // Reset Password State
+    const [resetEmail, setResetEmail] = useState('');
+    const [resetOtp, setResetOtp] = useState(['', '', '', '', '', '']);
+    const [resetToken, setResetToken] = useState('');
+    const [newPass, setNewPass] = useState('');
+    const [confirmNewPass, setConfirmNewPass] = useState('');
+    const [showNewPass, setShowNewPass] = useState(false);
+
     const [loading, setLoading] = useState(false);
     const [message, setMessage] = useState({ text: '', type: '' });
+    const [resetLoading, setResetLoading] = useState(false);
+    const [resetMessage, setResetMessage] = useState({ text: '', type: '' });
 
+    const otpInputs = useRef([]);
     const t = translations[lang];
+
+    useEffect(() => {
+        if (showForgotModal) {
+            setForgotStep(1);
+            setResetEmail('');
+            setResetOtp(['', '', '', '', '', '']);
+            setResetMessage({ text: '', type: '' });
+        }
+    }, [showForgotModal]);
+
     const togglePassword = () => setShowPassword(!showPassword);
 
     const languages = [
@@ -167,38 +234,124 @@ export default function Login() {
         try {
             const response = await fetch('https://v3.livefxhub.com:8444/api/live/login', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ email, password }),
             });
 
             const result = await response.json();
 
             if (result.success || result.status === 'success') {
-                // Success Case
-                if (result.data) {
-                    localStorage.setItem('accessToken', result.data.accessToken || '');
-                    localStorage.setItem('portalToken', result.data.portalToken || '');
-                    localStorage.setItem('accounts', JSON.stringify(result.data.accounts || []));
-                    setCookie('refreshToken', result.data.refreshToken, 7);
+                const data = result.data || result;
+                if (data.accessToken) {
+                    localStorage.setItem('accessToken', data.accessToken || '');
+                    localStorage.setItem('portalToken', data.portalToken || '');
+                    localStorage.setItem('accounts', JSON.stringify(data.accounts || []));
+                    setCookie('refreshToken', data.refreshToken, 7);
                 }
                 
                 setMessage({ text: 'Login successful! Redirecting...', type: 'success' });
-                
-                // Redirect after success
-                setTimeout(() => {
-                    navigate('/dashboard');
-                }, 1500);
+                setTimeout(() => navigate('/dashboard'), 1500);
             } else {
-                // Failure Case
                 setMessage({ text: result.message || 'Login failed', type: 'error' });
             }
         } catch (error) {
             setMessage({ text: 'Something went wrong. Please try again.', type: 'error' });
-            console.error('Login error:', error);
         } finally {
             setLoading(false);
+        }
+    };
+
+    // Forgot Password Flow
+    const handleForgotPassword = async () => {
+        if (!resetEmail) {
+            setResetMessage({ text: 'Please enter your email.', type: 'error' });
+            return;
+        }
+        setResetLoading(true);
+        setResetMessage({ text: '', type: '' });
+        try {
+            const res = await fetch('https://v3.livefxhub.com:8444/api/auth/password/forgot', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email: resetEmail })
+            });
+            const data = await res.json();
+            if (data.success || data.status === 'success') {
+                setForgotStep(2);
+            } else {
+                setResetMessage({ text: data.message || 'Error sending request.', type: 'error' });
+            }
+        } catch (err) {
+            setResetMessage({ text: 'Network error.', type: 'error' });
+        } finally {
+            setResetLoading(false);
+        }
+    };
+
+    const handleVerifyResetOtp = async () => {
+        const otpString = resetOtp.join('');
+        if (otpString.length < 6) return;
+        
+        setResetLoading(true);
+        setResetMessage({ text: '', type: '' });
+        try {
+            const res = await fetch('https://v3.livefxhub.com:8444/api/auth/password/verify-otp', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email: resetEmail, otp: otpString })
+            });
+            const data = await res.json();
+            if (data.success || data.status === 'success') {
+                const token = data.resetToken || (data.data && data.data.resetToken);
+                setResetToken(token);
+                localStorage.setItem('resetToken', token);
+                setForgotStep(3);
+            } else {
+                setResetMessage({ text: data.message || 'Invalid OTP.', type: 'error' });
+            }
+        } catch (err) {
+            setResetMessage({ text: 'Network error.', type: 'error' });
+        } finally {
+            setResetLoading(false);
+        }
+    };
+
+    const validatePassword = (pass) => {
+        const regex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
+        return regex.test(pass);
+    };
+
+    const handleResetPassword = async () => {
+        if (!newPass || !confirmNewPass) return;
+        if (newPass !== confirmNewPass) {
+            setResetMessage({ text: 'Passwords do not match.', type: 'error' });
+            return;
+        }
+        if (!validatePassword(newPass)) {
+            setResetMessage({ text: 'Password must be min 8 chars with 1 Uppercase, 1 Number, and 1 Special Char.', type: 'error' });
+            return;
+        }
+
+        setResetLoading(true);
+        try {
+            const res = await fetch('https://v3.livefxhub.com:8444/api/auth/password/reset', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ resetToken, newPassword: newPass })
+            });
+            const data = await res.json();
+            if (data.success || data.status === 'success') {
+                setResetMessage({ text: 'Password updated successfully!', type: 'success' });
+                setTimeout(() => {
+                    window.location.reload();
+                }, 1500);
+            } else {
+                setResetMessage({ text: data.message || 'Error resetting password.', type: 'error' });
+            }
+        } catch (err) {
+            setResetMessage({ text: 'Network error.', type: 'error' });
+        } finally {
+            setResetLoading(false);
         }
     };
 
@@ -214,12 +367,10 @@ export default function Login() {
                 <div className="login-brand">
                     <span className="brand-name">Live <span className="brand-accent">Fx</span> Hub</span>
                 </div>
-
                 <div className="login-promo">
                     <h1 style={{ whiteSpace: 'pre-line' }}>{t.promoH1}</h1>
                     <p>{t.promoP}</p>
                 </div>
-
                 <div className="login-footer-dots">
                     <div style={{ display: 'flex', gap: '8px' }}>
                         <div style={{ width: '20px', height: '4px', background: 'white', borderRadius: '2px' }}></div>
@@ -327,7 +478,7 @@ export default function Login() {
                 </div>
             </div>
 
-            {/* Forgot Password Modal */}
+            {/* Forgot Password Modal (Multi-step) */}
             {showForgotModal && (
                 <div className="modal-overlay">
                     <div className="reset-modal-content">
@@ -341,17 +492,115 @@ export default function Login() {
                         </div>
                         
                         <div className="modal-body">
-                            <h3>{t.resetTitle}</h3>
-                            <p>{t.resetSubtitle}</p>
-                            
-                            <div className="form-group" style={{ textAlign: 'left', marginTop: '20px' }}>
-                                <label>{t.email}</label>
-                                <input type="email" placeholder={t.emailPlaceholder} />
-                            </div>
-                            
-                            <button className="login-submit-btn" style={{ marginTop: '10px' }}>
-                                {t.sendBtn}
-                            </button>
+                            {forgotStep === 1 && (
+                                <>
+                                    <h3>{t.resetTitle}</h3>
+                                    <p>{t.resetSubtitle}</p>
+                                    <div className="form-group" style={{ textAlign: 'left', marginTop: '20px' }}>
+                                        <label>{t.email}</label>
+                                        <input 
+                                            type="email" 
+                                            placeholder={t.emailPlaceholder} 
+                                            value={resetEmail}
+                                            onChange={(e) => setResetEmail(e.target.value)}
+                                        />
+                                    </div>
+                                    {resetMessage.text && (
+                                        <div className={`login-status-message ${resetMessage.type} compact`}>
+                                            {resetMessage.text}
+                                        </div>
+                                    )}
+                                    <button 
+                                        className={`login-submit-btn ${resetLoading ? 'loading' : ''}`} 
+                                        onClick={handleForgotPassword}
+                                        disabled={resetLoading}
+                                    >
+                                        {resetLoading ? <div className="loader-inner"></div> : t.sendBtn}
+                                    </button>
+                                </>
+                            )}
+
+                            {forgotStep === 2 && (
+                                <>
+                                    <h3>{t.verifyTitle}</h3>
+                                    <p>{t.verifySubtitle}</p>
+                                    <div className="otp-input-container">
+                                        {resetOtp.map((digit, idx) => (
+                                            <input
+                                                key={idx}
+                                                type="text"
+                                                maxLength="1"
+                                                value={digit}
+                                                ref={el => otpInputs.current[idx] = el}
+                                                onChange={(e) => {
+                                                    const val = e.target.value.replace(/\D/g, '');
+                                                    const newOtp = [...resetOtp];
+                                                    newOtp[idx] = val;
+                                                    setResetOtp(newOtp);
+                                                    if (val && idx < 5) otpInputs.current[idx + 1].focus();
+                                                }}
+                                                onKeyDown={(e) => {
+                                                    if (e.key === 'Backspace' && !resetOtp[idx] && idx > 0) otpInputs.current[idx - 1].focus();
+                                                }}
+                                            />
+                                        ))}
+                                    </div>
+                                    {resetMessage.text && (
+                                        <div className={`login-status-message ${resetMessage.type} compact`}>
+                                            {resetMessage.text}
+                                        </div>
+                                    )}
+                                    <button 
+                                        className={`login-submit-btn ${resetLoading ? 'loading' : ''}`} 
+                                        onClick={handleVerifyResetOtp}
+                                        disabled={resetLoading}
+                                    >
+                                        {resetLoading ? <div className="loader-inner"></div> : "Verify OTP"}
+                                    </button>
+                                </>
+                            )}
+
+                            {forgotStep === 3 && (
+                                <>
+                                    <h3>{t.updateTitle}</h3>
+                                    <p>{t.updateSubtitle}</p>
+                                    <div className="form-group" style={{ textAlign: 'left', marginTop: '20px' }}>
+                                        <label>New Password</label>
+                                        <div className="password-input-wrapper">
+                                            <input 
+                                                type={showNewPass ? "text" : "password"} 
+                                                placeholder={t.newPasswordPlaceholder} 
+                                                value={newPass}
+                                                onChange={(e) => setNewPass(e.target.value)}
+                                            />
+                                            <div className="password-toggle" onClick={() => setShowNewPass(!showNewPass)}>
+                                                {showNewPass ? <EyeOff size={18} /> : <Eye size={18} />}
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div className="form-group" style={{ textAlign: 'left' }}>
+                                        <label>Confirm Password</label>
+                                        <input 
+                                            type={showNewPass ? "text" : "password"} 
+                                            placeholder={t.confirmPasswordPlaceholder}
+                                            value={confirmNewPass}
+                                            onChange={(e) => setConfirmNewPass(e.target.value)}
+                                        />
+                                    </div>
+                                    {resetMessage.text && (
+                                        <div className={`login-status-message ${resetMessage.type} compact`}>
+                                            {resetMessage.text}
+                                        </div>
+                                    )}
+                                    <button 
+                                        className={`login-submit-btn ${resetLoading ? 'loading' : ''}`} 
+                                        onClick={handleResetPassword}
+                                        disabled={resetLoading}
+                                    >
+                                        {resetLoading ? <div className="loader-inner"></div> : t.updateBtn}
+                                    </button>
+                                </>
+                            )}
                         </div>
                     </div>
                 </div>
