@@ -13,6 +13,7 @@ import Calendar from './components/calendar/Calendar';
 import Login from './components/auth/Login';
 import Signup from './components/auth/Signup';
 import TradingTerminal from './components/trading-terminal/TradingTerminal';
+import IBRegistration from './components/ib/IBRegistration';
 import './App.css';
 
 import { useTranslation } from 'react-i18next';
@@ -28,6 +29,7 @@ const routeToPage = {
   '/settings': 'Settings',
   '/support': 'Support',
   '/calendar': 'Calendar',
+  '/ib': 'IB',
 };
 
 // Map page names to route paths for navigation
@@ -40,6 +42,7 @@ const pageToRoute = {
   'Settings': '/settings',
   'Support': '/support',
   'Calendar': '/calendar',
+  'IB': '/ib',
 };
 
 function DashboardLayout() {
@@ -51,6 +54,7 @@ function DashboardLayout() {
   const [theme, setTheme] = useState(() => localStorage.getItem('theme') || 'dark');
   const [copyTradingTab, setCopyTradingTab] = useState('Discover');
   const [walletTab, setWalletTab] = useState('Transactions');
+  const hasSynced = React.useRef(false);
 
   // Derive activePage from the current URL
   const activePage = routeToPage[location.pathname] || 'Dashboard';
@@ -65,6 +69,39 @@ function DashboardLayout() {
   const toggleTheme = () => {
     setTheme(prev => prev === 'light' ? 'dark' : 'light');
   };
+
+  // Synchronize user data on platform mount/refresh
+  useEffect(() => {
+    if (hasSynced.current) return;
+    hasSynced.current = true;
+
+    const syncUserData = async () => {
+      const token = localStorage.getItem('portalToken');
+      const fingerprint = localStorage.getItem('deviceFingerprint');
+      
+      if (!token) return;
+
+      try {
+        const response = await fetch('https://v3.livefxhub.com:8444/api/live/me', {
+          method: 'GET',
+          headers: { 
+            'Authorization': `Bearer ${token}`,
+            'X-Device-Fingerprint': fingerprint || ''
+          }
+        });
+        const result = await response.json();
+        if (result.success) {
+          localStorage.setItem('userData', JSON.stringify(result.data));
+          // Dispatch a custom event to notify other components (like Topbar or Dashboard) that userData was updated
+          window.dispatchEvent(new Event('userDataUpdated'));
+        }
+      } catch (err) {
+        console.warn("Global profile sync failed:", err);
+      }
+    };
+
+    syncUserData();
+  }, []);
 
   // Navigate using React Router instead of state
   const setActivePage = (page) => {
@@ -99,6 +136,7 @@ function DashboardLayout() {
           <Route path="/support" element={<Support />} />
           <Route path="/calendar" element={<Calendar />} />
           <Route path="/settings" element={<Settings />} />
+          <Route path="/ib" element={<IBRegistration />} />
         </Routes>
       </div>
 

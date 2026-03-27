@@ -5,14 +5,52 @@ import {
     ChevronDown, LogOut, Activity
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { useNavigate } from 'react-router-dom';
+import { getDeviceFingerprint } from '../utils/fingerprint';
 
 export default function Sidebar({ sidebarOpen, activePage, setActivePage, copyTradingTab, setCopyTradingTab, walletTab, setWalletTab }) {
     const { t } = useTranslation();
+    const navigate = useNavigate();
     const [openMenu, setOpenMenu] = useState(null);
 
     const toggleMenu = (menu, e) => {
         e.preventDefault();
         setOpenMenu(prev => (prev === menu ? null : menu));
+    };
+
+    const handleLogout = async (e) => {
+        e.preventDefault();
+        const portalToken = localStorage.getItem('portalToken');
+        
+        try {
+            const fingerprint = await getDeviceFingerprint();
+            await fetch('https://v3.livefxhub.com:8444/api/live/logout', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${portalToken}`,
+                    'X-Device-Fingerprint': fingerprint
+                }
+            });
+        } catch (error) {
+            console.warn('Logout API failed:', error);
+        }
+
+        // Clear All storage
+        localStorage.clear();
+        sessionStorage.clear();
+        
+        // Clear Cookies
+        const cookies = document.cookie.split(";");
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i];
+            const eqPos = cookie.indexOf("=");
+            const name = eqPos > -1 ? cookie.substr(0, eqPos).trim() : cookie.trim();
+            document.cookie = name + "=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/";
+        }
+
+        // Redirect to login
+        navigate('/login');
     };
 
     return (
@@ -98,10 +136,17 @@ export default function Sidebar({ sidebarOpen, activePage, setActivePage, copyTr
                             <span className="nav-text">{t('Calendar')}</span>
                         </div>
                     </a>
+
+                    <a href="#" className={`nav-item ${activePage === 'IB' ? 'active' : ''}`} onClick={(e) => { e.preventDefault(); setActivePage('IB'); }}>
+                        <div className="nav-item-left">
+                            <Activity className="nav-icon" size={20} />
+                            <span className="nav-text">{localStorage.getItem('userData') && JSON.parse(localStorage.getItem('userData')).isIB ? t('IB Portal') : t('Become an IB')}</span>
+                        </div>
+                    </a>
                 </nav>
 
                 <div className="sidebar-bottom">
-                    <a href="#" className="nav-item logout-item" style={{ width: '100%', color: 'red' }}>
+                    <a href="#" className="nav-item logout-item" style={{ width: '100%', color: 'red' }} onClick={handleLogout}>
                         <div className="nav-item-left">
                             <LogOut className="nav-icon" size={20} style={{ color: 'red' }} />
                             <span className="nav-text">{t('Logout')}</span>

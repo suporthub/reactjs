@@ -3,6 +3,7 @@ import { Eye, EyeOff, Globe, ChevronDown, Check, X, ArrowRight } from 'lucide-re
 import { Link, useNavigate } from 'react-router-dom';
 import countriesLib, { getCountriesForLanguage } from '../../utils/countries';
 import './login.css';
+import { getDeviceFingerprint } from '../../utils/fingerprint';
 
 const countryCodes = [
     { code: "+1", label: "🇺🇸 USA (+1)", name: "United States" },
@@ -385,9 +386,13 @@ export default function Signup() {
                 leverage: 100
             };
 
+            const fingerprint = await getDeviceFingerprint();
             const response = await fetch(endpoint, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'X-Device-Fingerprint': fingerprint
+                },
                 body: JSON.stringify(payload)
             });
 
@@ -452,9 +457,13 @@ export default function Signup() {
         setOtpError('');
         setOtpSuccess('');
         try {
+            const fingerprint = await getDeviceFingerprint();
             const response = await fetch('https://v3.livefxhub.com:8444/api/auth/otp/send', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'X-Device-Fingerprint': fingerprint
+                },
                 body: JSON.stringify({
                     email: accountInfo.email,
                     purpose: "email_verify"
@@ -492,9 +501,13 @@ export default function Signup() {
                 otp: otpString
             };
 
+            const fingerprint = await getDeviceFingerprint();
             const response = await fetch('https://v3.livefxhub.com:8444/api/auth/verify-email', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'X-Device-Fingerprint': fingerprint
+                },
                 body: JSON.stringify(payload)
             });
 

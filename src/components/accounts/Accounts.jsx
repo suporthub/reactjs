@@ -14,20 +14,41 @@ export default function Accounts() {
     const [viewMode, setViewMode] = useState('list');
     const [accounts, setAccounts] = useState([]);
 
-    // Load accounts from localStorage
+    const hasFetched = React.useRef(false);
+
+    // Fetch accounts from API
     useEffect(() => {
-        const storedAccounts = localStorage.getItem('accounts');
-        if (storedAccounts) {
+        if (hasFetched.current) return;
+        hasFetched.current = true;
+
+        const fetchAccounts = async () => {
+            const token = localStorage.getItem('portalToken');
+            const fingerprint = localStorage.getItem('deviceFingerprint');
+            
+            if (!token) return;
+
             try {
-                setAccounts(JSON.parse(storedAccounts));
-            } catch (e) {
-                console.error("Failed to parse accounts from localStorage", e);
+                const response = await fetch('https://v3.livefxhub.com:8444/api/live/accounts', {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'X-Device-Fingerprint': fingerprint
+                    }
+                });
+                const result = await response.json();
+                if (result.success) {
+                    setAccounts(result.data || []);
+                    localStorage.setItem('accounts', JSON.stringify(result.data || []));
+                }
+            } catch (error) {
+                console.error("Fetch accounts failed:", error);
             }
-        }
+        };
+
+        fetchAccounts();
     }, []);
 
     // Filter accounts based on activeTab
-    // Using string comparison: 'Live' maps to 'live', 'Demo' maps to 'demo'
     const filteredAccounts = accounts.filter(acc => 
         acc.type === activeTab.toLowerCase()
     );
@@ -116,8 +137,8 @@ export default function Accounts() {
 
                                 <div className="account-body">
                                     <div className="amount">
-                                        <span className="amount-whole">0</span>
-                                        <span className="amount-decimal">.00</span>
+                                        <span className="amount-whole">{Math.floor(acc.walletBalance || 0)}</span>
+                                        <span className="amount-decimal">.{(acc.walletBalance || 0).toFixed(2).split('.')[1]}</span>
                                         <span className="currency">{acc.currency || 'USD'}</span>
                                     </div>
 

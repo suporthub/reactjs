@@ -292,9 +292,13 @@
     font-size: 0.9rem;
     transition: all 0.2s;
     outline: none;
-    background: #ffffff;
-    color: #1e293b;
+    background-color: #ffffff !important;
+    color: #1e293b !important;
     appearance: none;
+}
+
+.form-group input::placeholder {
+    color: #94a3b8 !important;
 }
 
 .form-group .readonly-input {
@@ -329,13 +333,13 @@
     justify-content: space-between;
     align-items: center;
     padding: 12px 14px;
-    background: white;
+    background-color: #ffffff !important;
     border: 1px solid #e2e8f0;
     border-radius: 10px;
     font-size: 0.9rem;
     cursor: pointer;
     transition: all 0.2s;
-    color: #1e293b;
+    color: #1e293b !important;
     white-space: nowrap;
     overflow: hidden;
 }
@@ -406,7 +410,8 @@
     border: none !important;
     padding: 4px 0 !important;
     font-size: 0.85rem !important;
-    background: transparent !important;
+    background-color: transparent !important;
+    color: #1e293b !important;
     width: 100% !important;
     box-shadow: none !important;
 }
@@ -591,7 +596,7 @@
     margin-bottom: 24px;
 }
 
-.lock-icon-bg {
+.lock-icon-bg, .auth-alert-icon-bg {
     width: 44px;
     height: 44px;
     background: #eff6ff;
@@ -601,20 +606,33 @@
     justify-content: center;
 }
 
-.close-modal {
+.auth-alert-icon-bg {
+    background: #FEF2F2; /* Soft red for unauthorized warning */
+}
+
+.mfa-header {
+    position: relative;
+    padding-bottom: 20px;
+}
+
+.close-modal, .close-modal-top {
     background: none;
     border: none;
     color: #94a3b8;
     cursor: pointer;
-    padding: 4px;
+    padding: 8px;
     border-radius: 50%;
-    transition: background 0.2s;
+    transition: all 0.2s;
     display: flex;
+    position: absolute;
+    top: 0;
+    right: 0;
 }
 
-.close-modal:hover {
+.close-modal:hover, .close-modal-top:hover {
     background: #f1f5f9;
     color: #1e293b;
+    transform: rotate(90deg);
 }
 
 .modal-body h3 {

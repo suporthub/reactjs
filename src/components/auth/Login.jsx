@@ -1,7 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Eye, EyeOff, Globe, ChevronDown, X, Lock, Check, ArrowRight } from 'lucide-react';
+import { Eye, EyeOff, Globe, ChevronDown, X, Lock, Check, ArrowRight, ShieldAlert } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import './login.css';
+import { getDeviceFingerprint, getDeviceLabel } from '../../utils/fingerprint';
 
 const translations = {
     english: {
@@ -187,6 +188,14 @@ export default function Login() {
     const [newPass, setNewPass] = useState('');
     const [confirmNewPass, setConfirmNewPass] = useState('');
     const [showNewPass, setShowNewPass] = useState(false);
+    
+    // MFA State
+    const [showMfaModal, setShowMfaModal] = useState(false);
+    const [mfaType, setMfaType] = useState(''); // 'totp' or 'otp'
+    const [mfaToken, setMfaToken] = useState('');
+    const [mfaOtp, setMfaOtp] = useState(['', '', '', '', '', '']);
+    const [mfaLoading, setMfaLoading] = useState(false);
+    const [mfaError, setMfaError] = useState('');
 
     const [loading, setLoading] = useState(false);
     const [message, setMessage] = useState({ text: '', type: '' });
@@ -232,21 +241,58 @@ export default function Login() {
         setMessage({ text: '', type: '' });
 
         try {
+            const fingerprint = await getDeviceFingerprint();
+            const deviceLabel = getDeviceLabel();
+
             const response = await fetch('https://v3.livefxhub.com:8444/api/live/login', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email, password }),
+                body: JSON.stringify({ 
+                    email, 
+                    password, 
+                    deviceFingerprint: fingerprint,
+                    deviceLabel: deviceLabel
+                }),
             });
 
             const result = await response.json();
 
             if (result.success || result.status === 'success') {
                 const data = result.data || result;
-                if (data.accessToken) {
-                    localStorage.setItem('accessToken', data.accessToken || '');
-                    localStorage.setItem('portalToken', data.portalToken || '');
-                    localStorage.setItem('accounts', JSON.stringify(data.accounts || []));
-                    setCookie('refreshToken', data.refreshToken, 7);
+                
+                if (data.status === 'totp_required' || data.status === 'otp_required') {
+                    setMfaType(data.status === 'totp_required' ? 'totp' : 'otp');
+                    setMfaToken(data.loginToken);
+                    setShowMfaModal(true);
+                    setLoading(false);
+                    return;
+                }
+
+                const token = data.portalToken;
+                
+                if (token) {
+                    localStorage.setItem('portalToken', token);
+                    localStorage.setItem('deviceFingerprint', fingerprint);
+                    
+                    try {
+                        const profileResponse = await fetch('https://v3.livefxhub.com:8444/api/live/me', {
+                            method: 'GET',
+                            headers: { 
+                                'Authorization': `Bearer ${token}`,
+                                'X-Device-Fingerprint': fingerprint
+                            }
+                        });
+                        const profileResult = await profileResponse.json();
+                        if (profileResult.success) {
+                            localStorage.setItem('userData', JSON.stringify(profileResult.data));
+                        }
+                    } catch (profileErr) {
+                        console.warn("Me API fetch failed:", profileErr);
+                    }
+                }
+                
+                if (data.portalRefreshToken) {
+                    setCookie('portalRefreshToken', data.portalRefreshToken, 7);
                 }
                 
                 setMessage({ text: 'Login successful! Redirecting...', type: 'success' });
@@ -352,6 +398,74 @@ export default function Login() {
             setResetMessage({ text: 'Network error.', type: 'error' });
         } finally {
             setResetLoading(false);
+        }
+    };
+
+    const handleVerifyMfa = async () => {
+        const fullOtp = mfaOtp.join('');
+        if (fullOtp.length < 6) return;
+
+        setMfaLoading(true);
+        setMfaError('');
+
+        const endpoint = mfaType === 'totp' 
+            ? 'https://v3.livefxhub.com:8444/api/auth/totp/verify'
+            : 'https://v3.livefxhub.com:8444/api/auth/otp/verify';
+
+        const payloadKey = mfaType === 'totp' ? 'code' : 'otp';
+
+        try {
+            const fingerprint = await getDeviceFingerprint();
+            const deviceLabel = getDeviceLabel();
+
+            const res = await fetch(endpoint, {
+                method: 'POST',
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${mfaToken}`
+                },
+                body: JSON.stringify({ 
+                    [payloadKey]: fullOtp,
+                    deviceFingerprint: fingerprint,
+                    deviceLabel: deviceLabel
+                })
+            });
+
+            const result = await res.json();
+            if (result.success) {
+                const token = result.data.portalToken;
+                localStorage.setItem('portalToken', token);
+                localStorage.setItem('deviceFingerprint', fingerprint);
+
+                try {
+                    const profileRes = await fetch('https://v3.livefxhub.com:8444/api/live/me', {
+                        headers: { 
+                            'Authorization': `Bearer ${token}`,
+                            'X-Device-Fingerprint': fingerprint
+                        }
+                    });
+                    const profile = await profileRes.json();
+                    if (profile.success) {
+                        localStorage.setItem('userData', JSON.stringify(profile.data));
+                    }
+                } catch (e) {
+                    console.warn("Profile sync failed after MFA:", e);
+                }
+
+                if (result.data.portalRefreshToken) {
+                    setCookie('portalRefreshToken', result.data.portalRefreshToken, 7);
+                }
+
+                setShowMfaModal(false);
+                setMessage({ text: 'Verification successful! Redirecting...', type: 'success' });
+                setTimeout(() => navigate('/dashboard'), 1500);
+            } else {
+                setMfaError(result.message || 'Verification failed');
+            }
+        } catch (err) {
+            setMfaError('Something went wrong');
+        } finally {
+            setMfaLoading(false);
         }
     };
 
@@ -601,6 +715,72 @@ export default function Login() {
                                     </button>
                                 </>
                             )}
+                        </div>
+                    </div>
+                </div>
+            )}
+            {/* Two-Factor Authentication / Email OTP Modal */}
+            {showMfaModal && (
+                <div className="modal-overlay">
+                    <div className="reset-modal-content mfa-modal">
+                        <div className="modal-header mfa-header">
+                            <div className="auth-alert-icon-bg">
+                                <ShieldAlert size={22} color="#EF4444" />
+                            </div>
+                            <button className="close-modal-top" onClick={() => setShowMfaModal(false)}>
+                                <X size={20} />
+                            </button>
+                        </div>
+                        
+                        <div className="modal-body">
+                            <h3>Unauthorized Login</h3>
+                            <p>
+                                {mfaType === 'totp' 
+                                    ? 'An unauthorized login attempt was detected. Please enter your authenticator code to proceed.'
+                                    : 'A verification code has been sent to your registered email to authorized this login attempt.'}
+                            </p>
+                            
+                            <div className="otp-input-container">
+                                {mfaOtp.map((digit, idx) => (
+                                    <input
+                                        key={idx}
+                                        type="text"
+                                        maxLength="1"
+                                        value={digit}
+                                        onChange={(e) => {
+                                            const val = e.target.value.replace(/\D/g, '');
+                                            const newOtp = [...mfaOtp];
+                                            newOtp[idx] = val;
+                                            setMfaOtp(newOtp);
+                                            if (val && idx < 5) {
+                                                const next = document.getElementById(`mfa-otp-${idx + 1}`);
+                                                if (next) next.focus();
+                                            }
+                                        }}
+                                        onKeyDown={(e) => {
+                                            if (e.key === 'Backspace' && !mfaOtp[idx] && idx > 0) {
+                                                const prev = document.getElementById(`mfa-otp-${idx - 1}`);
+                                                if (prev) prev.focus();
+                                            }
+                                        }}
+                                        id={`mfa-otp-${idx}`}
+                                    />
+                                ))}
+                            </div>
+
+                            {mfaError && (
+                                <div className="login-status-message error compact">
+                                    {mfaError}
+                                </div>
+                            )}
+
+                            <button 
+                                className={`login-submit-btn ${mfaLoading ? 'loading' : ''}`} 
+                                onClick={handleVerifyMfa}
+                                disabled={mfaLoading || mfaOtp.join('').length < 6}
+                            >
+                                {mfaLoading ? <div className="loader-inner"></div> : "Verify Login"}
+                            </button>
                         </div>
                     </div>
                 </div>

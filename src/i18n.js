@@ -23,6 +23,8 @@ const resources = {
       "Support": "Support",
       "Calendar": "Calendar",
       "Logout": "Logout",
+      "Become an IB": "Become an IB",
+      "IB Portal": "IB Portal",
 
       // Dashboard
       "Hello": "Hello",

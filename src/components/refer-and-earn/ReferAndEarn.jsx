@@ -7,7 +7,10 @@ export default function ReferAndEarn() {
     const { t } = useTranslation();
     const [showShareModal, setShowShareModal] = useState(false);
     const [copied, setCopied] = useState(false);
-    const inviteLink = "https://livefxhub.com/r/32qwgo2b5";
+    const userDataStr = localStorage.getItem('userData');
+    const userData = userDataStr ? JSON.parse(userDataStr) : null;
+    const referralCode = userData?.referralCode || '';
+    const inviteLink = `https://v3.livefxhub.com:8444/${referralCode}`;
 
     const handleCopy = () => {
         navigator.clipboard.writeText(inviteLink);

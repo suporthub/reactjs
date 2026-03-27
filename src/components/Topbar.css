@@ -1,0 +1,118 @@
+.profile-selector-container {
+    position: relative;
+}
+
+.profile-dropdown-menu {
+    position: absolute;
+    top: 100%;
+    right: 0;
+    margin-top: 12px;
+    background: var(--card-bg, #ffffff);
+    border-radius: 16px;
+    width: 280px;
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+    border: 1px solid var(--border-color, #e2e8f0);
+    z-index: 1000;
+    overflow: hidden;
+    padding: 16px;
+    animation: slideDown 0.2s ease-out;
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.profile-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+.profile-avatar-large {
+    width: 42px;
+    height: 42px;
+    background: var(--primary, #3b82f6);
+    color: #ffffff;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.profile-info-text {
+    flex: 1;
+}
+
+.profile-name {
+    font-weight: 700;
+    color: var(--text-main, #1e293b);
+    font-size: 1rem;
+    margin-bottom: 2px;
+}
+
+.profile-email {
+    font-size: 0.75rem;
+    color: var(--text-muted, #64748b);
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.profile-divider {
+    height: 1px;
+    background: var(--border-color, #e2e8f0);
+    margin: 0 -16px 16px;
+}
+
+.profile-status-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 12px;
+    background: var(--bg-soft, #f8fafc);
+    border-radius: 10px;
+}
+
+.status-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.8rem;
+    color: var(--text-muted, #64748b);
+    font-weight: 500;
+}
+
+.status-value {
+    font-size: 0.7rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.2px;
+}
+
+/* Dark theme overrides if needed */
+[data-theme='dark'] .profile-dropdown-menu {
+    background: #1e1e2d;
+    border-color: #2b2b3b;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3);
+}
+
+[data-theme='dark'] .profile-header .profile-name {
+    color: #ffffff;
+}
+
+[data-theme='dark'] .profile-status-item {
+    background: #2b2b3b;
+}
+
+[data-theme='dark'] .status-label {
+    color: #e2e8f0;
+}

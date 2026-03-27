@@ -5,6 +5,10 @@ import { useTranslation } from 'react-i18next';
 
 export default function Dashboard() {
     const { t } = useTranslation();
+    const userDataStr = localStorage.getItem('userData');
+    const userData = userDataStr ? JSON.parse(userDataStr) : null;
+    const displayName = userData?.firstName || 'Trader';
+
     return (
         <main className="main-content dashboard-content">
             <div className="content-area">
@@ -12,7 +16,7 @@ export default function Dashboard() {
                 {/* Welcome Card */}
                 <div className="welcome-card">
                     <div className="welcome-text">
-                        <h1>{t('Hello')}, Nithin</h1>
+                        <h1>{t('Hello')}, {displayName}</h1>
                         <p>{t('Power your day')}</p>
                     </div>
                     <div className="welcome-illustration">

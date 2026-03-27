@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Wallet, Sun, Moon, Globe, HelpCircle, Bell, Users, ChevronDown, Check } from 'lucide-react';
+import { Wallet, Sun, Moon, Globe, HelpCircle, Bell, Users, ChevronDown, Check, User, Mail, ShieldCheck } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import './Topbar.css'; // Assuming Topbar.css will contain styles for the new profile menu
 
 const languages = [
     { code: 'en', label: 'English' },
@@ -14,7 +15,13 @@ const languages = [
 export default function Topbar({ theme, toggleTheme }) {
     const { t, i18n } = useTranslation();
     const [showLangMenu, setShowLangMenu] = useState(false);
+    const [showProfileMenu, setShowProfileMenu] = useState(false);
     const langMenuRef = useRef(null);
+    const profileMenuRef = useRef(null);
+
+    const userDataStr = localStorage.getItem('userData');
+    const userData = userDataStr ? JSON.parse(userDataStr) : null;
+    const displayName = userData ? (userData.firstName ? `${userData.firstName} ${userData.lastName || ''}` : 'Trader') : 'Trader';
 
     const changeLanguage = (lng) => {
         i18n.changeLanguage(lng);
@@ -26,10 +33,22 @@ export default function Topbar({ theme, toggleTheme }) {
             if (langMenuRef.current && !langMenuRef.current.contains(event.target)) {
                 setShowLangMenu(false);
             }
+            if (profileMenuRef.current && !profileMenuRef.current.contains(event.target)) {
+                setShowProfileMenu(false);
+            }
         }
         document.addEventListener("mousedown", handleClickOutside);
         return () => document.removeEventListener("mousedown", handleClickOutside);
     }, []);
+
+    const kycStatusColor = () => {
+        switch(userData?.kycStatus?.toLowerCase()) {
+            case 'verified': return '#10b981';
+            case 'pending': return '#f59e0b';
+            case 'rejected': return '#ef4444';
+            default: return '#64748b';
+        }
+    };
 
     return (
         <header className="topbar">
@@ -81,9 +100,42 @@ export default function Topbar({ theme, toggleTheme }) {
                     <Bell size={20} />
                     <div className="notification-dot"></div>
                 </button>
-                <button className="icon-button avatar" aria-label="Profile">
-                    <Users size={18} />
-                </button>
+
+                <div className="profile-selector-container" ref={profileMenuRef}>
+                    <button 
+                        className={`icon-button avatar ${showProfileMenu ? 'active' : ''}`} 
+                        onClick={() => setShowProfileMenu(!showProfileMenu)}
+                        aria-label="Profile"
+                    >
+                        <Users size={18} />
+                    </button>
+                    {showProfileMenu && userData && (
+                        <div className="profile-dropdown-menu">
+                            <div className="profile-header">
+                                <div className="profile-avatar-large">
+                                    <User size={24} />
+                                </div>
+                                <div className="profile-info-text">
+                                    <div className="profile-name">{displayName}</div>
+                                    <div className="profile-email">
+                                        <Mail size={12} />
+                                        {userData.email}
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="profile-divider"></div>
+                            <div className="profile-status-item">
+                                <div className="status-label">
+                                    <ShieldCheck size={16} />
+                                    KYC Status
+                                </div>
+                                <div className="status-value" style={{ color: kycStatusColor() }}>
+                                    {userData.kycStatus || 'Not Started'}
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                </div>
             </div>
         </header>
     );
