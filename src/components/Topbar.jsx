@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Wallet, Sun, Moon, Globe, HelpCircle, Bell, Users, ChevronDown, Check, User, Mail, ShieldCheck } from 'lucide-react';
+import { Wallet, Sun, Moon, Globe, HelpCircle, Bell, Users, ChevronDown, Check, User, Mail, ShieldCheck, Menu } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import './Topbar.css'; // Assuming Topbar.css will contain styles for the new profile menu
 
@@ -12,7 +12,7 @@ const languages = [
     { code: 'ur', label: 'اردو' }
 ];
 
-export default function Topbar({ theme, toggleTheme }) {
+export default function Topbar({ theme, toggleTheme, sidebarOpen, setSidebarOpen }) {
     const { t, i18n } = useTranslation();
     const [showLangMenu, setShowLangMenu] = useState(false);
     const [showProfileMenu, setShowProfileMenu] = useState(false);
@@ -53,6 +53,9 @@ export default function Topbar({ theme, toggleTheme }) {
     return (
         <header className="topbar">
             <div className="topbar-left">
+                <button className="mobile-menu-toggle" onClick={() => setSidebarOpen(!sidebarOpen)} aria-label="Toggle Sidebar">
+                    <Menu size={22} />
+                </button>
                 <div className="logo-wrapper">
                     <div className="logo-text">Live <span style={{ color: 'var(--primary)' }}>Fx</span> Hub</div>
                 </div>
@@ -112,8 +115,8 @@ export default function Topbar({ theme, toggleTheme }) {
                     {showProfileMenu && userData && (
                         <div className="profile-dropdown-menu">
                             <div className="profile-header">
-                                <div className="profile-avatar-large">
-                                    <User size={24} />
+                                <div className="profile-avatar-large" style={{ background: 'transparent', padding: 0 }}>
+                                    <User size={22} color="var(--primary)" />
                                 </div>
                                 <div className="profile-info-text">
                                     <div className="profile-name">{displayName}</div>

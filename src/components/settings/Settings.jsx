@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { LogOut } from 'lucide-react';
+import { BadgeCheck, LogOut } from 'lucide-react';
 import Profile from './Profile';
 import Security from './Security';
+import KycUpdate from './KycUpdate';
 import DeleteAccount from './DeleteAccount';
 import { useTranslation } from 'react-i18next';
 import './settings.css';
@@ -16,6 +17,8 @@ export default function Settings() {
                 return <Profile />;
             case 'Security':
                 return <Security />;
+            case 'KYC':
+                return <KycUpdate />;
             case 'Delete':
                 return <DeleteAccount />;
             default:
@@ -43,6 +46,16 @@ export default function Settings() {
                             onClick={() => setActiveTab('Security')}
                         >
                             {t('Security')}
+                        </button>
+                        <button
+                            className={`settings-nav-item settings-nav-item-kyc ${activeTab === 'KYC' ? 'active' : ''}`}
+                            onClick={() => setActiveTab('KYC')}
+                        >
+                            <span className="settings-nav-item-label">
+                                <BadgeCheck size={16} />
+                                {t('KYC Update')}
+                            </span>
+                            <span className="settings-nav-pill">New</span>
                         </button>
                         
                         <button 

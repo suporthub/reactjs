@@ -2,13 +2,13 @@ import React, { useState } from 'react';
 import {
     LayoutDashboard, Users, Copy, CreditCard,
     Gift, Settings, HelpCircle, Calendar,
-    ChevronDown, LogOut, Activity
+    ChevronDown, LogOut, Activity, X
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { getDeviceFingerprint } from '../utils/fingerprint';
 
-export default function Sidebar({ sidebarOpen, activePage, setActivePage, copyTradingTab, setCopyTradingTab, walletTab, setWalletTab }) {
+export default function Sidebar({ sidebarOpen, setSidebarOpen, activePage, setActivePage, copyTradingTab, setCopyTradingTab, walletTab, setWalletTab }) {
     const { t } = useTranslation();
     const navigate = useNavigate();
     const [openMenu, setOpenMenu] = useState(null);
@@ -16,6 +16,21 @@ export default function Sidebar({ sidebarOpen, activePage, setActivePage, copyTr
     const toggleMenu = (menu, e) => {
         e.preventDefault();
         setOpenMenu(prev => (prev === menu ? null : menu));
+    };
+
+    const handleNavClick = (page, e) => {
+        e.preventDefault();
+        
+        // Dispatch global event if clicking Accounts to force a data refresh
+        if (page === 'Accounts') {
+            window.dispatchEvent(new Event('refreshAccountsData'));
+        }
+
+        setActivePage(page);
+        // Close sidebar on mobile after navigation
+        if (window.innerWidth <= 768 && setSidebarOpen) {
+            setSidebarOpen(false);
+        }
     };
 
     const handleLogout = async (e) => {
@@ -54,17 +69,29 @@ export default function Sidebar({ sidebarOpen, activePage, setActivePage, copyTr
     };
 
     return (
-        <div className="sidebar-container">
+        <div className={`sidebar-container ${sidebarOpen ? 'mobile-open' : ''}`}>
+            {/* Dark backdrop for mobile */}
+            {sidebarOpen && (
+                <div className="sidebar-backdrop" onClick={() => setSidebarOpen(false)}></div>
+            )}
             <aside className={`sidebar ${sidebarOpen ? 'open' : ''}`}>
+                {/* Close button inside sidebar on mobile */}
+                <div className="sidebar-mobile-header">
+                    <div className="logo-text">Live <span style={{ color: 'var(--primary)' }}>Fx</span> Hub</div>
+                    <button className="sidebar-close-btn" onClick={() => setSidebarOpen(false)}>
+                        <X size={20} />
+                    </button>
+                </div>
+
                 <nav className="nav-menu">
-                    <a href="#" className={`nav-item ${activePage === 'Dashboard' ? 'active' : ''}`} onClick={(e) => { e.preventDefault(); setActivePage('Dashboard'); }}>
+                    <a href="#" className={`nav-item ${activePage === 'Dashboard' ? 'active' : ''}`} onClick={(e) => handleNavClick('Dashboard', e)}>
                         <div className="nav-item-left">
                             <LayoutDashboard className="nav-icon" size={20} />
                             <span className="nav-text">{t('Dashboard')}</span>
                         </div>
                     </a>
 
-                    <a href="#" className={`nav-item ${activePage === 'Accounts' ? 'active' : ''}`} onClick={(e) => { e.preventDefault(); setActivePage('Accounts'); }}>
+                    <a href="#" className={`nav-item ${activePage === 'Accounts' ? 'active' : ''}`} onClick={(e) => handleNavClick('Accounts', e)}>
                         <div className="nav-item-left">
                             <Users className="nav-icon" size={20} />
                             <span className="nav-text">{t('Accounts')}</span>
@@ -109,35 +136,35 @@ export default function Sidebar({ sidebarOpen, activePage, setActivePage, copyTr
                         </div>
                     </div>
 
-                    <a href="#" className={`nav-item ${activePage === 'ReferAndEarn' ? 'active' : ''}`} onClick={(e) => { e.preventDefault(); setActivePage('ReferAndEarn'); }}>
+                    <a href="#" className={`nav-item ${activePage === 'ReferAndEarn' ? 'active' : ''}`} onClick={(e) => handleNavClick('ReferAndEarn', e)}>
                         <div className="nav-item-left">
                             <Gift className="nav-icon" size={20} />
                             <span className="nav-text">{t('Refer and earn')}</span>
                         </div>
                     </a>
 
-                    <a href="#" className={`nav-item ${activePage === 'Settings' ? 'active' : ''}`} onClick={(e) => { e.preventDefault(); setActivePage('Settings'); }}>
+                    <a href="#" className={`nav-item ${activePage === 'Settings' ? 'active' : ''}`} onClick={(e) => handleNavClick('Settings', e)}>
                         <div className="nav-item-left">
                             <Settings className="nav-icon" size={20} />
                             <span className="nav-text">{t('Settings')}</span>
                         </div>
                     </a>
 
-                    <a href="#" className={`nav-item ${activePage === 'Support' ? 'active' : ''}`} onClick={(e) => { e.preventDefault(); setActivePage('Support'); }}>
+                    <a href="#" className={`nav-item ${activePage === 'Support' ? 'active' : ''}`} onClick={(e) => handleNavClick('Support', e)}>
                         <div className="nav-item-left">
                             <HelpCircle className="nav-icon" size={20} />
                             <span className="nav-text">{t('Support')}</span>
                         </div>
                     </a>
 
-                    <a href="#" className={`nav-item ${activePage === 'Calendar' ? 'active' : ''}`} onClick={(e) => { e.preventDefault(); setActivePage('Calendar'); }}>
+                    <a href="#" className={`nav-item ${activePage === 'Calendar' ? 'active' : ''}`} onClick={(e) => handleNavClick('Calendar', e)}>
                         <div className="nav-item-left">
                             <Calendar className="nav-icon" size={20} />
                             <span className="nav-text">{t('Calendar')}</span>
                         </div>
                     </a>
 
-                    <a href="#" className={`nav-item ${activePage === 'IB' ? 'active' : ''}`} onClick={(e) => { e.preventDefault(); setActivePage('IB'); }}>
+                    <a href="#" className={`nav-item ${activePage === 'IB' ? 'active' : ''}`} onClick={(e) => handleNavClick('IB', e)}>
                         <div className="nav-item-left">
                             <Activity className="nav-icon" size={20} />
                             <span className="nav-text">{localStorage.getItem('userData') && JSON.parse(localStorage.getItem('userData')).isIB ? t('IB Portal') : t('Become an IB')}</span>

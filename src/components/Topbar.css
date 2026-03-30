@@ -37,11 +37,7 @@
 }
 
 .profile-avatar-large {
-    width: 42px;
-    height: 42px;
-    background: var(--primary, #3b82f6);
-    color: #ffffff;
-    border-radius: 50%;
+    color: var(--primary, #3b82f6);
     display: flex;
     align-items: center;
     justify-content: center;

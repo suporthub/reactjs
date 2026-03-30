@@ -56,6 +56,12 @@
     outline: none;
 }
 
+.settings-nav-item-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+}
+
 .settings-nav-item:hover {
     background: var(--account-bg-hover);
     color: var(--text-main);
@@ -68,6 +74,37 @@
 
 [data-theme='light'] .settings-nav-item.active {
     background: rgba(54, 135, 237, 0.08);
+}
+
+.settings-nav-item-kyc {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.settings-nav-item-kyc svg {
+    color: currentColor;
+    opacity: 0.9;
+}
+
+.settings-nav-pill {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 38px;
+    padding: 3px 8px;
+    border-radius: 999px;
+    background: rgba(var(--primary-rgb), 0.12);
+    color: var(--primary);
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+
+.settings-nav-item-kyc.active .settings-nav-pill {
+    background: rgba(var(--primary-rgb), 0.18);
 }
 
 .settings-nav-item.delete-tab {
@@ -198,6 +235,232 @@
     font-size: 0.9rem;
     color: var(--text-main);
     font-weight: 600;
+}
+
+/* KYC Update */
+.settings-kyc-view {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
+.kyc-hero-card {
+    display: flex;
+    align-items: stretch;
+    justify-content: space-between;
+    gap: 24px;
+    overflow: hidden;
+}
+
+.kyc-hero-copy {
+    flex: 1;
+    max-width: 620px;
+}
+
+.kyc-status-badge {
+    width: fit-content;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 7px 12px;
+    border-radius: 999px;
+    background: rgba(245, 158, 11, 0.12);
+    color: #f59e0b;
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+    margin-bottom: 18px;
+}
+
+.kyc-hero-copy h3 {
+    font-size: 1.5rem;
+    line-height: 1.25;
+    color: var(--text-main);
+    margin-bottom: 10px;
+}
+
+.kyc-hero-copy p {
+    font-size: 0.95rem;
+    line-height: 1.7;
+    color: var(--text-muted);
+    max-width: 54ch;
+}
+
+.kyc-action-row {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-top: 24px;
+}
+
+.kyc-primary-btn,
+.kyc-secondary-btn,
+.kyc-inline-btn {
+    border-radius: 10px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.kyc-primary-btn,
+.kyc-secondary-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 11px 16px;
+    border: 1px solid transparent;
+}
+
+.kyc-primary-btn {
+    background: var(--primary);
+    color: #ffffff;
+    border-color: var(--primary);
+    box-shadow: 0 10px 24px rgba(var(--primary-rgb), 0.22);
+}
+
+.kyc-primary-btn:hover {
+    background: var(--primary-hover);
+    border-color: var(--primary-hover);
+    transform: translateY(-1px);
+}
+
+.kyc-secondary-btn {
+    background: var(--surface);
+    color: var(--text-main);
+    border-color: var(--border-color);
+}
+
+.kyc-secondary-btn:hover,
+.kyc-inline-btn:hover {
+    border-color: rgba(var(--primary-rgb), 0.35);
+    color: var(--primary);
+    background: rgba(var(--primary-rgb), 0.06);
+}
+
+.kyc-summary-panel {
+    width: 320px;
+    padding: 20px;
+    border-radius: 18px;
+    border: 1px solid rgba(var(--primary-rgb), 0.12);
+    background: linear-gradient(180deg, rgba(var(--primary-rgb), 0.08), rgba(var(--primary-rgb), 0.02));
+    align-self: stretch;
+}
+
+.kyc-summary-head {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: var(--text-main);
+    font-size: 0.95rem;
+    font-weight: 700;
+    margin-bottom: 14px;
+}
+
+.kyc-summary-head svg {
+    color: var(--primary);
+}
+
+.kyc-summary-item {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 14px 0;
+    border-top: 1px solid rgba(var(--primary-rgb), 0.1);
+}
+
+.kyc-summary-item:first-of-type {
+    border-top: none;
+    padding-top: 0;
+}
+
+.kyc-summary-item span {
+    font-size: 0.78rem;
+    color: var(--text-muted);
+}
+
+.kyc-summary-item strong {
+    font-size: 0.95rem;
+    color: var(--text-main);
+}
+
+.kyc-section-title {
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--text-main);
+    margin: 0;
+}
+
+.kyc-section-subtitle {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    margin-top: 6px;
+}
+
+.kyc-checklist {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    margin-top: 24px;
+}
+
+.kyc-check-item {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 18px;
+    border-radius: 14px;
+    border: 1px solid var(--border-color);
+    background: var(--surface);
+}
+
+.kyc-check-item.complete {
+    background: rgba(16, 185, 129, 0.06);
+    border-color: rgba(16, 185, 129, 0.18);
+}
+
+.kyc-check-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(var(--primary-rgb), 0.1);
+    color: var(--primary);
+    flex-shrink: 0;
+}
+
+.kyc-check-item.complete .kyc-check-icon {
+    background: rgba(16, 185, 129, 0.12);
+    color: #10b981;
+}
+
+.kyc-check-copy {
+    flex: 1;
+}
+
+.kyc-check-copy h4 {
+    font-size: 0.95rem;
+    color: var(--text-main);
+    margin-bottom: 4px;
+}
+
+.kyc-check-copy p {
+    font-size: 0.84rem;
+    line-height: 1.6;
+    color: var(--text-muted);
+}
+
+.kyc-inline-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 14px;
+    background: transparent;
+    color: var(--text-main);
+    border: 1px solid var(--border-color);
+    flex-shrink: 0;
 }
 
 /* Security Styles */
@@ -703,5 +966,33 @@
     .settings-nav {
         flex-direction: row;
         overflow-x: auto;
+    }
+
+    .kyc-hero-card {
+        flex-direction: column;
+    }
+
+    .kyc-summary-panel {
+        width: 100%;
+    }
+}
+
+@media (max-width: 640px) {
+    .settings-content {
+        padding: 22px 18px;
+    }
+
+    .kyc-check-item {
+        flex-wrap: wrap;
+        align-items: flex-start;
+    }
+
+    .kyc-inline-btn {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .settings-nav-item-kyc {
+        min-width: 170px;
     }
 }

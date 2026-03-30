@@ -113,11 +113,12 @@ function DashboardLayout() {
 
   return (
     <div className={`app-container ${isRTL ? 'rtl' : ''}`}>
-      <Topbar theme={theme} toggleTheme={toggleTheme} />
+      <Topbar theme={theme} toggleTheme={toggleTheme} sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
 
       <div className="main-container">
         <Sidebar
           sidebarOpen={sidebarOpen}
+          setSidebarOpen={setSidebarOpen}
           activePage={activePage}
           setActivePage={setActivePage}
           copyTradingTab={copyTradingTab}

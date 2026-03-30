@@ -482,6 +482,8 @@
 
 .password-input-wrapper {
     position: relative;
+    width: 100%;
+    display: block;
 }
 
 .password-toggle {
@@ -596,7 +598,8 @@
     margin-bottom: 24px;
 }
 
-.lock-icon-bg, .auth-alert-icon-bg {
+.lock-icon-bg,
+.auth-alert-icon-bg {
     width: 44px;
     height: 44px;
     background: #eff6ff;
@@ -607,7 +610,8 @@
 }
 
 .auth-alert-icon-bg {
-    background: #FEF2F2; /* Soft red for unauthorized warning */
+    background: #FEF2F2;
+    /* Soft red for unauthorized warning */
 }
 
 .mfa-header {
@@ -615,7 +619,8 @@
     padding-bottom: 20px;
 }
 
-.close-modal, .close-modal-top {
+.close-modal,
+.close-modal-top {
     background: none;
     border: none;
     color: #94a3b8;
@@ -629,7 +634,8 @@
     right: 0;
 }
 
-.close-modal:hover, .close-modal-top:hover {
+.close-modal:hover,
+.close-modal-top:hover {
     background: #f1f5f9;
     color: #1e293b;
     transform: rotate(90deg);
@@ -834,7 +840,12 @@
 
 @media (max-width: 480px) {
     .compact-login-container {
-        padding: 0 16px 40px 16px !important;
+        padding: 0 20px 40px 20px !important;
+    }
+
+    .form-group input,
+    .password-input-wrapper {
+        width: 100% !important;
     }
 
     .login-top-actions {

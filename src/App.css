@@ -125,10 +125,13 @@
   gap: 4px;
   overflow-y: auto;
   overflow-x: hidden;
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE/Edge */
 }
 
-.sidebar:not(:hover) .nav-menu::-webkit-scrollbar {
-  display: none;
+.nav-menu::-webkit-scrollbar,
+.main-content::-webkit-scrollbar {
+  display: none; /* Chrome/Safari/Edge */
 }
 
 .nav-item {
@@ -362,6 +365,8 @@
   flex-direction: column;
   overflow-y: auto;
   position: relative;
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE/Edge */
 }
 
 .balance-box {
@@ -502,25 +507,142 @@
   transform: scale(1.05);
 }
 
+/* Mobile Menu Toggle - hidden on desktop */
+.mobile-menu-toggle {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  color: var(--text-main);
+  cursor: pointer;
+  padding: 6px;
+  border-radius: 6px;
+  transition: background 0.2s;
+}
+
+.mobile-menu-toggle:hover {
+  background: var(--account-bg-hover);
+}
+
+/* Sidebar mobile header - hidden on desktop */
+.sidebar-mobile-header {
+  display: none;
+}
+
+.sidebar-close-btn {
+  display: none;
+}
+
+/* Sidebar backdrop - only shown on mobile when open */
+.sidebar-backdrop {
+  display: none;
+}
+
 /* Responsive */
 @media (max-width: 768px) {
+  /* Show hamburger button on mobile */
+  .mobile-menu-toggle {
+    display: flex;
+  }
+
+  /* Hide the sidebar container completely on mobile */
+  .sidebar-container {
+    width: 0;
+    min-width: 0;
+    overflow: visible;
+  }
+
+  /* The sidebar panel itself */
   .sidebar {
-    position: absolute;
-    left: -100%;
-    width: var(--sidebar-w);
+    position: fixed;
+    top: 0;
+    left: -280px;
+    width: 260px;
+    height: 100vh;
+    z-index: 9999;
+    transition: left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: none;
+    overflow-y: auto;
+  }
+
+  .sidebar:hover {
+    width: 260px;
+    box-shadow: none;
   }
 
   .sidebar.open {
     left: 0;
+    box-shadow: 4px 0 24px rgba(0, 0, 0, 0.2);
   }
 
-  .mobile-toggle {
+  /* Show all nav text on mobile sidebar (always expanded) */
+  .sidebar.open .nav-text,
+  .sidebar.open .nav-badge,
+  .sidebar.open .menu-chevron,
+  .sidebar.open .invite-text {
+    opacity: 1;
+    visibility: visible;
+  }
+
+  /* Dark backdrop overlay */
+  .sidebar-backdrop {
     display: block;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 9998;
+    animation: backdropFadeIn 0.3s ease;
+  }
+
+  @keyframes backdropFadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+
+  /* Mobile header inside sidebar with logo + close button */
+  .sidebar-mobile-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px;
+    border-bottom: 1px solid var(--border-color);
+  }
+
+  .sidebar-mobile-header .logo-text {
+    font-size: 18px;
+    font-weight: 700;
+  }
+
+  .sidebar-close-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 50%;
+    transition: all 0.2s;
+  }
+
+  .sidebar-close-btn:hover {
+    background: var(--account-bg-hover);
+    color: var(--text-main);
+  }
+
+  /* Hide submenu display:none override on mobile when open */
+  .sidebar.open .submenu {
+    display: flex;
   }
 
   .topbar {
     justify-content: space-between;
-    padding-left: 56px;
+    padding: 12px 16px;
   }
 
   .account-body {
@@ -541,5 +663,9 @@
   .controls-bar {
     flex-direction: column;
     align-items: stretch;
+  }
+
+  .content-area {
+    padding: 20px 16px;
   }
 }
