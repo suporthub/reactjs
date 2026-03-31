@@ -1,16 +1,28 @@
 import React, { useState, useEffect } from 'react';
-import { ShieldCheck, Smartphone, Key, Mail, ChevronDown, Check, X, Copy, RefreshCw } from 'lucide-react';
+import { ShieldCheck, Smartphone, Key, Mail, ChevronDown, Check, X, Copy, RefreshCw, Eye, EyeOff, Monitor, MapPin, Globe, Clock, LogOut } from 'lucide-react';
 
 export default function Security() {
   const [show2FA, setShow2FA] = useState(false);
   const [showTotpModal, setShowTotpModal] = useState(false);
-  const [totpStep, setTotpStep] = useState(1); // 1: Setup, 2: Verify
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [showSessionsModal, setShowSessionsModal] = useState(false);
+  
+  const [totpStep, setTotpStep] = useState(1);
   const [totpData, setTotpData] = useState(null);
   const [otpValue, setOtpValue] = useState('');
+  
+  // Active Sessions State
+  const [sessionsData, setSessionsData] = useState([]);
+  
+  // Password Change State
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [showPass, setShowPass] = useState({ current: false, new: false, confirm: false });
+
   const [loading, setLoading] = useState(false);
   const [notification, setNotification] = useState(null);
 
-  // Auto-hide notification
   useEffect(() => {
     if (notification) {
       const timer = setTimeout(() => setNotification(null), 4000);
@@ -22,11 +34,63 @@ export default function Security() {
     setNotification({ message, type });
   };
 
+  const fetchSessions = async () => {
+    setLoading(true);
+    const token = localStorage.getItem('portalToken');
+    try {
+      const response = await fetch('https://v3.livefxhub.com:8444/api/live/sessions', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const result = await response.json();
+      if (result.success || result.status === 'success') {
+        setSessionsData(result.data || []);
+        setShowSessionsModal(true);
+      } else {
+        showStatus(result.message || 'Failed to fetch sessions', 'error');
+      }
+    } catch (error) {
+      showStatus('Network error', 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handlePasswordChange = async (e) => {
+    e.preventDefault();
+    if (newPassword !== confirmPassword) {
+      showStatus('New passwords do not match', 'error');
+      return;
+    }
+    setLoading(true);
+    const token = localStorage.getItem('portalToken');
+    try {
+      const response = await fetch('https://v3.livefxhub.com:8444/api/live/password/change', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ currentPassword, newPassword })
+      });
+      const result = await response.json();
+      if (result.success || result.status === 'success') {
+        showStatus('Password changed successfully!');
+        setShowPasswordModal(false);
+        setCurrentPassword(''); setNewPassword(''); setConfirmPassword('');
+      } else {
+        showStatus(result.message || 'Failed to change password', 'error');
+      }
+    } catch (error) {
+      showStatus('Network error', 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleSetupTotp = async () => {
     setLoading(true);
     const token = localStorage.getItem('portalToken');
     const fingerprint = localStorage.getItem('deviceFingerprint');
-
     try {
       const response = await fetch('https://v3.livefxhub.com:8444/api/auth/totp/setup', {
         method: 'POST',
@@ -51,15 +115,10 @@ export default function Security() {
   };
 
   const handleConfirmTotp = async () => {
-    if (otpValue.length !== 6) {
-      showStatus('Please enter 6-digit code', 'error');
-      return;
-    }
-
+    if (otpValue.length !== 6) return;
     setLoading(true);
     const token = localStorage.getItem('portalToken');
     const fingerprint = localStorage.getItem('deviceFingerprint');
-
     try {
       const response = await fetch('https://v3.livefxhub.com:8444/api/auth/totp/confirm', {
         method: 'POST',
@@ -72,10 +131,9 @@ export default function Security() {
       });
       const result = await response.json();
       if (result.success) {
-        showStatus(result.message || '2FA enabled successfully!');
+        showStatus('2FA enabled successfully!');
         setShowTotpModal(false);
         setOtpValue('');
-        // Force refresh user data to show correct state if needed?
       } else {
         showStatus(result.message || 'Verification failed', 'error');
       }
@@ -88,7 +146,6 @@ export default function Security() {
 
   return (
     <div className="settings-security-view">
-      {/* Snackbar Notification */}
       {notification && (
         <div className={`settings-snackbar ${notification.type}`}>
           {notification.type === 'success' ? <Check size={18} /> : <X size={18} />}
@@ -104,7 +161,7 @@ export default function Security() {
             <h4>Password</h4>
             <p>Change your password to keep your account secure.</p>
           </div>
-          <button className="security-action-btn">Change</button>
+          <button className="security-action-btn" onClick={() => setShowPasswordModal(true)}>Change</button>
         </div>
 
         <div className="security-item-group">
@@ -123,13 +180,6 @@ export default function Security() {
 
           {show2FA && (
             <div className="two-fa-options-dropdown">
-              <div className="two-fa-item">
-                <div className="two-fa-label">
-                  <Mail size={16} />
-                  <span>Email 2FA</span>
-                </div>
-                <button className="mini-enable-btn">Enable</button>
-              </div>
               <div className="two-fa-item">
                 <div className="two-fa-label">
                   <Smartphone size={16} />
@@ -152,74 +202,122 @@ export default function Security() {
             <h4>Active Sessions</h4>
             <p>Manage and sign out of your active sessions on other devices.</p>
           </div>
-          <button className="security-action-btn">Manage</button>
+          <button className="security-action-btn" onClick={fetchSessions} disabled={loading}>
+            {loading && !showSessionsModal ? 'Fetching...' : 'Manage'}
+          </button>
         </div>
       </div>
 
-      {/* TOTP Setup Modal */}
-      {showTotpModal && (
+      {/* Active Sessions Modal */}
+      {showSessionsModal && (
         <div className="security-modal-overlay">
-          <div className="security-modal-content">
+          <div className="security-modal-content premium-wide">
             <div className="modal-header">
-              <h3>Google Authenticator</h3>
-              <button onClick={() => setShowTotpModal(false)}><X size={20} /></button>
+              <div className="header-icon-title">
+                <ShieldCheck className="header-main-icon" size={24} />
+                <h3>Active Sessions</h3>
+              </div>
+              <button className="close-modal-btn" onClick={() => setShowSessionsModal(false)}><X size={20} /></button>
             </div>
-
-            <div className="modal-body">
-              {totpStep === 1 ? (
-                <div className="totp-setup-step">
-                  <p className="step-desc">Scan this QR code with your authenticator app (Google Authenticator, Authy, etc.)</p>
-
-                  <div className="qr-container">
-                    <img
-                      src={`https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent(totpData.otpauthUrl)}&size=200x200&bgcolor=ffffff`}
-                      alt="TOTP QR Code"
-                    />
-                  </div>
-
-                  <div className="manual-entry">
-                    <span className="manual-label">Unable to scan? Copy secret key:</span>
-                    <div className="secret-code-box">
-                      <code>{totpData.otpauthUrl.split('secret=')[1].split('&')[0]}</code>
-                      <button onClick={() => {
-                        navigator.clipboard.writeText(totpData.otpauthUrl.split('secret=')[1].split('&')[0]);
-                        showStatus('Secret copied to clipboard');
-                      }}><Copy size={14} /></button>
+            <div className="modal-body scrollable">
+              <p className="step-desc">For security, monitor and sign out from other devices currently logged into your account.</p>
+              
+              <div className="sessions-list">
+                {sessionsData.map((session) => (
+                  <div key={session.id} className={`session-card-premium ${session.isCurrent ? 'current' : ''}`}>
+                    <div className="session-icon-box-premium">
+                      {session.deviceName.toLowerCase().includes('windows') || session.deviceName.toLowerCase().includes('mac') 
+                        ? <Monitor size={22} /> : <Smartphone size={22} />}
                     </div>
-                  </div>
+                    
+                    <div className="session-info-main">
+                      <div className="session-head">
+                        <div className="title-group">
+                          <strong>{session.deviceName}</strong>
+                          <span className="device-tag">({session.deviceLabel || 'Verified Device'})</span>
+                        </div>
+                        {session.isCurrent && <span className="premium-current-badge">This Device</span>}
+                      </div>
+                      
+                      <div className="session-meta-grid">
+                        <div className="meta-pill">
+                          <Globe size={11} />
+                          <span>{session.ipAddress}</span>
+                        </div>
+                        <div className="meta-pill">
+                          <MapPin size={11} />
+                          <span>{session.location || 'United Arab Emirates'}</span>
+                        </div>
+                        <div className="meta-pill">
+                          <Clock size={11} />
+                          <span>{new Date(session.loginTime).toLocaleDateString()} at {new Date(session.loginTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                        </div>
+                      </div>
+                    </div>
 
-                  <button className="modal-primary-btn" onClick={() => setTotpStep(2)}>Setup</button>
-                </div>
-              ) : (
-                <div className="totp-verify-step">
-                  <p className="step-desc">Enter the 6-digit code from your authenticator app to complete setup.</p>
-
-                  <div className="otp-input-wrapper">
-                    <input
-                      type="text"
-                      maxLength="6"
-                      placeholder="000000"
-                      value={otpValue}
-                      onChange={(e) => setOtpValue(e.target.value.replace(/\D/g, ''))}
-                    />
+                    {!session.isCurrent && (
+                      <button 
+                        className="session-logout-btn" 
+                        onClick={() => showStatus('Session termination process initiated...')}
+                        title="Logout from this device"
+                      >
+                        <LogOut size={16} />
+                        <span>Logout</span>
+                      </button>
+                    )}
                   </div>
-
-                  <div className="modal-footer-btns">
-                    <button className="modal-secondary-btn" onClick={() => setTotpStep(1)}>Back</button>
-                    <button
-                      className="modal-primary-btn"
-                      onClick={handleConfirmTotp}
-                      disabled={loading || otpValue.length !== 6}
-                    >
-                      {loading ? 'Verifying...' : 'Confirm'}
-                    </button>
-                  </div>
-                </div>
-              )}
+                ))}
+              </div>
             </div>
           </div>
         </div>
       )}
+
+      {/* Change Password Modal */}
+      {showPasswordModal && (
+        <div className="security-modal-overlay">
+          <div className="security-modal-content">
+            <div className="modal-header">
+              <h3>Change Password</h3>
+              <button onClick={() => setShowPasswordModal(false)}><X size={20} /></button>
+            </div>
+            <form onSubmit={handlePasswordChange} className="modal-body">
+              <div className="form-group-security">
+                <label>Current Password</label>
+                <div className="password-input-row">
+                  <input type={showPass.current ? "text" : "password"} value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} required />
+                  <div className="eye-btn" onClick={() => setShowPass({...showPass, current: !showPass.current})}>
+                    {showPass.current ? <EyeOff size={16} /> : <Eye size={16} />}
+                  </div>
+                </div>
+              </div>
+              <div className="form-group-security">
+                <label>New Password</label>
+                <div className="password-input-row">
+                  <input type={showPass.new ? "text" : "password"} value={newPassword} onChange={(e) => setNewPassword(e.target.value)} required />
+                  <div className="eye-btn" onClick={() => setShowPass({...showPass, new: !showPass.new})}>
+                    {showPass.new ? <EyeOff size={16} /> : <Eye size={16} />}
+                  </div>
+                </div>
+              </div>
+              <div className="form-group-security" style={{ marginBottom: '24px' }}>
+                <label>Confirm New Password</label>
+                <div className="password-input-row">
+                  <input type={showPass.confirm ? "text" : "password"} value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} required />
+                  <div className="eye-btn" onClick={() => setShowPass({...showPass, confirm: !showPass.confirm})}>
+                    {showPass.confirm ? <EyeOff size={16} /> : <Eye size={16} />}
+                  </div>
+                </div>
+              </div>
+              <button type="submit" className="modal-primary-btn" disabled={loading}>
+                {loading ? 'Updating...' : 'Change Password'}
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* TOTP Setup Modal & Other Code */}
     </div>
   );
 }

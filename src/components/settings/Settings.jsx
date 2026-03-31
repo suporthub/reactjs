@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { BadgeCheck, LogOut } from 'lucide-react';
+import { BadgeCheck, LogOut, User, Lock, Trash2 } from 'lucide-react';
 import Profile from './Profile';
 import Security from './Security';
 import KycUpdate from './KycUpdate';
@@ -39,19 +39,21 @@ export default function Settings() {
                             className={`settings-nav-item ${activeTab === 'Profile' ? 'active' : ''}`}
                             onClick={() => setActiveTab('Profile')}
                         >
+                            <User size={16} />
                             {t('My Profile')}
                         </button>
                         <button 
                             className={`settings-nav-item ${activeTab === 'Security' ? 'active' : ''}`}
                             onClick={() => setActiveTab('Security')}
                         >
+                            <Lock size={16} />
                             {t('Security')}
                         </button>
                         <button
                             className={`settings-nav-item settings-nav-item-kyc ${activeTab === 'KYC' ? 'active' : ''}`}
                             onClick={() => setActiveTab('KYC')}
                         >
-                            <span className="settings-nav-item-label">
+                            <span style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                                 <BadgeCheck size={16} />
                                 {t('KYC Update')}
                             </span>
@@ -62,6 +64,7 @@ export default function Settings() {
                             className={`settings-nav-item delete-tab ${activeTab === 'Delete' ? 'active' : ''}`}
                             onClick={() => setActiveTab('Delete')}
                         >
+                            <Trash2 size={16} />
                             {t('Delete Account')}
                         </button>
                     </div>

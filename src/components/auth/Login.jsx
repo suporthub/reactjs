@@ -176,11 +176,11 @@ export default function Login() {
     const [showLangMenu, setShowLangMenu] = useState(false);
     const [showForgotModal, setShowForgotModal] = useState(false);
     const [forgotStep, setForgotStep] = useState(1); // 1: Email, 2: OTP, 3: New Password
-    
+
     // Login State
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
-    
+
     // Reset Password State
     const [resetEmail, setResetEmail] = useState('');
     const [resetOtp, setResetOtp] = useState(['', '', '', '', '', '']);
@@ -188,7 +188,7 @@ export default function Login() {
     const [newPass, setNewPass] = useState('');
     const [confirmNewPass, setConfirmNewPass] = useState('');
     const [showNewPass, setShowNewPass] = useState(false);
-    
+
     // MFA State
     const [showMfaModal, setShowMfaModal] = useState(false);
     const [mfaType, setMfaType] = useState(''); // 'totp' or 'otp'
@@ -247,9 +247,9 @@ export default function Login() {
             const response = await fetch('https://v3.livefxhub.com:8444/api/live/login', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ 
-                    email, 
-                    password, 
+                body: JSON.stringify({
+                    email,
+                    password,
                     deviceFingerprint: fingerprint,
                     deviceLabel: deviceLabel
                 }),
@@ -259,7 +259,7 @@ export default function Login() {
 
             if (result.success || result.status === 'success') {
                 const data = result.data || result;
-                
+
                 if (data.status === 'totp_required' || data.status === 'otp_required') {
                     setMfaType(data.status === 'totp_required' ? 'totp' : 'otp');
                     setMfaToken(data.loginToken);
@@ -269,32 +269,16 @@ export default function Login() {
                 }
 
                 const token = data.portalToken;
-                
+
                 if (token) {
                     localStorage.setItem('portalToken', token);
                     localStorage.setItem('deviceFingerprint', fingerprint);
-                    
-                    try {
-                        const profileResponse = await fetch('https://v3.livefxhub.com:8444/api/live/me', {
-                            method: 'GET',
-                            headers: { 
-                                'Authorization': `Bearer ${token}`,
-                                'X-Device-Fingerprint': fingerprint
-                            }
-                        });
-                        const profileResult = await profileResponse.json();
-                        if (profileResult.success) {
-                            localStorage.setItem('userData', JSON.stringify(profileResult.data));
-                        }
-                    } catch (profileErr) {
-                        console.warn("Me API fetch failed:", profileErr);
-                    }
                 }
-                
+
                 if (data.portalRefreshToken) {
                     setCookie('portalRefreshToken', data.portalRefreshToken, 7);
                 }
-                
+
                 setMessage({ text: 'Login successful! Redirecting...', type: 'success' });
                 setTimeout(() => navigate('/dashboard'), 1500);
             } else {
@@ -337,7 +321,7 @@ export default function Login() {
     const handleVerifyResetOtp = async () => {
         const otpString = resetOtp.join('');
         if (otpString.length < 6) return;
-        
+
         setResetLoading(true);
         setResetMessage({ text: '', type: '' });
         try {
@@ -408,7 +392,7 @@ export default function Login() {
         setMfaLoading(true);
         setMfaError('');
 
-        const endpoint = mfaType === 'totp' 
+        const endpoint = mfaType === 'totp'
             ? 'https://v3.livefxhub.com:8444/api/auth/totp/verify'
             : 'https://v3.livefxhub.com:8444/api/auth/otp/verify';
 
@@ -420,11 +404,11 @@ export default function Login() {
 
             const res = await fetch(endpoint, {
                 method: 'POST',
-                headers: { 
+                headers: {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${mfaToken}`
                 },
-                body: JSON.stringify({ 
+                body: JSON.stringify({
                     [payloadKey]: fullOtp,
                     deviceFingerprint: fingerprint,
                     deviceLabel: deviceLabel
@@ -432,28 +416,17 @@ export default function Login() {
             });
 
             const result = await res.json();
-            if (result.success) {
-                const token = result.data.portalToken;
-                localStorage.setItem('portalToken', token);
-                localStorage.setItem('deviceFingerprint', fingerprint);
-
-                try {
-                    const profileRes = await fetch('https://v3.livefxhub.com:8444/api/live/me', {
-                        headers: { 
-                            'Authorization': `Bearer ${token}`,
-                            'X-Device-Fingerprint': fingerprint
-                        }
-                    });
-                    const profile = await profileRes.json();
-                    if (profile.success) {
-                        localStorage.setItem('userData', JSON.stringify(profile.data));
-                    }
-                } catch (e) {
-                    console.warn("Profile sync failed after MFA:", e);
+            if (result.success || result.status === 'success') {
+                const data = result.data || result;
+                const token = data.portalToken;
+                
+                if (token) {
+                    localStorage.setItem('portalToken', token);
+                    localStorage.setItem('deviceFingerprint', fingerprint);
                 }
 
-                if (result.data.portalRefreshToken) {
-                    setCookie('portalRefreshToken', result.data.portalRefreshToken, 7);
+                if (data.portalRefreshToken) {
+                    setCookie('portalRefreshToken', data.portalRefreshToken, 7);
                 }
 
                 setShowMfaModal(false);
@@ -474,8 +447,8 @@ export default function Login() {
     return (
         <div className={`login-page ${isRTL ? 'rtl' : ''}`}>
             {/* Left Side Visual Section */}
-            <div 
-                className="login-left" 
+            <div
+                className="login-left"
                 style={{ backgroundImage: `url('/classic_trading_bg.png')` }}
             >
                 <div className="login-brand">
@@ -507,8 +480,8 @@ export default function Login() {
                         {showLangMenu && (
                             <div className="lang-dropdown">
                                 {languages.map((l) => (
-                                    <div 
-                                        key={l.code} 
+                                    <div
+                                        key={l.code}
                                         className={`lang-option ${lang === l.code ? 'active' : ''}`}
                                         onClick={() => {
                                             setLang(l.code);
@@ -530,8 +503,8 @@ export default function Login() {
                     <form onSubmit={handleLogin}>
                         <div className="form-group">
                             <label>{t.email}</label>
-                            <input 
-                                type="email" 
+                            <input
+                                type="email"
                                 placeholder={t.emailPlaceholder}
                                 value={email}
                                 onChange={(e) => setEmail(e.target.value)}
@@ -542,8 +515,8 @@ export default function Login() {
                         <div className="form-group">
                             <label>{t.password}</label>
                             <div className="password-input-wrapper">
-                                <input 
-                                    type={showPassword ? "text" : "password"} 
+                                <input
+                                    type={showPassword ? "text" : "password"}
                                     placeholder={t.passwordPlaceholder}
                                     value={password}
                                     onChange={(e) => setPassword(e.target.value)}
@@ -560,9 +533,9 @@ export default function Login() {
                                 <input type="checkbox" />
                                 {t.remember}
                             </label>
-                            <button 
-                                type="button" 
-                                className="forgot-password-btn" 
+                            <button
+                                type="button"
+                                className="forgot-password-btn"
                                 onClick={() => setShowForgotModal(true)}
                             >
                                 {t.forgot}
@@ -575,8 +548,8 @@ export default function Login() {
                             </div>
                         )}
 
-                        <button 
-                            type="submit" 
+                        <button
+                            type="submit"
                             className={`login-submit-btn ${loading ? 'loading' : ''}`}
                             disabled={loading}
                         >
@@ -604,7 +577,7 @@ export default function Login() {
                                 <X size={20} />
                             </button>
                         </div>
-                        
+
                         <div className="modal-body">
                             {forgotStep === 1 && (
                                 <>
@@ -612,9 +585,9 @@ export default function Login() {
                                     <p>{t.resetSubtitle}</p>
                                     <div className="form-group" style={{ textAlign: 'left', marginTop: '20px' }}>
                                         <label>{t.email}</label>
-                                        <input 
-                                            type="email" 
-                                            placeholder={t.emailPlaceholder} 
+                                        <input
+                                            type="email"
+                                            placeholder={t.emailPlaceholder}
                                             value={resetEmail}
                                             onChange={(e) => setResetEmail(e.target.value)}
                                         />
@@ -624,8 +597,8 @@ export default function Login() {
                                             {resetMessage.text}
                                         </div>
                                     )}
-                                    <button 
-                                        className={`login-submit-btn ${resetLoading ? 'loading' : ''}`} 
+                                    <button
+                                        className={`login-submit-btn ${resetLoading ? 'loading' : ''}`}
                                         onClick={handleForgotPassword}
                                         disabled={resetLoading}
                                     >
@@ -664,8 +637,8 @@ export default function Login() {
                                             {resetMessage.text}
                                         </div>
                                     )}
-                                    <button 
-                                        className={`login-submit-btn ${resetLoading ? 'loading' : ''}`} 
+                                    <button
+                                        className={`login-submit-btn ${resetLoading ? 'loading' : ''}`}
                                         onClick={handleVerifyResetOtp}
                                         disabled={resetLoading}
                                     >
@@ -681,9 +654,9 @@ export default function Login() {
                                     <div className="form-group" style={{ textAlign: 'left', marginTop: '20px' }}>
                                         <label>New Password</label>
                                         <div className="password-input-wrapper">
-                                            <input 
-                                                type={showNewPass ? "text" : "password"} 
-                                                placeholder={t.newPasswordPlaceholder} 
+                                            <input
+                                                type={showNewPass ? "text" : "password"}
+                                                placeholder={t.newPasswordPlaceholder}
                                                 value={newPass}
                                                 onChange={(e) => setNewPass(e.target.value)}
                                             />
@@ -694,8 +667,8 @@ export default function Login() {
                                     </div>
                                     <div className="form-group" style={{ textAlign: 'left' }}>
                                         <label>Confirm Password</label>
-                                        <input 
-                                            type={showNewPass ? "text" : "password"} 
+                                        <input
+                                            type={showNewPass ? "text" : "password"}
                                             placeholder={t.confirmPasswordPlaceholder}
                                             value={confirmNewPass}
                                             onChange={(e) => setConfirmNewPass(e.target.value)}
@@ -706,8 +679,8 @@ export default function Login() {
                                             {resetMessage.text}
                                         </div>
                                     )}
-                                    <button 
-                                        className={`login-submit-btn ${resetLoading ? 'loading' : ''}`} 
+                                    <button
+                                        className={`login-submit-btn ${resetLoading ? 'loading' : ''}`}
                                         onClick={handleResetPassword}
                                         disabled={resetLoading}
                                     >
@@ -731,15 +704,15 @@ export default function Login() {
                                 <X size={20} />
                             </button>
                         </div>
-                        
+
                         <div className="modal-body">
                             <h3>Unauthorized Login</h3>
                             <p>
-                                {mfaType === 'totp' 
+                                {mfaType === 'totp'
                                     ? 'An unauthorized login attempt was detected. Please enter your authenticator code to proceed.'
                                     : 'A verification code has been sent to your registered email to authorized this login attempt.'}
                             </p>
-                            
+
                             <div className="otp-input-container">
                                 {mfaOtp.map((digit, idx) => (
                                     <input
@@ -774,8 +747,8 @@ export default function Login() {
                                 </div>
                             )}
 
-                            <button 
-                                className={`login-submit-btn ${mfaLoading ? 'loading' : ''}`} 
+                            <button
+                                className={`login-submit-btn ${mfaLoading ? 'loading' : ''}`}
                                 onClick={handleVerifyMfa}
                                 disabled={mfaLoading || mfaOtp.join('').length < 6}
                             >

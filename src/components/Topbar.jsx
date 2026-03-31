@@ -42,7 +42,7 @@ export default function Topbar({ theme, toggleTheme, sidebarOpen, setSidebarOpen
     }, []);
 
     const kycStatusColor = () => {
-        switch(userData?.kycStatus?.toLowerCase()) {
+        switch (userData?.kycStatus?.toLowerCase()) {
             case 'verified': return '#10b981';
             case 'pending': return '#f59e0b';
             case 'rejected': return '#ef4444';
@@ -71,10 +71,10 @@ export default function Topbar({ theme, toggleTheme, sidebarOpen, setSidebarOpen
                 <button className="icon-button no-border" onClick={toggleTheme} aria-label="Toggle Theme">
                     {theme === 'light' ? <Moon size={20} /> : <Sun size={20} />}
                 </button>
-                
+
                 <div className="lang-selector-container" ref={langMenuRef}>
-                    <button 
-                        className={`icon-button no-border ${showLangMenu ? 'active' : ''}`} 
+                    <button
+                        className={`icon-button no-border ${showLangMenu ? 'active' : ''}`}
                         onClick={() => setShowLangMenu(!showLangMenu)}
                         aria-label="Language"
                     >
@@ -83,8 +83,8 @@ export default function Topbar({ theme, toggleTheme, sidebarOpen, setSidebarOpen
                     {showLangMenu && (
                         <div className="lang-dropdown-menu">
                             {languages.map((lng) => (
-                                <div 
-                                    key={lng.code} 
+                                <div
+                                    key={lng.code}
                                     className={`lang-dropdown-option ${i18n.language === lng.code ? 'active' : ''}`}
                                     onClick={() => changeLanguage(lng.code)}
                                 >
@@ -105,8 +105,8 @@ export default function Topbar({ theme, toggleTheme, sidebarOpen, setSidebarOpen
                 </button>
 
                 <div className="profile-selector-container" ref={profileMenuRef}>
-                    <button 
-                        className={`icon-button avatar ${showProfileMenu ? 'active' : ''}`} 
+                    <button
+                        className={`icon-button avatar ${showProfileMenu ? 'active' : ''}`}
                         onClick={() => setShowProfileMenu(!showProfileMenu)}
                         aria-label="Profile"
                     >
@@ -115,14 +115,14 @@ export default function Topbar({ theme, toggleTheme, sidebarOpen, setSidebarOpen
                     {showProfileMenu && userData && (
                         <div className="profile-dropdown-menu">
                             <div className="profile-header">
-                                <div className="profile-avatar-large" style={{ background: 'transparent', padding: 0 }}>
-                                    <User size={22} color="var(--primary)" />
+                                <div className="profile-avatar-small">
+                                    <User size={18} color="var(--primary)" />
                                 </div>
                                 <div className="profile-info-text">
                                     <div className="profile-name">{displayName}</div>
-                                    <div className="profile-email">
-                                        <Mail size={12} />
-                                        {userData.email}
+                                    <div className="profile-email-row">
+                                        <Mail size={11} />
+                                        <span>{userData.email}</span>
                                     </div>
                                 </div>
                             </div>

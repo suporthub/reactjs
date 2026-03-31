@@ -59,6 +59,11 @@
   height: 100%;
 }
 
+.rtl .welcome-illustration {
+    right: auto;
+    left: 20px;
+}
+
 .welcome-illustration img,
 .welcome-img {
   margin-bottom: -15px;

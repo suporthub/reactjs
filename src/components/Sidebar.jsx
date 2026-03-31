@@ -20,7 +20,7 @@ export default function Sidebar({ sidebarOpen, setSidebarOpen, activePage, setAc
 
     const handleNavClick = (page, e) => {
         e.preventDefault();
-        
+
         // Dispatch global event if clicking Accounts to force a data refresh
         if (page === 'Accounts') {
             window.dispatchEvent(new Event('refreshAccountsData'));
@@ -36,7 +36,7 @@ export default function Sidebar({ sidebarOpen, setSidebarOpen, activePage, setAc
     const handleLogout = async (e) => {
         e.preventDefault();
         const portalToken = localStorage.getItem('portalToken');
-        
+
         try {
             const fingerprint = await getDeviceFingerprint();
             await fetch('https://v3.livefxhub.com:8444/api/live/logout', {
@@ -54,7 +54,7 @@ export default function Sidebar({ sidebarOpen, setSidebarOpen, activePage, setAc
         // Clear All storage
         localStorage.clear();
         sessionStorage.clear();
-        
+
         // Clear Cookies
         const cookies = document.cookie.split(";");
         for (let i = 0; i < cookies.length; i++) {

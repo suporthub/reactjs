@@ -5,7 +5,7 @@ import '../auth/login.css'; // Added for OTP modal styling
 import {
     Plus, ChevronDown, LayoutGrid, List, ArrowDownToLine,
     ArrowUpToLine, MoreVertical, Info, X, DollarSign, Zap, ShieldCheck, Wallet,
-    CreditCard, Globe, Settings, Lock, Target, FileDown, ArrowRightLeft, Copy
+    CreditCard, Globe, Settings, Lock, Target, FileDown, ArrowRightLeft, Copy, Check
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
@@ -22,6 +22,7 @@ export default function Accounts() {
     const [accountType, setAccountType] = useState(null); // 'live' or 'demo'
     const [formLoading, setFormLoading] = useState(false);
     const [formError, setFormError] = useState('');
+    const [formSuccess, setFormSuccess] = useState('');
 
     // OTP Modal States
     const [showOtpModal, setShowOtpModal] = useState(false);
@@ -48,6 +49,7 @@ export default function Accounts() {
     const [openMenuAccountId, setOpenMenuAccountId] = useState(null);
     const [showInfoModal, setShowInfoModal] = useState(false);
     const [selectedAccountForInfo, setSelectedAccountForInfo] = useState(null);
+    const [copied, setCopied] = useState(false);
 
     const hasFetched = React.useRef(false);
 
@@ -128,6 +130,8 @@ export default function Accounts() {
         try {
             if (navigator.clipboard && window.isSecureContext) {
                 await navigator.clipboard.writeText(value);
+                setCopied(true);
+                setTimeout(() => setCopied(false), 2000);
                 return;
             }
         } catch (error) {
@@ -146,6 +150,8 @@ export default function Accounts() {
             textArea.select();
             document.execCommand('copy');
             document.body.removeChild(textArea);
+            setCopied(true);
+            setTimeout(() => setCopied(false), 1500);
         } catch (error) {
             console.error('Fallback copy failed:', error);
         }
@@ -211,11 +217,30 @@ export default function Accounts() {
             const result = await response.json();
 
             if (result.success) {
-                setShowModal(false);
-                setStep(1);
-                setAccountType(null);
-                setFormData({ accountName: '', group: 'Demo', accountVariant: 'usd', initialBalance: 10000 });
-                fetchAccounts(); // Refresh the list
+                setFormSuccess('Account created successfully! Updating list...');
+                
+                // Switch to the correct tab so user sees the new account
+                if (accountType === 'live') {
+                    setActiveTab('Live');
+                } else {
+                    setActiveTab('Demo');
+                }
+
+                // Initial fetch
+                fetchAccounts(); 
+                
+                // Delayed fetch to ensure eventual consistency if DB is slow
+                setTimeout(() => {
+                    fetchAccounts();
+                }, 1000);
+                
+                setTimeout(() => {
+                    setShowModal(false);
+                    setStep(1);
+                    setAccountType(null);
+                    setFormSuccess('');
+                    setFormData({ accountName: '', group: 'Demo', accountVariant: 'usd', initialBalance: 10000 });
+                }, 2000);
             } else if (result.code === 'EMAIL_NOT_VERIFIED') {
                 setFormError(result.message);
                 handleSendOtp();
@@ -505,35 +530,30 @@ export default function Accounts() {
 
                             {step === 1 ? (
                                 <div className="wizard-step-1">
-                                    <div className="selection-cards-vertical">
+                                    <div className="selection-cards-v">
                                         <div className="selection-card-v" onClick={() => handleSelectType('live')}>
                                             <div className="card-v-image">
-                                                <img src="/live_hero.png" alt="Live Account" />
-
+                                                <img src="/live_hero_v2.png" alt="Live Account" />
                                             </div>
                                             <div className="card-v-content">
                                                 <h3>Live Account</h3>
                                                 <p>Trade with real money and experience real market profit.</p>
-                                                <div style={{ marginTop: 'auto' }}>
-                                                    <button className="card-v-btn live-btn">
-                                                        Select Live
-                                                    </button>
-                                                </div>
+                                                <button className="card-v-btn live-btn">
+                                                    Select Live
+                                                </button>
                                             </div>
                                         </div>
 
                                         <div className="selection-card-v" onClick={() => handleSelectType('demo')}>
                                             <div className="card-v-image">
-                                                <img src="/demo_hero.png" alt="Demo Account" />
+                                                <img src="/demo_hero_v2.png" alt="Demo Account" />
                                             </div>
                                             <div className="card-v-content">
                                                 <h3>Demo Account</h3>
                                                 <p>Practice trading with virtual funds without any financial risk.</p>
-                                                <div style={{ marginTop: 'auto' }}>
-                                                    <button className="card-v-btn demo-btn">
-                                                        Select Demo
-                                                    </button>
-                                                </div>
+                                                <button className="card-v-btn demo-btn">
+                                                    Select Demo
+                                                </button>
                                             </div>
                                         </div>
                                     </div>
@@ -642,6 +662,21 @@ export default function Accounts() {
                                         </div>
 
                                         {formError && <div className="form-error-msg">{formError}</div>}
+                                        {formSuccess && <div className="form-success-msg" style={{ 
+                                            color: '#10b981', 
+                                            background: 'rgba(16, 185, 129, 0.1)', 
+                                            padding: '10px', 
+                                            borderRadius: '8px', 
+                                            fontSize: '13px', 
+                                            fontWeight: 500,
+                                            marginTop: '12px',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: '8px'
+                                        }}>
+                                            <Check size={16} />
+                                            {formSuccess}
+                                        </div>}
                                     </div>
 
                                     <div className="wizard-footer">
@@ -754,47 +789,43 @@ export default function Accounts() {
                                 </button>
                             </div>
 
-                            <div className="info-modal-content">
+                             <div className="info-modal-content">
                                 <div className="info-list">
                                     <div className="info-row">
                                         <div className="info-label">Account Number</div>
-                                        <div className="info-value monospace">
+                                        <div className="info-value">
                                             {selectedAccountForInfo.accountNumber}
                                             <button
-                                                className="btn-copy"
+                                                className={`btn-copy ${copied ? 'success' : ''}`}
                                                 type="button"
                                                 onClick={() => copyAccountNumber(selectedAccountForInfo.accountNumber)}
-                                                title="Copy"
                                             >
-                                                <Copy size={14} />
+                                                {copied ? <Check size={14} /> : <Copy size={14} />}
+                                                {copied && <span className="copy-feedback">Copied!</span>}
                                             </button>
                                         </div>
                                     </div>
                                     <div className="info-row">
                                         <div className="info-label">Account Name</div>
-                                        <div className="info-value">{selectedAccountForInfo.accountName || 'Not Set'}</div>
+                                        <div className="info-value">{selectedAccountForInfo.accountName || 'Main Account'}</div>
                                     </div>
                                     <div className="info-row">
                                         <div className="info-label">Account Type</div>
-                                        <div className="info-value type-badge">
-                                            {selectedAccountForInfo.type}
+                                        <div className="info-value">
+                                            <span className="type-badge">{selectedAccountForInfo.accountType || activeTab}</span>
                                         </div>
                                     </div>
                                     <div className="info-row">
                                         <div className="info-label">Leverage</div>
-                                        <div className="info-value">1:{selectedAccountForInfo.leverage}</div>
+                                        <div className="info-value">1:100</div>
                                     </div>
                                 </div>
 
                                 <div className="info-balance-footer">
-                                    <div className="balance-label-wrapper">
-                                        <span className="info-label-large">Wallet Balance</span>
-                                    </div>
+                                    <div className="balance-label">Wallet Balance</div>
                                     <div className="balance-amount">
-                                        <span className="balance-number">
-                                            {Number(selectedAccountForInfo.walletBalance || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                                        </span>
-                                        <span className="balance-currency">{selectedAccountForInfo.currency}</span>
+                                        <span className="balance-number">{selectedAccountForInfo.balance?.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0.00'}</span>
+                                        <span className="balance-currency">USD</span>
                                     </div>
                                 </div>
                             </div>
