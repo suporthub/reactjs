@@ -52,6 +52,11 @@ export default function Accounts() {
     const [copied, setCopied] = useState(false);
 
     const hasFetched = React.useRef(false);
+    
+    // User Data & IB Status
+    const userDataStr = localStorage.getItem('userData');
+    const userData = userDataStr ? JSON.parse(userDataStr) : null;
+    const isIB = userData?.isIB || false;
 
     const fetchAccounts = async () => {
         const token = localStorage.getItem('portalToken');
@@ -372,16 +377,16 @@ export default function Accounts() {
     return (
         <main className="main-content">
             <div className="content-area">
-                {/* Banner */}
-                <div className="partner-banner">
-                    <div className="banner-content">
-                        <h2>{t('Become a partner')}</h2>
-                        <p>{t('Invite partner desc')}</p>
+                {/* Premium Banner (Dynamic for IB Status) */}
+                <div className="partner-card-premium clickable" onClick={() => navigate('/ib')}>
+                    <div className="partner-text">
+                        <h1>{isIB ? 'Open IB Portal' : t('Become a partner')}</h1>
+                        <p>{isIB ? 'Manage your referrals and commissions seamlessly' : t('Invite partner desc')}</p>
                     </div>
                     <div className="banner-shapes">
-                        <div className="shape-circle shape-1"></div>
-                        <div className="shape-circle shape-2"></div>
-                        <div className="shape-circle shape-3"></div>
+                        <div className="shape-circle-p shape-1"></div>
+                        <div className="shape-circle-p shape-2"></div>
+                        <div className="shape-circle-p shape-3"></div>
                     </div>
                 </div>
 

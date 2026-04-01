@@ -1,11 +1,28 @@
 import React, { useState, useEffect } from 'react';
-import { ShieldCheck, Smartphone, Key, Mail, ChevronDown, Check, X, Copy, RefreshCw, Eye, EyeOff, Monitor, MapPin, Globe, Clock, LogOut } from 'lucide-react';
+import { 
+  Smartphone, 
+  Check, 
+  X, 
+  Copy, 
+  RefreshCw, 
+  Eye, 
+  EyeOff, 
+  Monitor, 
+  MapPin, 
+  Globe, 
+  Clock, 
+  LogOut,
+  ShieldCheck,
+  Lock
+} from 'lucide-react';
 
 export default function Security() {
   const [show2FA, setShow2FA] = useState(false);
   const [showTotpModal, setShowTotpModal] = useState(false);
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [showSessionsModal, setShowSessionsModal] = useState(false);
+  const [showDisable2FAModal, setShowDisable2FAModal] = useState(false);
+  const [otpDisableValue, setOtpDisableValue] = useState(['', '', '', '', '', '']);
   
   const [totpStep, setTotpStep] = useState(1);
   const [totpData, setTotpData] = useState(null);
@@ -22,6 +39,11 @@ export default function Security() {
 
   const [loading, setLoading] = useState(false);
   const [notification, setNotification] = useState(null);
+
+  // Cache data
+  const userDataStr = localStorage.getItem('userData');
+  const userData = userDataStr ? JSON.parse(userDataStr) : null;
+  const is2faEnabled = userData?.is2faEnabled || false;
 
   useEffect(() => {
     if (notification) {
@@ -132,6 +154,8 @@ export default function Security() {
       const result = await response.json();
       if (result.success) {
         showStatus('2FA enabled successfully!');
+        const updatedUser = { ...userData, is2faEnabled: true };
+        localStorage.setItem('userData', JSON.stringify(updatedUser));
         setShowTotpModal(false);
         setOtpValue('');
       } else {
@@ -141,6 +165,66 @@ export default function Security() {
       showStatus('Connection error', 'error');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleDisable2FA = async () => {
+    const codeStr = otpDisableValue.join('');
+    if (codeStr.length !== 6) {
+      showStatus('Please enter the 6-digit code', 'error');
+      return;
+    }
+
+    setLoading(true);
+    const token = localStorage.getItem('portalToken');
+    try {
+      const response = await fetch('https://v3.livefxhub.com:8444/api/auth/totp', {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ code: codeStr })
+      });
+      const result = await response.json();
+      if (result.success || result.status === 'success') {
+        showStatus('Two-factor authentication disabled successfully');
+        const updatedUser = { ...userData, is2faEnabled: false };
+        localStorage.setItem('userData', JSON.stringify(updatedUser));
+        setShowDisable2FAModal(false);
+        setOtpDisableValue(['', '', '', '', '', '']);
+      } else {
+        showStatus(result.message || 'Verification failed', 'error');
+      }
+    } catch (error) {
+      showStatus('Network error', 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleOtpChange = (index, value) => {
+    if (value.length > 1) value = value[value.length - 1];
+    if (!/^\d*$/.test(value)) return;
+
+    const newOtp = [...otpDisableValue];
+    newOtp[index] = value;
+    setOtpDisableValue(newOtp);
+
+    // Auto-focus next input
+    if (value && index < 5) {
+      const nextInput = document.getElementById(`otp-disable-${index + 1}`);
+      if (nextInput) nextInput.focus();
+    }
+  };
+
+  const handleOtpKeyDown = (index, e) => {
+    if (e.key === 'Backspace' && !otpDisableValue[index] && index > 0) {
+      const prevInput = document.getElementById(`otp-disable-${index - 1}`);
+      if (prevInput) prevInput.focus();
+    }
+    if (e.key === 'Enter') {
+      handleDisable2FA();
     }
   };
 
@@ -186,11 +270,11 @@ export default function Security() {
                   <span>Google Authenticator</span>
                 </div>
                 <button
-                  className="mini-enable-btn"
-                  onClick={handleSetupTotp}
+                  className={`mini-enable-btn ${is2faEnabled ? 'disable' : ''}`}
+                  onClick={is2faEnabled ? () => setShowDisable2FAModal(true) : handleSetupTotp}
                   disabled={loading}
                 >
-                  {loading ? <RefreshCw className="spin" size={14} /> : 'Enable'}
+                  {loading ? <RefreshCw className="spin" size={14} /> : (is2faEnabled ? 'Disable' : 'Enable')}
                 </button>
               </div>
             </div>
@@ -208,6 +292,57 @@ export default function Security() {
         </div>
       </div>
 
+      {/* Disable 2FA Modal */}
+      {showDisable2FAModal && (
+        <div className="security-modal-overlay">
+          <div className="security-modal-content small">
+            <div className="modal-header">
+              <h3>Disable 2FA?</h3>
+              <button onClick={() => setShowDisable2FAModal(false)}><X size={20} /></button>
+            </div>
+            <div className="modal-body align-center">
+              <ShieldCheck size={48} color="#ef4444" style={{ marginBottom: '16px' }} />
+              <p className="step-desc" style={{ textAlign: 'center', marginBottom: '24px' }}>
+                Enter the 6-digit code from your authenticator app to disable Two-Factor Authentication.
+              </p>
+              
+              <div className="otp-disable-grid">
+                {otpDisableValue.map((digit, idx) => (
+                  <input
+                    key={idx}
+                    id={`otp-disable-${idx}`}
+                    type="text"
+                    maxLength="1"
+                    value={digit}
+                    onChange={(e) => handleOtpChange(idx, e.target.value)}
+                    onKeyDown={(e) => handleOtpKeyDown(idx, e)}
+                    className="otp-small-box"
+                    autoFocus={idx === 0}
+                  />
+                ))}
+              </div>
+
+              <div className="modal-footer-btns-center" style={{ marginTop: '30px' }}>
+                <button 
+                  className="modal-secondary-btn" 
+                  onClick={() => setShowDisable2FAModal(false)}
+                  disabled={loading}
+                >
+                  No, Keep it
+                </button>
+                <button 
+                  className="modal-primary-btn delete" 
+                  onClick={handleDisable2FA}
+                  disabled={loading || otpDisableValue.join('').length !== 6}
+                >
+                  {loading ? 'Verifying...' : 'Yes, Disable it'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Active Sessions Modal */}
       {showSessionsModal && (
         <div className="security-modal-overlay">
@@ -221,7 +356,6 @@ export default function Security() {
             </div>
             <div className="modal-body scrollable">
               <p className="step-desc">For security, monitor and sign out from other devices currently logged into your account.</p>
-              
               <div className="sessions-list">
                 {sessionsData.map((session) => (
                   <div key={session.id} className={`session-card-premium ${session.isCurrent ? 'current' : ''}`}>
@@ -229,7 +363,6 @@ export default function Security() {
                       {session.deviceName.toLowerCase().includes('windows') || session.deviceName.toLowerCase().includes('mac') 
                         ? <Monitor size={22} /> : <Smartphone size={22} />}
                     </div>
-                    
                     <div className="session-info-main">
                       <div className="session-head">
                         <div className="title-group">
@@ -238,32 +371,14 @@ export default function Security() {
                         </div>
                         {session.isCurrent && <span className="premium-current-badge">This Device</span>}
                       </div>
-                      
                       <div className="session-meta-grid">
-                        <div className="meta-pill">
-                          <Globe size={11} />
-                          <span>{session.ipAddress}</span>
-                        </div>
-                        <div className="meta-pill">
-                          <MapPin size={11} />
-                          <span>{session.location || 'United Arab Emirates'}</span>
-                        </div>
-                        <div className="meta-pill">
-                          <Clock size={11} />
-                          <span>{new Date(session.loginTime).toLocaleDateString()} at {new Date(session.loginTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-                        </div>
+                        <div className="meta-pill"><Globe size={11} /><span>{session.ipAddress}</span></div>
+                        <div className="meta-pill"><MapPin size={11} /><span>{session.location || 'UAE'}</span></div>
+                        <div className="meta-pill"><Clock size={11} /><span>{new Date(session.loginTime).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}</span></div>
                       </div>
                     </div>
-
                     {!session.isCurrent && (
-                      <button 
-                        className="session-logout-btn" 
-                        onClick={() => showStatus('Session termination process initiated...')}
-                        title="Logout from this device"
-                      >
-                        <LogOut size={16} />
-                        <span>Logout</span>
-                      </button>
+                      <button className="session-logout-btn" onClick={() => showStatus('Session term...')}><LogOut size={16} /><span>Logout</span></button>
                     )}
                   </div>
                 ))}
@@ -317,7 +432,47 @@ export default function Security() {
         </div>
       )}
 
-      {/* TOTP Setup Modal & Other Code */}
+      {/* TOTP Setup Modal */}
+      {showTotpModal && (
+        <div className="security-modal-overlay">
+          <div className="security-modal-content">
+            <div className="modal-header">
+              <h3>Google Authenticator</h3>
+              <button onClick={() => setShowTotpModal(false)}><X size={20} /></button>
+            </div>
+            <div className="modal-body">
+              {totpStep === 1 ? (
+                <div className="totp-setup-step">
+                  <p className="step-desc">Scan this QR code with your authenticator app.</p>
+                  <div className="qr-container">
+                    {totpData && <img src={`https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent(totpData.otpauthUrl)}&size=200x200`} alt="QR" />}
+                  </div>
+                  <div className="manual-entry">
+                    <div className="secret-code-box">
+                      <code>{totpData?.otpauthUrl.split('secret=')[1].split('&')[0]}</code>
+                      <button onClick={() => { navigator.clipboard.writeText(totpData?.otpauthUrl.split('secret=')[1].split('&')[0]); showStatus('Copied'); }}><Copy size={14} /></button>
+                    </div>
+                  </div>
+                  <button className="modal-primary-btn" onClick={() => setTotpStep(2)}>Setup</button>
+                </div>
+              ) : (
+                <div className="totp-verify-step">
+                  <p className="step-desc">Enter 6-digit code.</p>
+                  <div className="otp-input-wrapper">
+                    <input type="text" maxLength="6" value={otpValue} onChange={(e) => setOtpValue(e.target.value.replace(/\D/g, ''))} />
+                  </div>
+                  <div className="modal-footer-btns">
+                    <button className="modal-secondary-btn" onClick={() => setTotpStep(1)}>Back</button>
+                    <button className="modal-primary-btn" onClick={handleConfirmTotp} disabled={loading || otpValue.length !== 6}>
+                      Confirm
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

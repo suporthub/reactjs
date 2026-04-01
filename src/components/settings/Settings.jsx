@@ -5,11 +5,49 @@ import Security from './Security';
 import KycUpdate from './KycUpdate';
 import DeleteAccount from './DeleteAccount';
 import { useTranslation } from 'react-i18next';
+import { useNavigate } from 'react-router-dom';
+import { getDeviceFingerprint } from '../../utils/fingerprint';
 import './settings.css';
 
 export default function Settings() {
     const { t } = useTranslation();
+    const navigate = useNavigate();
     const [activeTab, setActiveTab] = useState('Profile');
+
+    const handleLogout = async (e) => {
+        if (e) e.preventDefault();
+        const portalToken = localStorage.getItem('portalToken');
+
+        try {
+            const fingerprint = await getDeviceFingerprint();
+            await fetch('https://v3.livefxhub.com:8444/api/live/logout', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${portalToken}`,
+                    'X-Device-Fingerprint': fingerprint
+                }
+            });
+        } catch (error) {
+            console.warn('Logout API failed:', error);
+        }
+
+        // Clear All storage
+        localStorage.clear();
+        sessionStorage.clear();
+
+        // Clear Cookies
+        const cookies = document.cookie.split(";");
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i];
+            const eqPos = cookie.indexOf("=");
+            const name = eqPos > -1 ? cookie.substr(0, eqPos) : cookie;
+            document.cookie = name + "=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/";
+        }
+
+        // Redirect to login
+        navigate('/login');
+    };
 
     const renderContent = () => {
         switch (activeTab) {
@@ -69,7 +107,7 @@ export default function Settings() {
                         </button>
                     </div>
 
-                    <button className="settings-logout-btn">
+                    <button className="settings-logout-btn" onClick={handleLogout}>
                         <LogOut size={18} />
                         {t('Logout')}
                     </button>
