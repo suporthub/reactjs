@@ -31,20 +31,11 @@ export default function AuthGuard({ children }) {
         hasRun.current = true;
 
         const validateAuth = async () => {
-            const token = localStorage.getItem('portalToken');
+            let token = localStorage.getItem('portalToken');
+            const refreshToken = getCookie('portalRefreshToken');
 
-            // No token at all → check if refresh token exists
-            if (!token) {
-                const refreshToken = getCookie('portalRefreshToken');
-                
-                if (!refreshToken) {
-                    // No tokens at all → go to login
-                    setAuthState('unauthenticated');
-                    navigate('/login', { replace: true });
-                    return;
-                }
-
-                // Has refresh token but no access token → try to refresh
+            // 1. If no access token but we have a refresh token, try to get a new access token
+            if (!token && refreshToken) {
                 try {
                     const refreshResponse = await fetch('https://v3.livefxhub.com:8444/api/live/refresh-token', {
                         method: 'POST',
@@ -56,36 +47,31 @@ export default function AuthGuard({ children }) {
 
                     if (refreshData.success || refreshData.status === 'success') {
                         const data = refreshData.data || refreshData;
-                        if (data.portalToken) {
-                            localStorage.setItem('portalToken', data.portalToken);
-                        }
+                        token = data.portalToken;
+                        if (token) localStorage.setItem('portalToken', token);
+                        
                         if (data.portalRefreshToken) {
                             const date = new Date();
                             date.setTime(date.getTime() + (7 * 24 * 60 * 60 * 1000));
                             document.cookie = `portalRefreshToken=${data.portalRefreshToken}; expires=${date.toUTCString()}; path=/`;
                         }
-                        setAuthState('authenticated');
-                        return;
                     } else {
-                        // Refresh failed
-                        localStorage.removeItem('portalToken');
-                        localStorage.removeItem('userData');
-                        localStorage.removeItem('accounts');
-                        document.cookie = 'portalRefreshToken=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/';
-                        setAuthState('unauthenticated');
-                        navigate('/login', { replace: true });
-                        return;
+                        throw new Error("Refresh failed");
                     }
                 } catch (err) {
-                    console.error('Auth refresh failed:', err);
-                    setAuthState('unauthenticated');
-                    navigate('/login', { replace: true });
+                    console.error('Manual refresh failed:', err);
+                    clearAllAndGoToLogin();
                     return;
                 }
             }
 
-            // Token exists → validate it via /api/live/me
-            // The apiInterceptor will handle 401 → refresh automatically
+            // 2. If we still don't have a token, we must log in
+            if (!token) {
+                clearAllAndGoToLogin();
+                return;
+            }
+
+            // 3. We have a token — validate it and get user profile
             try {
                 const fingerprint = localStorage.getItem('deviceFingerprint') || '';
                 const response = await fetch('https://v3.livefxhub.com:8444/api/live/me', {
@@ -96,23 +82,34 @@ export default function AuthGuard({ children }) {
                     }
                 });
 
+                if (response.status === 401) {
+                    // Try to redirect just in case interceptor failed or refresh was invalid
+                    clearAllAndGoToLogin();
+                    return;
+                }
+
                 const result = await response.json();
 
-                if (result.success) {
-                    // Token is valid — update cached user data
-                    localStorage.setItem('userData', JSON.stringify(result.data));
+                if (result.success || result.status === 'success') {
+                    localStorage.setItem('userData', JSON.stringify(result.data || result));
                     window.dispatchEvent(new Event('userDataUpdated'));
                     setAuthState('authenticated');
                 } else {
-                    // If we reach here, the interceptor already tried refresh and it failed
-                    // The interceptor itself will redirect to login
-                    setAuthState('unauthenticated');
+                    clearAllAndGoToLogin();
                 }
             } catch (err) {
                 console.error('Auth validation failed:', err);
-                // Network error — still allow if token exists (offline tolerance)
-                setAuthState('authenticated');
+                // Safe default is to login again to prevent hung black screen
+                clearAllAndGoToLogin();
             }
+        };
+
+        const clearAllAndGoToLogin = () => {
+            localStorage.removeItem('portalToken');
+            localStorage.removeItem('userData');
+            document.cookie = 'portalRefreshToken=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/';
+            setAuthState('unauthenticated');
+            navigate('/login', { replace: true });
         };
 
         validateAuth();

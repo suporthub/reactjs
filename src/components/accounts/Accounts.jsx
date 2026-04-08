@@ -380,8 +380,8 @@ export default function Accounts() {
                 {/* Premium Banner (Dynamic for IB Status) */}
                 <div className="partner-card-premium clickable" onClick={() => navigate('/ib')}>
                     <div className="partner-text">
-                        <h1>{isIB ? 'Open IB Portal' : t('Become a partner')}</h1>
-                        <p>{isIB ? 'Manage your referrals and commissions seamlessly' : t('Invite partner desc')}</p>
+                        <h1>{isIB ? t('Open IB Portal') : t('Become a partner')}</h1>
+                        <p>{isIB ? t('IB Portal desc') : t('Invite partner desc')}</p>
                     </div>
                     <div className="banner-shapes">
                         <div className="shape-circle-p shape-1"></div>
@@ -529,7 +529,7 @@ export default function Accounts() {
                     <div className="accounts-modal-overlay">
                         <div className={`account-wizard-modal ${step === 2 ? 'wide' : ''}`}>
                             <div className="modal-header-wizard">
-                                <h2>{step === 1 ? 'Select Account Type' : `Create ${accountType === 'live' ? 'Live' : 'Demo'} Account`}</h2>
+                                <h2>{step === 1 ? t('Select Account Type') : accountType === 'live' ? t('Create Live Account') : t('Create Demo Account')}</h2>
                                 <button className="close-btn-wizard" onClick={() => setShowModal(false)}><X size={20} /></button>
                             </div>
 
@@ -541,10 +541,10 @@ export default function Accounts() {
                                                 <img src="/live_hero_v2.png" alt="Live Account" />
                                             </div>
                                             <div className="card-v-content">
-                                                <h3>Live Account</h3>
-                                                <p>Trade with real money and experience real market profit.</p>
+                                                <h3>{t('Live Account')}</h3>
+                                                <p>{t('Live Account card desc')}</p>
                                                 <button className="card-v-btn live-btn">
-                                                    Select Live
+                                                    {t('Select Live')}
                                                 </button>
                                             </div>
                                         </div>
@@ -554,10 +554,10 @@ export default function Accounts() {
                                                 <img src="/demo_hero_v2.png" alt="Demo Account" />
                                             </div>
                                             <div className="card-v-content">
-                                                <h3>Demo Account</h3>
-                                                <p>Practice trading with virtual funds without any financial risk.</p>
+                                                <h3>{t('Demo Account')}</h3>
+                                                <p>{t('Demo Account card desc')}</p>
                                                 <button className="card-v-btn demo-btn">
-                                                    Select Demo
+                                                    {t('Select Demo')}
                                                 </button>
                                             </div>
                                         </div>
@@ -567,12 +567,12 @@ export default function Accounts() {
                                 <form className="wizard-step-2" onSubmit={handleCreateAccount}>
                                     <div className="wizard-form-body">
                                         <div className="wizard-group">
-                                            <label>Account Display Name</label>
+                                            <label>{t('Account Display Name')}</label>
                                             <div className="input-with-icon">
                                                 <Wallet size={18} />
                                                 <input
                                                     type="text"
-                                                    placeholder="e.g. My Real USD Scalper"
+                                                    placeholder={t('e.g. My Real USD Scalper')}
                                                     required
                                                     value={formData.accountName}
                                                     onChange={e => setFormData({ ...formData, accountName: e.target.value })}
@@ -582,12 +582,12 @@ export default function Accounts() {
 
                                         <div className="form-row-wizard">
                                             <div className="wizard-group">
-                                                <label>Account Group (Type)</label>
+                                                <label>{t('Account Group (Type)')}</label>
                                                 <div className={`custom-wizard-select ${accountType === 'demo' ? 'disabled' : ''}`} ref={groupDropdownRef}>
                                                     <div className={`select-trigger ${showGroupDropdown ? 'open' : ''}`} onClick={() => accountType !== 'demo' && setShowGroupDropdown(!showGroupDropdown)}>
                                                         <div className="trigger-left">
                                                             <Globe size={18} />
-                                                            <span>{accountType === 'demo' ? 'Demo' : formData.group}</span>
+                                                            <span>{accountType === 'demo' ? t('Demo') : formData.group}</span>
                                                         </div>
                                                         {accountType !== 'demo' && <ChevronDown size={14} className={showGroupDropdown ? 'rotate' : ''} />}
                                                     </div>
@@ -611,12 +611,12 @@ export default function Accounts() {
                                             </div>
 
                                             <div className="wizard-group">
-                                                <label>Account Variant</label>
+                                                <label>{t('Account Variant')}</label>
                                                 <div className="custom-wizard-select" ref={variantDropdownRef}>
                                                     <div className={`select-trigger ${showVariantDropdown ? 'open' : ''}`} onClick={() => setShowVariantDropdown(!showVariantDropdown)}>
                                                         <div className="trigger-left">
                                                             <CreditCard size={18} />
-                                                            <span>{formData.accountVariant === 'usd' ? 'USD Account' : 'Cent Account'}</span>
+                                                            <span>{formData.accountVariant === 'usd' ? t('USD Account') : t('Cent Account')}</span>
                                                         </div>
                                                         <ChevronDown size={14} className={showVariantDropdown ? 'rotate' : ''} />
                                                     </div>
@@ -629,7 +629,7 @@ export default function Accounts() {
                                                                     setShowVariantDropdown(false);
                                                                 }}
                                                             >
-                                                                USD Account
+                                                                {t('USD Account')}
                                                             </div>
                                                             <div
                                                                 className={`select-option ${formData.accountVariant === 'cent' ? 'selected' : ''}`}
@@ -638,7 +638,7 @@ export default function Accounts() {
                                                                     setShowVariantDropdown(false);
                                                                 }}
                                                             >
-                                                                Cent Account
+                                                                {t('Cent Account')}
                                                             </div>
                                                         </div>
                                                     )}
@@ -648,12 +648,12 @@ export default function Accounts() {
 
                                         {accountType === 'demo' && (
                                             <div className="wizard-group full-width">
-                                                <label>Initial Balance (Optional)</label>
+                                                <label>{t('Initial Balance (Optional)')}</label>
                                                 <div className="input-with-icon">
                                                     <DollarSign size={18} />
                                                     <input
                                                         type="number"
-                                                        placeholder="e.g. 10000"
+                                                        placeholder={t('e.g. 10000')}
                                                         value={formData.initialBalance}
                                                         onChange={e => setFormData({ ...formData, initialBalance: e.target.value })}
                                                     />
@@ -663,7 +663,7 @@ export default function Accounts() {
 
                                         <div className="wizard-notice">
                                             <Info size={16} />
-                                            <span>Default leverage of 1:100 will be applied to your new account.</span>
+                                            <span>{t('Default leverage apply')}</span>
                                         </div>
 
                                         {formError && <div className="form-error-msg">{formError}</div>}
@@ -691,14 +691,14 @@ export default function Accounts() {
                                             onClick={() => setStep(1)}
                                             disabled={formLoading}
                                         >
-                                            Back
+                                            {t('Back')}
                                         </button>
                                         <button
                                             type="submit"
                                             className={`btn-create-wizard ${formLoading ? 'loading' : ''}`}
                                             disabled={formLoading}
                                         >
-                                            {formLoading ? <div className="spinner-wizard"></div> : 'Create Account'}
+                                            {formLoading ? <div className="spinner-wizard"></div> : t('Create Account')}
                                         </button>
                                     </div>
                                 </form>
@@ -719,11 +719,11 @@ export default function Accounts() {
                                 <div className="success-icon-wrapper">
                                     <ShieldCheck size={32} />
                                 </div>
-                                <h3>Verify Your Email</h3>
-                                <p className="otp-msg">To create a live account, please verify your email first. We've sent a 6-digit code.</p>
+                                <h3>{t('Verify Your Email')}</h3>
+                                <p className="otp-msg">{t('otp email verify desc')}</p>
                                 <div className="acc-badge">
                                     <div className="email-badge-label">
-                                        <span>Email: </span>
+                                        <span>{t('Email')}: </span>
                                         <strong style={{ fontSize: '12px' }}>
                                             {(() => {
                                                 try {
@@ -768,15 +768,15 @@ export default function Accounts() {
                                 onClick={handleVerifyOtp}
                                 disabled={otpLoading}
                             >
-                                {otpLoading ? <div className="loader-inner"></div> : "Verify & Continue"}
+                                {otpLoading ? <div className="loader-inner"></div> : t('Verify & Continue')}
                             </button>
 
                             <div className="otp-footer">
-                                <p>Didn't receive the code?</p>
+                                <p>{t("Didn't receive the code?")}</p>
                                 {resendCooldown > 0 ? (
-                                    <span className="resend-timer">Resend OTP in <strong>{formatTime(resendCooldown)}</strong></span>
+                                    <span className="resend-timer">{t('Resend OTP in')} <strong>{formatTime(resendCooldown)}</strong></span>
                                 ) : (
-                                    <button className="resend-btn" onClick={handleResendOtp}>Resend OTP</button>
+                                    <button className="resend-btn" onClick={handleResendOtp}>{t('Resend OTP')}</button>
                                 )}
                             </div>
                         </div>
@@ -797,7 +797,7 @@ export default function Accounts() {
                              <div className="info-modal-content">
                                 <div className="info-list">
                                     <div className="info-row">
-                                        <div className="info-label">Account Number</div>
+                                        <div className="info-label">{t('Account Number')}</div>
                                         <div className="info-value">
                                             {selectedAccountForInfo.accountNumber}
                                             <button
@@ -806,28 +806,28 @@ export default function Accounts() {
                                                 onClick={() => copyAccountNumber(selectedAccountForInfo.accountNumber)}
                                             >
                                                 {copied ? <Check size={14} /> : <Copy size={14} />}
-                                                {copied && <span className="copy-feedback">Copied!</span>}
+                                                {copied && <span className="copy-feedback">{t('Copied!')}</span>}
                                             </button>
                                         </div>
                                     </div>
                                     <div className="info-row">
-                                        <div className="info-label">Account Name</div>
-                                        <div className="info-value">{selectedAccountForInfo.accountName || 'Main Account'}</div>
+                                        <div className="info-label">{t('Account Name')}</div>
+                                        <div className="info-value">{selectedAccountForInfo.accountName || t('Main Account')}</div>
                                     </div>
                                     <div className="info-row">
-                                        <div className="info-label">Account Type</div>
+                                        <div className="info-label">{t('Account Type')}</div>
                                         <div className="info-value">
                                             <span className="type-badge">{selectedAccountForInfo.accountType || activeTab}</span>
                                         </div>
                                     </div>
                                     <div className="info-row">
-                                        <div className="info-label">Leverage</div>
+                                        <div className="info-label">{t('Leverage')}</div>
                                         <div className="info-value">1:100</div>
                                     </div>
                                 </div>
 
                                 <div className="info-balance-footer">
-                                    <div className="balance-label">Wallet Balance</div>
+                                    <div className="balance-label">{t('Wallet Balance')}</div>
                                     <div className="balance-amount">
                                         <span className="balance-number">{selectedAccountForInfo.balance?.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0.00'}</span>
                                         <span className="balance-currency">USD</span>

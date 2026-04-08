@@ -9,7 +9,9 @@ import {
 import IBProfile from './IBProfile';
 import LoyaltyProgram from './LoyaltyProgram';
 import IBKycStatus from './IBKycStatus';
+import IBClients from './IBClients';
 import IBWallet from './IBWallet';
+import './IBRegistration.css';
 import './ib.css';
 
 export default function IBRegistration() {
@@ -25,6 +27,8 @@ export default function IBRegistration() {
     const [ibData, setIbData] = useState(null);
     const [portalLoading, setPortalLoading] = useState(isIB);
     const [notification, setNotification] = useState(null);
+    const [showSuccessModal, setShowSuccessModal] = useState(false);
+    const [submissionData, setSubmissionData] = useState(null);
 
     // Registration Form State
     const [formData, setFormData] = useState({
@@ -56,8 +60,6 @@ export default function IBRegistration() {
     const fetchIbProfile = async () => {
         const token = localStorage.getItem('portalToken');
         try {
-            // Using the exact endpoint provided: https://v3.livefxhub.com:8444/api/live/ib/me 
-            // (Note: Adding /api/live/ib/ to match the platform's standard routing for IB authenticated calls)
             const response = await fetch('https://v3.livefxhub.com:8444/api/ib/me', {
                 method: 'GET',
                 headers: {
@@ -106,7 +108,12 @@ export default function IBRegistration() {
             });
             const result = await response.json();
             if (result.success) {
-                setNotification({ message: result.message, type: 'success' });
+                setSubmissionData({
+                    code: result.referralCode || result.code || result.data?.referralCode || 'N/A',
+                    status: result.kycStatus || result.status || result.data?.kycStatus || 'Pending',
+                    message: result.message || t('IB application submitted successfully. Our team will review your application.')
+                });
+                setShowSuccessModal(true);
             } else {
                 setNotification({ message: result.message, type: 'error' });
             }
@@ -135,7 +142,7 @@ export default function IBRegistration() {
                 case 'KYC':
                     return <IBKycStatus ibData={ibData} />;
                 case 'Clients':
-                    return <div className="portal-placeholder">Clients Management Coming Soon</div>;
+                    return <IBClients ibData={ibData} />;
                 case 'Wallet':
                     return <IBWallet ibData={ibData} />;
                 default:
@@ -149,24 +156,24 @@ export default function IBRegistration() {
                     <div className="portal-sidebar-head">
                         <div className="portal-logo">
                             <BadgeCheck size={24} className="badge-icon" />
-                            <span>IB Portal</span>
+                            <span>{t('IB Portal')}</span>
                         </div>
                     </div>
                     <nav className="portal-nav">
                         <button className={`portal-nav-item ${activePortalTab === 'Profile' ? 'active' : ''}`} onClick={() => setActivePortalTab('Profile')}>
-                            <User size={16} /> Profile
+                            <User size={16} /> {t('Profile')}
                         </button>
                         <button className={`portal-nav-item ${activePortalTab === 'Loyalty' ? 'active' : ''}`} onClick={() => setActivePortalTab('Loyalty')}>
-                            <BadgeCheck size={16} /> Loyalty Program
+                            <BadgeCheck size={16} /> {t('Loyalty Program')}
                         </button>
                         <button className={`portal-nav-item ${activePortalTab === 'KYC' ? 'active' : ''}`} onClick={() => setActivePortalTab('KYC')}>
-                            <ShieldCheck size={16} /> KYC Status
+                            <ShieldCheck size={16} /> {t('KYC Status')}
                         </button>
                         <button className={`portal-nav-item ${activePortalTab === 'Clients' ? 'active' : ''}`} onClick={() => setActivePortalTab('Clients')}>
-                            <Users size={16} /> Clients
+                            <Users size={16} /> {t('Clients')}
                         </button>
                         <button className={`portal-nav-item ${activePortalTab === 'Wallet' ? 'active' : ''}`} onClick={() => setActivePortalTab('Wallet')}>
-                            <Wallet size={16} /> Wallet
+                            <Wallet size={16} /> {t('Wallet')}
                         </button>
                     </nav>
                 </div>
@@ -177,18 +184,17 @@ export default function IBRegistration() {
         );
     }
 
-    // Default Registration View
     return (
         <div className="ib-reg-area">
-            {notification && (
-                <div className={`notification-pop ${notification.type}`}>
-                    {notification.type === 'success' ? <Check size={18} /> : <AlertCircle size={18} />}
-                    {notification.message}
-                </div>
-            )}
             <div className="ib-form-card">
+                {notification && notification.type !== 'success' && (
+                    <div className={`notification-pop ${notification.type}`}>
+                        <AlertCircle size={18} />
+                        {notification.message}
+                    </div>
+                )}
                 <div className="ib-form-header">
-                    <h2>Become an Introducing Broker</h2>
+                    <h2>{t('Become an Introducing Broker')}</h2>
                     <div className="step-dots">
                         <div className={`dot ${currentStep === 1 ? 'active' : ''} ${currentStep > 1 ? 'done' : ''}`}>1</div>
                         <div className={`dot-line ${currentStep > 1 ? 'done' : ''}`}></div>
@@ -201,62 +207,103 @@ export default function IBRegistration() {
                         <>
                             <div className="form-row">
                                 <div className="form-group">
-                                    <label>First Name</label>
+                                    <label>{t('First Name')}</label>
                                     <input name="firstName" value={formData.firstName} onChange={handleInputChange} />
                                 </div>
                                 <div className="form-group">
-                                    <label>Last Name</label>
+                                    <label>{t('Last Name')}</label>
                                     <input name="lastName" value={formData.lastName} onChange={handleInputChange} />
                                 </div>
                             </div>
                             <div className="form-row">
                                 <div className="form-group">
-                                    <label>Email</label>
+                                    <label>{t('Email')}</label>
                                     <input disabled value={formData.email} className="disabled-input" />
                                 </div>
                                 <div className="form-group">
-                                    <label>WhatsApp Number</label>
+                                    <label>{t('WhatsApp Number')}</label>
                                     <input name="whatsappNumber" value={formData.whatsappNumber} onChange={handleInputChange} />
                                 </div>
                             </div>
                             <div className="form-group">
-                                <label>Languages Spoken</label>
-                                <input name="languages" value={formData.languages} onChange={handleInputChange} placeholder="English, Arabic, etc." />
+                                <label>{t('Languages Spoken')}</label>
+                                <input name="languages" value={formData.languages} onChange={handleInputChange} placeholder={t('English, Arabic, etc.')} />
                             </div>
-                            <button type="button" className="ib-primary-btn" onClick={() => setCurrentStep(2)}>Next</button>
+                            <button 
+                                type="button" 
+                                className="ib-primary-btn" 
+                                disabled={!formData.languages.trim()}
+                                onClick={() => setCurrentStep(2)}
+                            >
+                                {t('Next')}
+                            </button>
                         </>
                     ) : (
                         <>
                             <div className="form-group">
-                                <label>Previous Experience (Optional)</label>
+                                <label>{t('Previous Experience (Optional)')}</label>
                                 <textarea name="description" value={formData.description} onChange={handleInputChange} rows="3" />
                             </div>
                             <div className="file-upload-row">
                                 <div className="file-upload-item">
-                                    <label>Proof of Identity</label>
+                                    <label>{t('Proof of Identity')}</label>
                                     <div className="custom-upload">
                                         <input type="file" id="id-up" name="nationalIdFile" onChange={handleFileChange} />
-                                        <label htmlFor="id-up"><Upload size={16} /> {files.nationalIdFile?.name || 'Upload ID'}</label>
+                                        <label htmlFor="id-up"><Upload size={16} /> {files.nationalIdFile?.name || t('Upload ID')}</label>
                                     </div>
                                 </div>
                                 <div className="file-upload-item">
-                                    <label>Proof of Address</label>
+                                    <label>{t('Proof of Address')}</label>
                                     <div className="custom-upload">
                                         <input type="file" id="addr-up" name="addressProofFile" onChange={handleFileChange} />
-                                        <label htmlFor="addr-up"><Upload size={16} /> {files.addressProofFile?.name || 'Upload Doc'}</label>
+                                        <label htmlFor="addr-up"><Upload size={16} /> {files.addressProofFile?.name || t('Upload Doc')}</label>
                                     </div>
                                 </div>
                             </div>
                             <div className="ib-btn-row">
-                                <button type="button" className="ib-secondary-btn" onClick={() => setCurrentStep(1)}>Back</button>
+                                <button type="button" className="ib-secondary-btn" onClick={() => setCurrentStep(1)}>{t('Back')}</button>
                                 <button type="submit" className="ib-primary-btn">
-                                    {loading ? <Loader2 className="spin" size={18} /> : 'Submit Application'}
+                                    {loading ? <Loader2 className="spin" size={18} /> : t('Submit Application')}
                                 </button>
                             </div>
                         </>
                     )}
                 </form>
             </div>
+
+            {/* Success Modal */}
+            {showSuccessModal && (
+                <div className="ib-success-overlay">
+                    <div className="ib-success-card">
+                        <div className="success-icon-wrapper">
+                            <BadgeCheck size={44} className="success-badge-icon" />
+                        </div>
+                        <h3>{t('Application Submitted')}</h3>
+                        <p className="success-msg-main">{submissionData?.message}</p>
+                        
+                        <div className="success-meta-box">
+                            <div className="meta-item">
+                                <span className="m-lbl">{t('YOUR UNIQUE CODE')}</span>
+                                <strong className="m-val">{submissionData?.code || '---'}</strong>
+                            </div>
+                            <div className="meta-item">
+                                <span className="m-lbl">{t('KYC STATUS')}</span>
+                                <strong className={`m-val status-${(submissionData?.status || 'pending').toLowerCase().replace(' ', '-')}`}>
+                                    {submissionData?.status || t('Pending')}
+                                </strong>
+                            </div>
+                        </div>
+
+                        <button 
+                            className="open-portal-btn"
+                            onClick={() => window.location.reload()}
+                        >
+                            {t('Click to open IB Portal')}
+                            <ArrowRight size={18} />
+                        </button>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

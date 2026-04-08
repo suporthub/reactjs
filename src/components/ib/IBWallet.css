@@ -1,0 +1,110 @@
+/* IB Wallet - Financial Management Hub */
+.ib-wallet-wrapper { width: 100%; max-width: 820px; }
+
+.wallet-main-card-premium {
+    background: var(--surface);
+    border: 1px solid var(--border-color);
+    border-radius: 20px;
+    padding: 32px;
+    margin-bottom: 30px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.02);
+}
+
+.wallet-card-header { margin-bottom: 28px; }
+
+.wallet-selector-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 12px;
+    padding: 8px 18px;
+    background: var(--bg-color);
+    border: 1px solid var(--border-color);
+    border-radius: 30px;
+}
+
+.currency-icon-circle {
+    width: 24px; height: 24px;
+    background: #1e293b;
+    color: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center; justify-content: center;
+}
+
+[data-theme='dark'] .currency-icon-circle { background: white; color: #020617; }
+
+.wallet-selector-pill span { font-size: 0.85rem; font-weight: 700; color: var(--text-main); }
+
+.wallet-balance-core { margin-bottom: 36px; }
+
+.balance-label { font-size: 0.85rem; font-weight: 700; color: var(--text-muted); display: block; margin-bottom: 12px; }
+
+.balance-amount-row { display: flex; align-items: center; gap: 18px; }
+
+.main-balance { font-size: 2.4rem; font-weight: 800; color: var(--text-main); margin: 0; letter-spacing: -1px; }
+
+.visibility-toggle-btn { background: transparent; border: none; color: var(--text-muted); cursor: pointer; padding: 6px; }
+
+.wallet-action-footer { display: flex; align-items: center; gap: 12px; }
+
+.wallet-btn-secondary {
+    display: flex; align-items: center; gap: 10px;
+    background: #1e293b;
+    color: white;
+    padding: 12px 36px;
+    border-radius: 12px;
+    border: none;
+    font-size: 0.9rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: transform 0.2s;
+}
+
+[data-theme='dark'] .wallet-btn-secondary { background: white; color: #020617; }
+
+.wallet-btn-secondary:hover { transform: translateY(-1px); opacity: 0.9; }
+
+.withdrawal-processing-notice {
+    margin-top: 30px;
+    display: flex;
+    gap: 14px;
+    padding: 16px 20px;
+    background: rgba(var(--primary-rgb), 0.03);
+    border-radius: 12px;
+    border-left: 4px solid var(--primary);
+}
+
+.withdrawal-processing-notice p { 
+    font-size: 0.78rem; 
+    line-height: 1.5; 
+    color: var(--text-muted); 
+    margin: 0; 
+}
+.withdrawal-processing-notice strong { color: var(--text-main); }
+
+.wallet-stats-grid-premium { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+
+.stat-card-micro {
+    background: var(--surface);
+    border: 1px solid var(--border-color);
+    border-radius: 16px;
+    padding: 24px;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    transition: transform 0.2s;
+}
+
+.stat-card-micro:hover { transform: translateY(-1px); }
+
+.stat-icon {
+    width: 52px; height: 52px;
+    border-radius: 14px;
+    display: flex; align-items: center; justify-content: center;
+}
+
+.stat-icon.earned { background: rgba(16, 185, 129, 0.1); color: #10b981; }
+.stat-icon.withdrawn { background: rgba(245, 158, 11, 0.1); color: #f59e0b; }
+
+.stat-info .stat-lbl { font-size: 0.68rem; font-weight: 800; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.8px; }
+.stat-info .stat-val { font-size: 1.25rem; font-weight: 800; color: var(--text-main); display: block; margin-top: 4px; }

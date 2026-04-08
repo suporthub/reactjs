@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Eye, EyeOff, Globe, ChevronDown, Check, X, ArrowRight } from 'lucide-react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import countriesLib, { getCountriesForLanguage } from '../../utils/countries';
 import './login.css';
 import { getDeviceFingerprint } from '../../utils/fingerprint';
@@ -269,6 +269,7 @@ const translations = {
 
 export default function Signup() {
     const navigate = useNavigate();
+    const { referralCode } = useParams();
     const [showPassword, setShowPassword] = useState(false);
     const [lang, setLang] = useState('english');
     const [showLangMenu, setShowLangMenu] = useState(false);
@@ -301,6 +302,13 @@ export default function Signup() {
 
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
+
+    useEffect(() => {
+        if (referralCode) {
+            setLiveData(prev => ({ ...prev, referralId: referralCode }));
+            setDemoData(prev => ({ ...prev, referralId: referralCode }));
+        }
+    }, [referralCode]);
 
     // OTP Related States
     const [showOtpModal, setShowOtpModal] = useState(false);
@@ -383,7 +391,8 @@ export default function Signup() {
                 country: formData.countryISO2,
                 groupName: formData.accountType.charAt(0).toUpperCase() + formData.accountType.slice(1),
                 currency: "USD",
-                leverage: 100
+                leverage: 100,
+                referralCode: formData.referralId || ""
             };
 
             const fingerprint = await getDeviceFingerprint();
@@ -608,6 +617,13 @@ export default function Signup() {
                     <h2>{t.welcome}</h2>
                     <p className="login-subtitle">{t.subtitle}</p>
 
+                    {referralCode && (
+                        <div className="referral-applied-badge">
+                            <Check size={14} />
+                            <span>{t.referralId} {referralCode} Applied</span>
+                        </div>
+                    )}
+
                     <form onSubmit={handleSignup}>
                         <div className="form-group">
                             <label>{t.email}</label>
@@ -725,7 +741,9 @@ export default function Signup() {
                                     type="text"
                                     placeholder={t.referralPlaceholder}
                                     value={formData.referralId}
-                                    onChange={(e) => setFormData({ ...formData, referralId: e.target.value })}
+                                    onChange={(e) => !referralCode && setFormData({ ...formData, referralId: e.target.value })}
+                                    readOnly={!!referralCode}
+                                    className={referralCode ? 'readonly-input' : ''}
                                 />
                             </div>
                         )}

@@ -87,7 +87,200 @@
     background: transparent;
 }
 
-/* Profile Hero Section */
+/* IB Registration Area - Ultra High Density Step 2 */
+.ib-reg-area {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    background: var(--bg-color);
+    min-height: calc(100vh - 80px);
+    width: 100%;
+}
+
+.ib-form-card {
+    width: 100%;
+    max-width: 620px;
+    /* Revised width for better balance */
+    background: var(--surface);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 32px 36px;
+    /* Increased spatial breathing */
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.03);
+}
+
+.ib-form-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.ib-form-header h2 {
+    font-size: 1.15rem;
+    font-weight: 800;
+    color: var(--text-main);
+    margin: 0;
+}
+
+.step-dots {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.dot {
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    background: var(--bg-color);
+    border: 1px solid var(--border-color);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.72rem;
+    font-weight: 800;
+    color: var(--text-muted);
+}
+
+.dot.active {
+    border-color: var(--primary);
+    color: var(--primary);
+}
+
+.dot.done {
+    background: var(--primary);
+    color: white;
+    border-color: var(--primary);
+}
+
+.dot-line {
+    width: 16px;
+    height: 1px;
+    background: var(--border-color);
+}
+
+.ib-signup-form .form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+    margin-bottom: 10px;
+}
+
+.ib-signup-form .form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    margin-bottom: 12px;
+}
+
+.ib-signup-form label {
+    font-size: 0.65rem;
+    font-weight: 800;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.ib-signup-form input,
+.ib-signup-form textarea {
+    background: var(--bg-color);
+    border: 1px solid var(--border-color);
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-size: 0.8rem;
+    color: var(--text-main);
+    outline: none;
+}
+
+.ib-signup-form textarea {
+    resize: none;
+    min-height: 60px;
+    /* Reduced col size */
+}
+
+.ib-primary-btn {
+    width: 100%;
+    padding: 10px;
+    /* Reduced button size */
+    background: var(--primary);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    font-weight: 800;
+    cursor: pointer;
+    margin-top: 5px;
+}
+
+.ib-primary-btn:disabled {
+    background: #cbd5e1;
+    cursor: not-allowed;
+}
+
+.ib-btn-row {
+    display: grid;
+    grid-template-columns: 80px 1fr;
+    /* Reduced col size */
+    gap: 10px;
+    margin-top: 8px;
+}
+
+.ib-secondary-btn {
+    padding: 10px;
+    /* Reduced button size */
+    background: var(--bg-color);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    color: var(--text-main);
+    font-size: 0.82rem;
+    font-weight: 800;
+    cursor: pointer;
+}
+
+/* Hidden Real File Inputs - Critical Fix */
+.custom-upload input[type="file"] {
+    display: none !important;
+}
+
+.file-upload-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+    margin-bottom: 15px;
+}
+
+.custom-upload label {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 12px;
+    /* Reduced upload nodes */
+    background: rgba(0, 0, 0, 0.01);
+    border: 1px dashed var(--border-color);
+    border-radius: 8px;
+    cursor: pointer;
+    color: var(--text-muted);
+    transition: all 0.2s;
+}
+
+.custom-upload label:hover {
+    border-color: var(--primary);
+    background: rgba(var(--primary-rgb), 0.02);
+}
+
+.custom-upload label span {
+    font-size: 0.68rem;
+    font-weight: 800;
+    color: var(--text-main);
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+}
+
+/* Dashboard Sections */
 .profile-hero-section {
     display: grid;
     grid-template-columns: 1.5fr 1fr;
@@ -96,82 +289,6 @@
     margin-bottom: 24px;
 }
 
-@media (max-width: 1024px) {
-    .profile-hero-section {
-        grid-template-columns: 1fr;
-    }
-}
-
-.hero-promo-card {
-    background: linear-gradient(135deg, var(--primary) 0%, #4338ca 100%);
-    border-radius: 16px;
-    display: flex;
-    overflow: hidden;
-    position: relative;
-    box-shadow: 0 8px 30px rgba(var(--primary-rgb), 0.12);
-    min-height: 190px;
-}
-
-.promo-text-side {
-    flex: 1;
-    padding: 24px 32px;
-    z-index: 2;
-    color: white;
-}
-
-.promo-tag {
-    display: inline-block;
-    padding: 2px 8px;
-    background: rgba(255, 255, 255, 0.1);
-    border-radius: 4px;
-    font-size: 0.65rem;
-    font-weight: 800;
-    text-transform: uppercase;
-    margin-bottom: 8px;
-}
-
-.promo-text-side h1 {
-    font-size: 1.4rem;
-    font-weight: 800;
-    margin-bottom: 12px;
-    line-height: 1.2;
-}
-
-.promo-text-side p {
-    font-size: 0.78rem;
-    opacity: 0.85;
-    max-width: 320px;
-    line-height: 1.4;
-    margin-bottom: 18px;
-}
-
-.promo-cta-btn {
-    padding: 6px 18px;
-    background: #ffaa1d;
-    color: #1e293b;
-    border: none;
-    border-radius: 6px;
-    font-size: 0.75rem;
-    font-weight: 800;
-    cursor: pointer;
-}
-
-.promo-img-side {
-    position: relative;
-    width: 200px;
-}
-
-.promo-img-side img {
-    position: absolute;
-    bottom: -10px;
-    right: 0px;
-    width: 140%;
-    height: auto;
-    object-fit: contain;
-    filter: drop-shadow(0 15px 30px rgba(0,0,0,0.3));
-}
-
-/* User Info Card Centered Theme */
 .user-info-status-card.centered-theme {
     background: var(--surface);
     border: 1px solid var(--border-color);
@@ -182,80 +299,8 @@
     align-items: center;
     justify-content: center;
     text-align: center;
-    width: 100%;
 }
 
-.avatar-large-centered {
-    width: 58px; height: 58px;
-    background: linear-gradient(135deg, var(--primary) 0%, #4338ca 100%);
-    color: white;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    margin-bottom: 12px;
-    box-shadow: 0 6px 15px rgba(var(--primary-rgb), 0.1);
-    border: 3px solid var(--surface);
-}
-
-.user-identity-core h3 {
-    font-size: 1.05rem;
-    font-weight: 800;
-    color: var(--text-main);
-    margin-bottom: 6px;
-}
-
-.ib-level-medal-v2 {
-    display: inline-flex;
-    align-items: center;
-    gap: 5px;
-    background: rgba(var(--primary-rgb), 0.08);
-    color: var(--primary);
-    padding: 3px 10px;
-    border-radius: 4px;
-    font-size: 0.6rem;
-    font-weight: 800;
-    text-transform: uppercase;
-    margin-bottom: 16px;
-}
-
-.partner-details-stack {
-    width: 100%;
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-}
-
-.detail-row-stack {
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-}
-
-.detail-row-stack .lbl {
-    font-size: 0.62rem;
-    font-weight: 700;
-    color: var(--text-muted);
-}
-
-.detail-row-stack .val {
-    font-size: 0.8rem;
-    font-weight: 800;
-    color: var(--text-main);
-}
-
-.val-status-pill {
-    display: inline-block;
-    padding: 2px 8px;
-    background: #f59e0b;
-    color: white;
-    border-radius: 4px;
-    font-size: 0.62rem;
-    font-weight: 800;
-    margin: 2px auto 0 auto;
-}
-
-/* Referral Recruitment Hub */
 .referral-recruitment-hub {
     background: var(--surface);
     border: 1px solid var(--border-color);
@@ -266,192 +311,16 @@
     box-sizing: border-box;
 }
 
-.hub-header { margin-bottom: 24px; }
-.hub-header h2 { font-size: 1.1rem; font-weight: 800; color: var(--text-main); margin-bottom: 4px; }
-.hub-header p { font-size: 0.78rem; color: var(--text-muted); }
-.hub-core-grid { display: flex; align-items: flex-start; gap: 30px; width: 100%; }
-
-@media (max-width: 900px) { .hub-core-grid { flex-direction: column; gap: 20px; } }
-
-.recruitment-node { flex: 1; min-width: 0; display: flex; flex-direction: column; }
-.node-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; min-height: 28px; }
-.node-lbl { font-size: 0.65rem; font-weight: 800; color: var(--text-muted); letter-spacing: 0.8px; line-height: 1; }
-.code-badge-premium { padding: 4px 12px; background: rgba(var(--primary-rgb), 0.05); border: 1px dashed var(--primary); border-radius: 6px; font-family: 'Courier New', Courier, monospace !important; font-weight: 800; color: var(--primary); font-size: 0.9rem; }
-.recruitment-node label { font-size: 0.72rem; font-weight: 700; color: var(--text-main); margin-bottom: 8px; }
-.link-copy-field, .email-invite-field { display: flex; gap: 10px; width: 100%; }
-.link-copy-field input, .email-invite-field input { flex: 1; min-width: 0; background: rgba(0, 0, 0, 0.02); border: 1px solid var(--border-color); padding: 10px 14px; border-radius: 8px; font-size: 0.8rem; outline: none; color: var(--text-main); }
-.copy-action-btn { display: flex; align-items: center; gap: 8px; padding: 0 16px; background: var(--primary); color: white; border: none; border-radius: 8px; font-size: 0.75rem; font-weight: 800; cursor: pointer; transition: transform 0.2s; min-width: 90px; flex-shrink: 0; }
-.social-sharing-footer { display: flex; align-items: center; gap: 12px; margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--border-color); }
-.social-sharing-footer span { font-size: 0.62rem; font-weight: 800; color: var(--text-muted); }
-.sharing-icons-row { display: flex; gap: 8px; }
-.social-icon { width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: none; cursor: pointer; transition: all 0.25s; color: white; }
-.social-icon.wa { background: #25d366; }
-.social-icon.fb { background: #1877f2; }
-.social-icon.tw { background: #1da1f2; }
-.social-icon.ln { background: #0a66c2; }
-.social-icon.ig { background: linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%); }
-.send-invite-btn { padding: 0 18px; background: var(--primary); color: white; border: none; border-radius: 8px; font-size: 0.75rem; font-weight: 800; cursor: pointer; transition: all 0.2s; flex-shrink: 0; }
-.invite-status-msg { margin-top: 10px; padding: 6px 12px; border-radius: 6px; font-size: 0.7rem; font-weight: 800; }
-.invite-status-msg.success { background: rgba(16, 185, 129, 0.1); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.2); }
-.invite-status-msg.error { background: rgba(239, 68, 68, 0.1); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.2); }
-
-/* IB Wallet Hub - Premium Styles */
-.ib-wallet-wrapper { width: 100%; max-width: 800px; }
-
-.wallet-main-card-premium {
-    background: var(--surface);
-    border: 1px solid var(--border-color);
-    border-radius: 20px;
-    padding: 30px;
-    margin-bottom: 30px;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.02);
+.ib-wallet-wrapper {
+    width: 100%;
+    max-width: 800px;
 }
 
-.wallet-card-header { margin-bottom: 24px; }
-
-.wallet-selector-pill {
-    display: inline-flex;
-    align-items: center;
-    gap: 12px;
-    padding: 6px 16px;
-    background: var(--bg-color);
-    border: 1px solid var(--border-color);
-    border-radius: 30px;
-    cursor: pointer;
+.ib-kyc-status-view {
+    width: 100%;
+    max-width: 800px;
 }
 
-.currency-icon-circle {
-    width: 24px; height: 24px;
-    background: #1e293b;
-    color: white;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+.loyalty-program-view {
+    width: 100%;
 }
-
-[data-theme='dark'] .currency-icon-circle { background: white; color: #020617; }
-
-.wallet-selector-pill span { font-size: 0.8rem; font-weight: 700; color: var(--text-main); }
-
-.wallet-balance-core { margin-bottom: 32px; }
-
-.balance-label { font-size: 0.85rem; font-weight: 700; color: var(--text-muted); display: block; margin-bottom: 10px; }
-
-.balance-amount-row { display: flex; align-items: center; gap: 16px; }
-
-.main-balance { font-size: 2.1rem; font-weight: 800; color: var(--text-main); margin: 0; letter-spacing: -1px; }
-
-.visibility-toggle-btn { background: transparent; border: none; color: var(--text-muted); cursor: pointer; padding: 4px; }
-
-.growth-indicator-pill {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    padding: 4px 12px;
-    background: #10b981;
-    color: white;
-    border-radius: 30px;
-    font-size: 0.72rem;
-    font-weight: 800;
-    margin-left: 10px;
-}
-
-.wallet-action-footer { display: flex; align-items: center; gap: 12px; }
-
-.wallet-btn-primary {
-    display: flex; align-items: center; gap: 10px;
-    background: #1e293b;
-    color: white;
-    padding: 10px 24px;
-    border-radius: 12px;
-    border: none;
-    font-size: 0.85rem;
-    font-weight: 700;
-    cursor: pointer;
-}
-
-[data-theme='dark'] .wallet-btn-primary { background: white; color: #020617; }
-
-.wallet-btn-secondary {
-    display: flex; align-items: center; gap: 10px;
-    background: #1e293b;
-    color: white;
-    padding: 12px 32px;
-    border-radius: 12px;
-    border: none;
-    font-size: 0.85rem;
-    font-weight: 700;
-    cursor: pointer;
-}
-
-[data-theme='dark'] .wallet-btn-secondary { background: white; color: #020617; }
-
-.withdrawal-processing-notice {
-    margin-top: 24px;
-    display: flex;
-    gap: 12px;
-    padding: 12px 16px;
-    background: rgba(var(--primary-rgb), 0.03);
-    border-radius: 10px;
-    border-left: 3px solid var(--primary);
-}
-
-.withdrawal-processing-notice svg { color: var(--primary); flex-shrink: 0; margin-top: 2px; }
-.withdrawal-processing-notice p { 
-    font-size: 0.75rem; 
-    line-height: 1.4; 
-    color: var(--text-muted); 
-    margin: 0; 
-    font-style: italic;
-}
-.withdrawal-processing-notice strong { color: var(--text-main); text-transform: capitalize; }
-
-/* Wallet Performance Grid */
-.wallet-stats-grid-premium { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
-
-.stat-card-micro {
-    background: var(--surface);
-    border: 1px solid var(--border-color);
-    border-radius: 16px;
-    padding: 20px;
-    display: flex;
-    align-items: center;
-    gap: 16px;
-}
-
-.stat-icon {
-    width: 46px; height: 46px;
-    border-radius: 12px;
-    display: flex; align-items: center; justify-content: center;
-}
-
-.stat-icon.earned { background: rgba(16, 185, 129, 0.1); color: #10b981; }
-.stat-icon.withdrawn { background: rgba(245, 158, 11, 0.1); color: #f59e0b; }
-
-.stat-info .stat-lbl { font-size: 0.65rem; font-weight: 800; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; }
-.stat-info .stat-val { font-size: 1.15rem; font-weight: 800; color: var(--text-main); display: block; margin-top: 2px; }
-
-/* Loyalty Program Roadmap */
-.loyalty-program-view { width: 100%; }
-.loyalty-program-block { margin-bottom: 40px; }
-.program-header-premium { margin-bottom: 24px; }
-.program-header-premium .title-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
-.program-header-premium h3 { font-size: 1.2rem; font-weight: 800; color: var(--text-main); }
-.program-dates { display: flex; align-items: center; gap: 6px; font-size: 0.75rem; color: var(--text-muted); font-weight: 700; }
-.loyalty-roadmap { display: flex; flex-direction: column; gap: 4px; }
-.roadmap-node { display: flex; gap: 20px; }
-.level-indicator { display: flex; flex-direction: column; align-items: center; padding-top: 4px; }
-.lvl-dot { width: 32px; height: 32px; border-radius: 50%; background: var(--surface-2); border: 2px solid var(--border-color); display: flex; align-items: center; justify-content: center; font-size: 0.8rem; font-weight: 800; color: var(--text-muted); z-index: 2; transition: all 0.3s; }
-.lvl-connector { width: 2px; flex: 1; background: var(--border-color); margin: 4px 0; }
-.roadmap-node.current .lvl-dot { border-color: var(--primary); color: var(--primary); box-shadow: 0 0 12px rgba(var(--primary-rgb), 0.2); }
-.roadmap-node.completed .lvl-dot { background: var(--primary); border-color: var(--primary); color: white; }
-.roadmap-card { flex: 1; background: var(--surface); border: 1px solid var(--border-color); border-radius: 12px; padding: 16px 20px; margin-bottom: 20px; transition: all 0.2s; }
-.task-type-badge { display: flex; align-items: center; gap: 6px; font-size: 0.65rem; font-weight: 800; text-transform: uppercase; color: var(--text-muted); }
-.reward-tag-premium { display: flex; align-items: center; gap: 5px; padding: 4px 10px; background: rgba(16, 185, 129, 0.08); color: #10b981; border-radius: 6px; font-size: 0.72rem; font-weight: 800; }
-.roadmap-card .card-body h4 { font-size: 0.95rem; font-weight: 800; color: var(--text-main); margin-bottom: 15px; }
-.roadmap-progress-wrap { background: rgba(0,0,0,0.01); padding: 12px; border-radius: 8px; border: 1px solid var(--border-color); }
-.progress-labels-refined { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
-.status-pill.ongoing { background: rgba(59, 130, 246, 0.1); color: #3b82f6; }
-.roadmap-bar { height: 4px; background: var(--border-color); border-radius: 2px; overflow: hidden; }
-.bar-fill { height: 100%; background: var(--primary); transition: width 0.6s ease; }

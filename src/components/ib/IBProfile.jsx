@@ -1,4 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
+import './IBProfile.css';
 import { 
     Copy, Wallet, TrendingUp, UserCheck, Users, 
     ChevronRight, CreditCard, ShieldCheck, BadgeCheck,
@@ -9,6 +11,7 @@ import {
 export default function IBProfile({ ibData }) {
     if (!ibData) return null;
 
+    const { t } = useTranslation();
     const [copied, setCopied] = useState(false);
     const [inviteEmail, setInviteEmail] = useState('');
     const [inviteStatus, setInviteStatus] = useState({ type: '', message: '' });
@@ -42,13 +45,13 @@ export default function IBProfile({ ibData }) {
             });
 
             if (response.ok) {
-                setInviteStatus({ type: 'success', message: 'Invitation sent successfully!' });
+                setInviteStatus({ type: 'success', message: t('Invitation sent successfully!') });
                 setInviteEmail('');
             } else {
-                setInviteStatus({ type: 'error', message: 'Failed to send invitation. Please try again.' });
+                setInviteStatus({ type: 'error', message: t('Failed to send invitation. Please try again.') });
             }
         } catch (err) {
-            setInviteStatus({ type: 'error', message: 'Network error. Could not send invitation.' });
+            setInviteStatus({ type: 'error', message: t('Network error. Could not send invitation.') });
         } finally {
             setIsInviting(false);
             setTimeout(() => setInviteStatus({ type: '', message: '' }), 4000);
@@ -56,35 +59,49 @@ export default function IBProfile({ ibData }) {
     };
 
     const shareOnSocial = (platform) => {
-        const text = `Join my trading network on LiveFXHub! Use my referral link: `;
-        const url = encodeURIComponent(referralLink);
-        let shareUrl = '';
-
         switch (platform) {
-            case 'whatsapp': shareUrl = `https://wa.me/?text=${encodeURIComponent(text + referralLink)}`; break;
+            case 'whatsapp': shareUrl = `https://wa.me/?text=${encodeURIComponent(t('Join my trading network on LiveFXHub! Use my referral link: ') + referralLink)}`; break;
             case 'facebook': shareUrl = `https://www.facebook.com/sharer/sharer.php?u=${url}`; break;
-            case 'twitter': shareUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${url}`; break;
+            case 'twitter': shareUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(t('Join my trading network on LiveFXHub! Use my referral link: '))}&url=${url}`; break;
             case 'linkedin': shareUrl = `https://www.linkedin.com/sharing/share-offsite/?url=${url}`; break;
             case 'instagram': 
-                alert('Instagram sharing requires manual link placement. Link copied!');
+                alert(t('Instagram sharing requires manual link placement. Link copied!'));
                 handleCopy(); 
                 return;
         }
         if (shareUrl) window.open(shareUrl, '_blank');
     };
 
+    const banners = [
+        '/ib_banner.png',
+        '/live_hero_v2.png',
+        '/demo_hero_v2.png'
+    ];
+    
+    const [currentBannerIndex, setCurrentBannerIndex] = useState(0);
+
+    useEffect(() => {
+        const interval = setInterval(() => {
+            setCurrentBannerIndex((prevIndex) => (prevIndex + 1) % banners.length);
+        }, 20000); // 20 seconds
+        return () => clearInterval(interval);
+    }, [banners.length]);
+
     return (
         <div className="ib-profile-dashboard">
             <div className="profile-hero-section">
-                <div className="hero-promo-card">
-                    <div className="promo-text-side">
-                        <span className="promo-tag">Partner Program</span>
-                        <h1>Build your team and earn more commissions</h1>
-                        <p>Invite traders to LiveFXHub and earn up to $3.5 per lot. Track your performance and scale your network with our advanced IB tools.</p>
-                        <button className="promo-cta-btn">Learn More</button>
-                    </div>
-                    <div className="promo-img-side">
-                        <img src="/brain/85cded9e-f241-41e5-b12a-4ebf4a0934e0/ib_partnership_hero_illustration_1775042320555.png" alt="Partnership" />
+                <div className="hero-promo-banner-main">
+                    <img key={currentBannerIndex} src={banners[currentBannerIndex]} alt={`Partner Program Banner ${currentBannerIndex + 1}`} className="fade-in-banner" />
+                    
+                    <div className="promo-carousel-dots">
+                        {banners.map((_, index) => (
+                            <button
+                                key={index}
+                                className={`promo-car-dot ${index === currentBannerIndex ? 'active' : ''}`}
+                                onClick={() => setCurrentBannerIndex(index)}
+                                aria-label={`Go to slide ${index + 1}`}
+                            />
+                        ))}
                     </div>
                 </div>
 
@@ -96,22 +113,24 @@ export default function IBProfile({ ibData }) {
                         <h3>{fullName}</h3>
                         <div className="ib-level-medal-v2">
                             <BadgeCheck size={14} />
-                            <span>LEVEL {ibData?.ib_level || 1} PARTNER</span>
+                            <span>{t('LEVEL')} {ibData?.ib_level || 1} {t('PARTNER')}</span>
                         </div>
                     </div>
 
                     <div className="partner-details-stack">
                         <div className="detail-row-stack">
-                            <span className="lbl">Email Address</span>
-                            <span className="val">{userData?.email || 'N/A'}</span>
+                            <span className="lbl">{t('Email Address')}</span>
+                            <span className="val">{userData?.email || t('N/A')}</span>
                         </div>
                         <div className="detail-row-stack">
-                            <span className="lbl">Mobile Number</span>
-                            <span className="val">{ibData?.whatsapp_number || 'N/A'}</span>
+                            <span className="lbl">{t('Mobile Number')}</span>
+                            <span className="val">{ibData?.whatsapp_number || t('N/A')}</span>
                         </div>
                         <div className="detail-row-stack">
-                            <span className="lbl">KYC Status</span>
-                            <span className="val-status-pill">{ibData?.kyc_status?.toUpperCase() || 'NONE'}</span>
+                            <span className="lbl">{t('KYC Status')}</span>
+                            <span className={`val-status-pill ${ibData?.kyc_status?.toLowerCase()}`}>
+                                {t(ibData?.kyc_status?.toUpperCase() || 'NONE')}
+                            </span>
                         </div>
                     </div>
                 </div>
@@ -119,27 +138,27 @@ export default function IBProfile({ ibData }) {
 
             <div className="referral-recruitment-hub">
                 <div className="hub-header">
-                    <h2>Referral Program</h2>
-                    <p>Use your unique link to recruit new traders and earn institutional-grade commissions.</p>
+                    <h2>{t('Referral Program')}</h2>
+                    <p>{t('Use your unique link to recruit new traders and earn institutional-grade commissions.')}</p>
                 </div>
                 
                 <div className="hub-core-grid">
                     <div className="recruitment-node">
                         <div className="node-head">
-                            <span className="node-lbl">YOUR UNIQUE CODE</span>
-                            <div className="code-badge-premium">{referralCode || '---'}</div>
+                            <span className="node-lbl">{t('YOUR UNIQUE CODE')}</span>
+                            <div className="code-badge-premium">{referralCode || t('---')}</div>
                         </div>
-                        <label>Your Referral Link</label>
+                        <label>{t('Your Referral Link')}</label>
                         <div className="link-copy-field">
                             <input type="text" readOnly value={referralLink} />
                             <button className={`copy-action-btn ${copied ? 'copied' : ''}`} onClick={handleCopy}>
                                 {copied ? <Check size={18} /> : <Copy size={18} />}
-                                <span>{copied ? 'Copied' : 'Copy'}</span>
+                                <span>{copied ? t('Copied') : t('Copy')}</span>
                             </button>
                         </div>
                         
                         <div className="social-sharing-footer">
-                            <span>QUICK SHARE:</span>
+                            <span>{t('QUICK SHARE:')}</span>
                             <div className="sharing-icons-row">
                                 <button onClick={() => shareOnSocial('whatsapp')} className="social-icon wa" title="Share on WhatsApp"><MessageCircle size={16} /></button>
                                 <button onClick={() => shareOnSocial('facebook')} className="social-icon fb" title="Share on Facebook"><Facebook size={16} /></button>
@@ -152,13 +171,13 @@ export default function IBProfile({ ibData }) {
 
                     <div className="recruitment-node">
                         <div className="node-head">
-                            <span className="node-lbl">RECRUIT TRADERS</span>
+                            <span className="node-lbl">{t('RECRUIT TRADERS')}</span>
                         </div>
-                        <label>Direct Email Invite</label>
+                        <label>{t('Direct Email Invite')}</label>
                         <div className="email-invite-field">
                             <input 
                                 type="email" 
-                                placeholder="client@example.com" 
+                                placeholder={t('client@example.com')} 
                                 value={inviteEmail}
                                 onChange={(e) => setInviteEmail(e.target.value)}
                             />
@@ -167,7 +186,7 @@ export default function IBProfile({ ibData }) {
                                 onClick={handleSendInvite}
                                 disabled={isInviting || !inviteEmail}
                             >
-                                {isInviting ? 'Sending...' : 'Send Invite'}
+                                {isInviting ? t('Sending...') : t('Send Invite')}
                             </button>
                         </div>
                         {inviteStatus.message && (
@@ -175,7 +194,7 @@ export default function IBProfile({ ibData }) {
                                 {inviteStatus.message}
                             </div>
                         )}
-                        <p className="invite-disclaimer">Recruit via direct email to ensure high conversion rates.</p>
+                        <p className="invite-disclaimer">{t('Recruit via direct email to ensure high conversion rates.')}</p>
                     </div>
                 </div>
             </div>
@@ -184,7 +203,7 @@ export default function IBProfile({ ibData }) {
                 <div className="rejection-notice-premium">
                     <ShieldCheck size={24} />
                     <div className="rejection-text">
-                        <strong>Partnership Application Update</strong>
+                        <strong>{t('Partnership Application Update')}</strong>
                         <p>{ibData.rejection_reason}</p>
                     </div>
                 </div>

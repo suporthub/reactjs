@@ -168,33 +168,23 @@ export default function Security() {
     }
   };
 
-  const handleDisable2FA = async () => {
-    const codeStr = otpDisableValue.join('');
-    if (codeStr.length !== 6) {
-      showStatus('Please enter the 6-digit code', 'error');
-      return;
-    }
-
+  const handleTerminateSession = async (sessionId) => {
     setLoading(true);
     const token = localStorage.getItem('portalToken');
     try {
-      const response = await fetch('https://v3.livefxhub.com:8444/api/auth/totp', {
+      const response = await fetch(`https://v3.livefxhub.com:8444/api/live/sessions/${sessionId}`, {
         method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({ code: codeStr })
+        headers: { 
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
       });
       const result = await response.json();
       if (result.success || result.status === 'success') {
-        showStatus('Two-factor authentication disabled successfully');
-        const updatedUser = { ...userData, is2faEnabled: false };
-        localStorage.setItem('userData', JSON.stringify(updatedUser));
-        setShowDisable2FAModal(false);
-        setOtpDisableValue(['', '', '', '', '', '']);
+        showStatus('Session terminated successfully');
+        setSessionsData(prev => prev.filter(s => s.id !== sessionId));
       } else {
-        showStatus(result.message || 'Verification failed', 'error');
+        showStatus(result.message || 'Failed to terminate session', 'error');
       }
     } catch (error) {
       showStatus('Network error', 'error');
@@ -378,7 +368,14 @@ export default function Security() {
                       </div>
                     </div>
                     {!session.isCurrent && (
-                      <button className="session-logout-btn" onClick={() => showStatus('Session term...')}><LogOut size={16} /><span>Logout</span></button>
+                      <button 
+                        className="session-logout-btn" 
+                        onClick={() => handleTerminateSession(session.id)}
+                        disabled={loading}
+                      >
+                        <LogOut size={16} />
+                        <span>{loading ? '...' : 'Logout'}</span>
+                      </button>
                     )}
                   </div>
                 ))}

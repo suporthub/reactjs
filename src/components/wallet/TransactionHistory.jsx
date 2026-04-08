@@ -1,5 +1,5 @@
 import React from 'react';
-import { Search, RotateCcw } from 'lucide-react';
+import { Search } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 export default function TransactionHistory() {
@@ -12,10 +12,6 @@ export default function TransactionHistory() {
                 </div>
                 <h2>{t('No transaction')}</h2>
                 <p>{t('No transaction desc')}</p>
-                <button className="reset-filters-btn">
-                    <RotateCcw size={18} />
-                    {t('Reset filters')}
-                </button>
             </div>
         </div>
     );

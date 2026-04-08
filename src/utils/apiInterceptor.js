@@ -109,11 +109,16 @@ window.fetch = async (...args) => {
           const refreshResponse = await originalFetch('https://v3.livefxhub.com:8444/api/live/refresh-token', {
             method: 'POST',
             headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${currentToken}`
+              'Content-Type': 'application/json'
             },
             body: JSON.stringify({ refreshToken })
           });
+
+          if (!refreshResponse.ok) {
+            isRefreshing = false;
+            onRefreshed(null);
+            return;
+          }
 
           const refreshData = await refreshResponse.json();
 

@@ -1,0 +1,379 @@
+/* IB Profile - High-Density Proportional Balance */
+.profile-hero-section {
+    display: grid;
+    grid-template-columns: 1.6fr 1fr;
+    gap: 20px;
+    width: 100%;
+    margin-bottom: 24px;
+}
+
+@media (max-width: 1100px) {
+    .profile-hero-section {
+        grid-template-columns: 1fr;
+    }
+}
+
+.hero-promo-banner-main {
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--surface);
+    height: 320px;
+    /* Fixed height to match old card size */
+    width: 100%;
+    position: relative;
+}
+
+.hero-promo-banner-main img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+.fade-in-banner {
+    animation: bannerFadeIn 0.8s ease-in-out;
+}
+
+@keyframes bannerFadeIn {
+    from {
+        opacity: 0.2;
+        transform: scale(1.02);
+    }
+
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+/* Carousel dots overlay */
+.promo-carousel-dots {
+    position: absolute;
+    bottom: 15px;
+    display: flex;
+    gap: 8px;
+    justify-content: center;
+    width: 100%;
+    z-index: 10;
+}
+
+.promo-car-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.5);
+    border: none;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    padding: 0;
+}
+
+.promo-car-dot.active {
+    background: #ffaa1d;
+    transform: scale(1.2);
+}
+
+/* Old promo card sides removed as we use a single banner image now */
+
+/* User Identity Card - Centered Precision */
+.user-info-status-card.centered-theme {
+    background: var(--surface);
+    border: 1px solid var(--border-color);
+    border-radius: 16px;
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    width: 100%;
+}
+
+.avatar-large-centered {
+    width: 54px;
+    height: 54px;
+    background: linear-gradient(135deg, var(--primary) 0%, #4338ca 100%);
+    color: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 15px auto;
+    box-shadow: 0 4px 12px rgba(var(--primary-rgb), 0.15);
+}
+
+.user-identity-core {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.user-identity-core h3 {
+    font-size: 1.1rem;
+    font-weight: 800;
+    color: var(--text-main);
+    margin: 0 0 8px 0;
+}
+
+.ib-level-medal-v2 {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(var(--primary-rgb), 0.06);
+    color: var(--primary);
+    padding: 4px 12px;
+    border-radius: 4px;
+    font-size: 0.6rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    margin-bottom: 20px;
+}
+
+.partner-details-stack {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.detail-row-stack {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+}
+
+.detail-row-stack .lbl {
+    font-size: 0.65rem;
+    font-weight: 700;
+    color: var(--text-muted);
+}
+
+.detail-row-stack .val {
+    font-size: 0.85rem;
+    font-weight: 800;
+    color: var(--text-main);
+}
+
+.val-status-pill {
+    width: 100%;
+    padding: 6px;
+    background: #f59e0b; /* default pending */
+    color: white;
+    border-radius: 8px;
+    font-size: 0.72rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    margin-top: 5px;
+}
+
+.val-status-pill.approved, 
+.val-status-pill.verified, 
+.val-status-pill.active { 
+    background: #10b981; 
+}
+
+.val-status-pill.rejected { 
+    background: #ef4444; 
+}
+
+/* Referral Hub - Enhanced Row Coordination */
+.referral-recruitment-hub {
+    background: var(--surface);
+    border: 1px solid var(--border-color);
+    border-radius: 16px;
+    padding: 24px;
+    margin-bottom: 24px;
+}
+
+.hub-header {
+    margin-bottom: 20px;
+}
+
+.hub-header h2 {
+    font-size: 1.1rem;
+    font-weight: 800;
+    color: var(--text-main);
+    margin-bottom: 4px;
+}
+
+.hub-header p {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    opacity: 0.8;
+}
+
+.hub-core-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 32px;
+    width: 100%;
+    align-items: stretch;
+    /* Stretch to keep equal height row feel */
+}
+
+@media (max-width: 950px) {
+    .hub-core-grid {
+        grid-template-columns: 1fr;
+        gap: 20px;
+    }
+}
+
+.recruitment-node {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+}
+
+.node-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+    min-height: 28px;
+}
+
+.node-lbl {
+    font-size: 0.65rem;
+    font-weight: 800;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+}
+
+.code-badge-premium {
+    padding: 3px 10px;
+    background: rgba(var(--primary-rgb), 0.05);
+    border: 1px dashed var(--primary);
+    border-radius: 6px;
+    font-family: monospace !important;
+    font-weight: 800;
+    color: var(--primary);
+    font-size: 0.75rem;
+}
+
+.recruitment-node label {
+    font-size: 0.7rem;
+    font-weight: 800;
+    color: var(--text-main);
+    margin-bottom: 10px;
+    display: block;
+}
+
+.link-copy-field,
+.email-invite-field {
+    display: flex;
+    gap: 12px;
+    width: 100%;
+}
+
+.link-copy-field input,
+.email-invite-field input {
+    flex: 1;
+    width: 60%;
+    /* Limit size to avoid stretching */
+    background: var(--bg-color);
+    border: 1px solid var(--border-color);
+    padding: 10px 14px;
+    border-radius: 8px;
+    font-size: 0.78rem;
+    color: var(--text-main);
+    outline: none;
+}
+
+.copy-action-btn,
+.send-invite-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 0 16px;
+    background: var(--primary);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 0.7rem;
+    font-weight: 800;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.copy-action-btn:hover,
+.send-invite-btn:hover {
+    opacity: 0.9;
+    transform: translateY(-1px);
+}
+
+.recruitment-sub-note {
+    font-size: 0.65rem;
+    color: var(--text-muted);
+    margin-top: 10px;
+    line-height: 1.4;
+}
+
+.social-sharing-footer {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-top: 15px;
+    padding-top: 15px;
+    border-top: 1px solid var(--border-color);
+}
+
+.social-sharing-footer span {
+    font-size: 0.62rem;
+    font-weight: 800;
+    color: var(--text-muted);
+    text-transform: uppercase;
+}
+
+.sharing-icons-row {
+    display: flex;
+    gap: 8px;
+}
+
+.social-icon {
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    cursor: pointer;
+    transition: transform 0.2s;
+}
+
+.social-icon svg {
+    width: 12px;
+    height: 12px;
+}
+
+.social-icon:hover {
+    transform: scale(1.1);
+}
+
+.social-icon.wa {
+    background: #25d366;
+}
+
+.social-icon.fb {
+    background: #1877f2;
+}
+
+.social-icon.tw {
+    background: #1da1f2;
+}
+
+.social-icon.ig {
+    background: linear-gradient(45deg, #f09433, #e6683c, #dc2743, #cc2366, #bc1888);
+}
+
+.social-icon.ln {
+    background: #0a66c2;
+}

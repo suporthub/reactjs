@@ -1,21 +1,24 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { Award, Target, Gift, Zap, Users, Wallet, TrendingUp, Calendar, Lock, CheckCircle2 } from 'lucide-react';
+import './LoyaltyProgram.css';
 
 export default function LoyaltyProgram({ ibData }) {
+    const { t } = useTranslation();
     const programs = ibData?.active_loyality_programs || [];
 
     if (programs.length === 0) {
         return (
             <div className="loyalty-empty-state">
                 < Award size={48} />
-                <h3>No Active Programs</h3>
-                <p>Check back later for new partnership loyalty programs and rewards.</p>
+                <h3>{t('No Active Programs')}</h3>
+                <p>{t('Check back later for new partnership loyalty programs and rewards.')}</p>
             </div>
         );
     }
 
     const formatDate = (dateStr) => {
-        if (!dateStr) return 'No Expiry';
+        if (!dateStr) return t('No Expiry');
         return new Date(dateStr).toLocaleDateString();
     };
 
@@ -25,13 +28,13 @@ export default function LoyaltyProgram({ ibData }) {
                 <div key={program.id} className="loyalty-program-block">
                     <div className="program-header-premium">
                         <div className="title-row">
-                            <h3>{program.name}</h3>
+                            <h3>{t(program.name)}</h3>
                             <div className="program-dates">
                                 <Calendar size={14} />
                                 <span>{formatDate(program.start_date)} - {formatDate(program.end_date)}</span>
                             </div>
                         </div>
-                        <p>{program.description}</p>
+                        <p>{t(program.description)}</p>
                     </div>
 
                     <div className="loyalty-roadmap">
@@ -56,7 +59,7 @@ export default function LoyaltyProgram({ ibData }) {
                                                 {task.type === 'referrals' ? <Users size={14} /> :
                                                  task.type === 'deposit' ? <Wallet size={14} /> :
                                                  <TrendingUp size={14} />}
-                                                <span>Level {index + 1}</span>
+                                                <span>{t('Level')} {index + 1}</span>
                                             </div>
                                             <div className="reward-tag-premium">
                                                 <Gift size={12} />
@@ -68,9 +71,9 @@ export default function LoyaltyProgram({ ibData }) {
                                             <h4>{task.description}</h4>
                                             <div className="roadmap-progress-wrap">
                                                 <div className="progress-labels-refined">
-                                                    <span>Target: {task.target} {task.type === 'volume' ? 'Lots' : task.type === 'deposit' ? 'USD' : 'Referrals'}</span>
+                                                    <span>{t('Target:')} {task.target} {task.type === 'volume' ? t('Lots') : task.type === 'deposit' ? 'USD' : t('Referrals')}</span>
                                                     <span className={`status-pill ${isLocked ? 'locked' : isCurrent ? 'ongoing' : 'done'}`}>
-                                                        {isLocked ? 'Locked' : isCurrent ? 'In Progress' : 'Completed'}
+                                                        {isLocked ? t('Locked') : isCurrent ? t('In Progress') : t('Completed')}
                                                     </span>
                                                 </div>
                                                 <div className="roadmap-bar">
@@ -89,7 +92,7 @@ export default function LoyaltyProgram({ ibData }) {
             <div className="loyalty-info-notice">
                 <div className="notice-content">
                     <Zap size={16} />
-                    <p>Complete levels sequentially to unlock the next reward tier. Bonuses are automatically credited to your wallet.</p>
+                    <p>{t('Complete levels sequentially to unlock the next reward tier. Bonuses are automatically credited to your wallet.')}</p>
                 </div>
             </div>
         </div>

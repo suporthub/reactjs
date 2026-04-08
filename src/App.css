@@ -371,12 +371,14 @@
 
 .balance-box {
   display: flex;
-  align-items: baseline;
-  gap: 4px;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
   font-weight: 600;
-  font-size: 12px;
+  font-size: 14px;
   color: var(--text-muted);
-  margin-right: 8px;
+  margin-right: 12px;
+  white-space: nowrap;
 }
 
 .balance-val {
@@ -569,6 +571,7 @@
   .sidebar:hover {
     width: 260px;
     box-shadow: none;
+    z-index: 9999;
   }
 
   .sidebar.open {

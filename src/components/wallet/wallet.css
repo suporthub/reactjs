@@ -355,15 +355,15 @@
 }
 
 .balance-overview-card {
-    background: linear-gradient(135deg, var(--primary), #3b82f6);
-    border-radius: 24px;
+    background: linear-gradient(135deg, #1c1e26 0%, #292a36 100%);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 20px;
     padding: 40px;
     margin-bottom: 48px;
     display: flex;
     justify-content: space-between;
     align-items: center;
     color: #fff;
-    box-shadow: 0 20px 40px rgba(var(--primary-rgb), 0.2);
     position: relative;
     overflow: hidden;
 }
@@ -371,11 +371,25 @@
 .balance-overview-card::before {
     content: '';
     position: absolute;
-    top: -50%;
-    right: -10%;
+    top: -20px;
+    right: 80px;
+    width: 200px;
+    height: 200px;
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid rgba(255, 255, 255, 0.04);
+    border-radius: 50%;
+    pointer-events: none;
+}
+
+.balance-overview-card::after {
+    content: '';
+    position: absolute;
+    bottom: -80px;
+    right: -40px;
     width: 300px;
     height: 300px;
-    background: rgba(255, 255, 255, 0.1);
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.05);
     border-radius: 50%;
     pointer-events: none;
 }
@@ -469,9 +483,8 @@
 }
 
 .withdraw-list-item:hover {
-    border-color: var(--primary);
-    transform: translateX(8px);
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.04);
+    border-color: rgba(255, 255, 255, 0.2);
+    background: var(--account-bg-hover);
 }
 
 .item-main {
@@ -590,5 +603,345 @@
 
     .wallet-header h1 {
         font-size: 2rem;
+    }
+}
+
+/* Deposit Form Specific Styles */
+.payment-method-card.clickable {
+    cursor: pointer;
+}
+
+.deposit-back-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: transparent;
+    color: var(--text-main);
+    border: none;
+    font-size: 0.95rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: opacity 0.2s ease;
+    margin-bottom: 24px;
+    padding: 0;
+}
+
+.deposit-back-btn:hover {
+    opacity: 0.7;
+}
+
+.payment-method-card.selected-state {
+    cursor: default;
+    border-color: var(--primary);
+    transform: none;
+    margin-bottom: 32px;
+}
+
+.payment-method-card.selected-state:hover {
+    background: var(--surface);
+    transform: none;
+}
+
+.deposit-form-split-layout {
+    display: flex;
+    gap: 40px;
+    align-items: flex-start;
+    max-width: 1040px;
+}
+
+.deposit-form-left {
+    flex: 1;
+    max-width: 480px;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
+.deposit-form-right {
+    flex: 1;
+    max-width: 500px;
+    position: sticky;
+    top: 24px;
+}
+
+@media (max-width: 850px) {
+    .deposit-form-split-layout {
+        flex-direction: column;
+    }
+
+    .deposit-form-right {
+        max-width: 100%;
+        width: 100%;
+    }
+}
+
+.form-group-wallet {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.form-group-wallet label {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--text-muted);
+}
+
+.wallet-input {
+    background: var(--bg-color);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 14px 16px;
+    font-size: 0.95rem;
+    color: var(--text-main);
+    outline: none;
+    transition: border-color 0.2s ease;
+    width: 100%;
+}
+
+.wallet-input:focus {
+    border-color: var(--primary);
+}
+
+/* Deposit Note Card */
+.deposit-note-card {
+    background: var(--surface);
+    border: 1px solid var(--border-color);
+    border-left: 4px solid var(--primary);
+    border-radius: 8px;
+    padding: 20px 24px;
+}
+
+.note-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--primary);
+    font-weight: 700;
+    font-size: 0.9rem;
+    margin-bottom: 16px;
+    text-transform: uppercase;
+}
+
+.note-list {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.note-item {
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+    font-size: 0.88rem;
+    color: var(--text-main);
+    line-height: 1.5;
+}
+
+.note-icon-pin {
+    color: #ef4444;
+    flex-shrink: 0;
+    margin-top: 2px;
+}
+
+.note-icon-refresh {
+    color: #3b82f6;
+    flex-shrink: 0;
+    margin-top: 2px;
+}
+
+.note-icon-save {
+    color: #8b5cf6;
+    flex-shrink: 0;
+    margin-top: 2px;
+}
+
+.highlight-orange {
+    color: #f59e0b;
+    font-weight: 500;
+}
+
+.highlight-green {
+    color: #10b981;
+    font-weight: 500;
+}
+
+.primary-wallet-btn {
+    background: var(--primary);
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    padding: 16px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+    width: 100%;
+    margin-top: 8px;
+}
+
+.primary-wallet-btn:hover {
+    background: var(--primary-hover);
+}
+
+/* Crypto Custom Select Styles */
+.crypto-custom-select-container {
+    position: relative;
+    width: 100%;
+}
+
+.crypto-select-btn {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: var(--bg-color);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 12px 16px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    user-select: none;
+    min-height: 52px;
+}
+
+.crypto-select-btn:hover {
+    border-color: rgba(255, 255, 255, 0.2);
+}
+
+/* Look at the image: The active/selected card has a green border */
+.crypto-select-btn.active,
+.crypto-select-btn:focus,
+.crypto-dropdown-item.selected {
+    border-color: #22c55e;
+}
+
+.crypto-dropdown-item.selected {
+    border: 1px solid #22c55e;
+    background: rgba(34, 197, 94, 0.04);
+}
+
+.crypto-select-value {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    color: var(--text-main);
+    font-size: 0.95rem;
+    font-weight: 500;
+}
+
+.crypto-select-placeholder {
+    color: var(--text-muted);
+}
+
+.crypto-chevron {
+    color: var(--text-muted);
+    transition: transform 0.2s ease;
+}
+
+.crypto-chevron.open {
+    transform: rotate(180deg);
+}
+
+.crypto-dropdown-menu {
+    position: absolute;
+    top: calc(100% + 8px);
+    left: 0;
+    width: 100%;
+    background: var(--surface);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+    z-index: 100;
+    max-height: 250px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    padding: 6px;
+    gap: 4px;
+}
+
+.crypto-dropdown-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    cursor: pointer;
+    border-radius: 6px;
+    color: var(--text-main);
+    font-size: 0.95rem;
+    transition: all 0.2s ease;
+    border: 1px solid transparent;
+}
+
+.crypto-dropdown-item:hover {
+    background: var(--account-bg-hover);
+}
+
+.crypto-svg-wrapper {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    flex-shrink: 0;
+}
+
+/* Crypto Important Notice styling for Withdraw */
+.crypto-important-notice {
+    background: rgba(234, 179, 8, 0.03);
+    border: 1px solid rgba(234, 179, 8, 0.4);
+    border-radius: 12px;
+    padding: 24px;
+}
+
+.crypto-important-notice .notice-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    color: #eab308;
+    font-size: 1.25rem;
+    font-weight: 700;
+    margin-bottom: 20px;
+}
+
+.crypto-important-notice .notice-points {
+    list-style-type: disc;
+    margin: 0 0 0 24px;
+    padding: 0;
+}
+
+.crypto-important-notice .notice-points li {
+    color: #eab308;
+    font-size: 0.95rem;
+    line-height: 1.5;
+    padding-left: 4px;
+    margin-bottom: 12px;
+}
+
+.crypto-important-notice .notice-points li:last-child {
+    margin-bottom: 0;
+}
+
+.crypto-form-grid-wrapper {
+    max-width: 900px;
+    width: 100%;
+}
+
+.crypto-form-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 24px 40px;
+    margin-bottom: 32px;
+}
+
+.crypto-deposit-btn {
+    width: 100%;
+    max-width: 100%;
+}
+
+@media (max-width: 768px) {
+    .crypto-form-grid {
+        grid-template-columns: 1fr;
+        gap: 20px;
     }
 }

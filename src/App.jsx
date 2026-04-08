@@ -120,6 +120,7 @@ function App() {
   return (
     <Routes>
       <Route path="/login" element={<Login />} />
+      <Route path="/signup/:referralCode" element={<Signup />} />
       <Route path="/signup" element={<Signup />} />
       <Route path="/trading-terminal" element={<TradingTerminal />} />
       <Route path="/*" element={<AuthGuard><DashboardLayout /></AuthGuard>} />
