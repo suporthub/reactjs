@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Info, Pin, RefreshCcw, Save, Loader2 } from 'lucide-react';
+import { Info, Pin, RefreshCcw, Save, Loader2, AlertCircle } from 'lucide-react';
 import { getDeviceFingerprint } from '../../utils/fingerprint';
 
 export default function VietnamDeposit() {
@@ -10,6 +10,7 @@ export default function VietnamDeposit() {
         description: ''
     });
     const [loading, setLoading] = useState(false);
+    const [error, setError] = useState(null);
 
     const handleDeposit = async (e) => {
         // Prevent form submission if button is within a form
@@ -18,9 +19,11 @@ export default function VietnamDeposit() {
         const amountNum = parseFloat(formData.amount);
         
         if (!formData.amount || isNaN(amountNum) || amountNum <= 0) {
-            alert(t('Please enter a valid positive amount'));
+            setError(t('Please enter a valid positive amount'));
             return;
         }
+
+        setError(null);
 
         setLoading(true);
         try {
@@ -45,24 +48,24 @@ export default function VietnamDeposit() {
             const result = await response.json();
 
             // Handle standard success patterns and the specific URL return
-            if (result.success || result.status === 'success' || result.data?.url || result.url) {
-                const redirectUrl = result.url || result.data?.url;
+            if (result.success || result.status === 'success' || result.data?.url || result.url || result.paymentUrl || result.data?.paymentUrl) {
+                const redirectUrl = result.paymentUrl || result.data?.paymentUrl || result.url || result.data?.url;
                 if (redirectUrl) {
                     window.location.href = redirectUrl;
                 } else {
                     console.error("No redirect URL found in response", result);
-                    alert(t('Payment initialization failed: No redirect URL found.'));
+                    setError(t('Payment initialization failed: No redirect URL found.'));
                 }
             } else if (response.status === 401) {
                 // Should be handled by apiInterceptor, but adding safety here
-                alert(t('Your session has expired. Please log in again.'));
+                setError(t('Your session has expired. Please log in again.'));
             } else {
                 console.error("API error status:", response.status, result);
-                alert(result.message || t('Something went wrong. Please try again.'));
+                setError(result.message || t('Something went wrong. Please try again.'));
             }
-        } catch (error) {
-            console.error("Deposit request failed:", error);
-            alert(t('Request failed. Please check your connection.'));
+        } catch (err) {
+            console.error("Deposit request failed:", err);
+            setError(t('Request failed. Please check your connection.'));
         } finally {
             setLoading(false);
         }
@@ -105,6 +108,13 @@ export default function VietnamDeposit() {
                         onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                     />
                 </div>
+
+                {error && (
+                    <div className="wallet-deposit-error">
+                        <AlertCircle size={16} />
+                        <span>{error}</span>
+                    </div>
+                )}
 
                 <button 
                     className="primary-wallet-btn" 

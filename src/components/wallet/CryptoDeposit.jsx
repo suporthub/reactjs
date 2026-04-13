@@ -91,26 +91,89 @@ export default function CryptoDeposit() {
     const { t } = useTranslation();
     const [currency, setCurrency] = useState('usdt');
     const [network, setNetwork] = useState('bsc');
-    const [account, setAccount] = useState('live');
+    const [amount, setAmount] = useState('');
+    const [description, setDescription] = useState('Crypto deposit');
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState('');
 
     const currencyOptions = [
         { value: 'usdt', label: 'USDT', svgIcon: 'usdt' },
-        { value: 'usdc', label: 'USDC', svgIcon: 'usdc' },
     ];
 
-    const networkOptions = [
-        { value: 'bsc', label: 'Binance Smart Chain (BSC)', svgIcon: 'bsc' },
-        { value: 'trx', label: 'TRON (TRX)', svgIcon: 'trx' },
-        { value: 'eth', label: 'Ethereum (ETH)', svgIcon: 'eth' },
-        { value: 'matic', label: 'Polygon (MATIC)', svgIcon: 'matic' },
-    ];
+    const [networkOptions, setNetworkOptions] = useState([]);
+    const [networksLoading, setNetworksLoading] = useState(true);
 
-    const accountOptions = [
-        { value: 'live', label: 'Main Trading Account (live)' },
-        { value: 'sp1', label: 'ednndjfjfjf (SP)' },
-        { value: 'sp2', label: 'sjsjjdjdjfjfj (SP)' },
-        { value: 'sp3', label: 'kodidela_111 (SP)' },
-    ];
+    useEffect(() => {
+        const fetchNetworks = async () => {
+            const token = localStorage.getItem('portalToken');
+            try {
+                const response = await fetch('https://v3.livefxhub.com:8444/api/payments/tylt/networks', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const result = await response.json();
+                if (result.success && result.data) {
+                    const options = result.data.map(n => ({
+                        value: n.networkSymbol,
+                        label: n.networkName.includes('(') ? n.networkName : `${n.networkName} (${n.networkSymbol})`,
+                        svgIcon: n.networkSymbol.toLowerCase()
+                    }));
+                    setNetworkOptions(options);
+                    if (options.length > 0) {
+                        setNetwork(options[0].value);
+                    }
+                }
+            } catch (err) {
+                console.error('Failed to fetch networks:', err);
+                setError('Failed to load networks. Please refresh the page.');
+            } finally {
+                setNetworksLoading(false);
+            }
+        };
+        fetchNetworks();
+    }, []);
+
+    const handleDeposit = async () => {
+        if (!amount || parseFloat(amount) <= 0) {
+            setError('Please enter a valid amount');
+            return;
+        }
+
+        setError('');
+        setLoading(true);
+
+        const token = localStorage.getItem('portalToken');
+
+        const payload = {
+            amount: parseFloat(amount),
+            baseCurrency: "USD",
+            networkSymbol: network, // Use the symbol directly from the selected network
+            description: description || 'Crypto deposit'
+        };
+
+        try {
+            const response = await fetch('https://v3.livefxhub.com:8444/api/payments/crypto/address', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify(payload)
+            });
+
+            const result = await response.json();
+
+            if (result.success && result.data && result.data.paymentUrl) {
+                window.location.href = result.data.paymentUrl;
+            } else {
+                setError(result.message || 'Failed to initiate deposit. Please try again.');
+            }
+        } catch (err) {
+            console.error('Deposit initiation error:', err);
+            setError('A network error occurred. Please check your connection.');
+        } finally {
+            setLoading(false);
+        }
+    };
 
     return (
         <div className="crypto-form-grid-wrapper">
@@ -127,23 +190,44 @@ export default function CryptoDeposit() {
                     options={networkOptions} 
                     value={network} 
                     onChange={setNetwork} 
-                />
-
-                <CryptoCustomSelect 
-                    label={t("Select Account")} 
-                    options={accountOptions} 
-                    value={account} 
-                    onChange={setAccount} 
+                    placeholder={networksLoading ? t("Loading networks...") : t("Select Network")}
                 />
 
                 <div className="form-group-wallet">
                     <label>{t('Amount (USD)')}</label>
-                    <input type="number" placeholder={t("Enter amount to deposit")} className="wallet-input" />
+                    <input 
+                        type="number" 
+                        placeholder={t("Enter amount to deposit")} 
+                        className="wallet-input" 
+                        value={amount}
+                        onChange={(e) => setAmount(e.target.value)}
+                    />
+                </div>
+
+                <div className="form-group-wallet">
+                    <label>{t('Description')}</label>
+                    <input 
+                        type="text" 
+                        placeholder={t("Enter description")} 
+                        className="wallet-input" 
+                        value={description}
+                        onChange={(e) => setDescription(e.target.value)}
+                    />
                 </div>
             </div>
 
-            <button className="primary-wallet-btn crypto-deposit-btn">
-                {t('Deposit')}
+            {error && (
+                <div className="wallet-deposit-error">
+                    {error}
+                </div>
+            )}
+
+            <button 
+                className={`primary-wallet-btn crypto-deposit-btn ${loading ? 'loading' : ''}`}
+                onClick={handleDeposit}
+                disabled={loading}
+            >
+                {loading ? t('Processing...') : t('Deposit')}
             </button>
         </div>
     );
