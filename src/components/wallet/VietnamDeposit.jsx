@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Info, Pin, RefreshCcw, Save, Loader2, AlertCircle } from 'lucide-react';
+import { Info, Pin, RefreshCcw, Save, Loader2, AlertCircle, ChevronDown } from 'lucide-react';
 import { getDeviceFingerprint } from '../../utils/fingerprint';
+import { getAccounts } from '../../utils/accountsCache';
 
 export default function VietnamDeposit() {
     const { t } = useTranslation();
@@ -12,12 +13,44 @@ export default function VietnamDeposit() {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
 
+    // Account selection state
+    const [selectedAccountId, setSelectedAccountId] = useState('');
+    const [accountOptions, setAccountOptions] = useState([]);
+    const [accountsLoading, setAccountsLoading] = useState(true);
+    const [accountDropdownOpen, setAccountDropdownOpen] = useState(false);
+    const accountDropdownRef = useRef(null);
+
+    useEffect(() => {
+        const loadAccounts = async () => {
+            const accounts = await getAccounts();
+            if (accounts.length > 0) {
+                setAccountOptions(accounts);
+                setSelectedAccountId(accounts[0].id);
+            }
+            setAccountsLoading(false);
+        };
+        loadAccounts();
+
+        const handleClickOutside = (event) => {
+            if (accountDropdownRef.current && !accountDropdownRef.current.contains(event.target)) {
+                setAccountDropdownOpen(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
+
     const handleDeposit = async (e) => {
         // Prevent form submission if button is within a form
         e?.preventDefault();
 
         const amountNum = parseFloat(formData.amount);
-        
+
+        if (!selectedAccountId) {
+            setError(t('Please select an account'));
+            return;
+        }
+
         if (!formData.amount || isNaN(amountNum) || amountNum <= 0) {
             setError(t('Please enter a valid positive amount'));
             return;
@@ -41,7 +74,7 @@ export default function VietnamDeposit() {
                 },
                 body: JSON.stringify({
                     amountVnd: amountNum,
-                    description: formData.description || `Deposit for account ${userData.id || 'User'}`
+                    tradingAccountId: selectedAccountId
                 })
             });
 
@@ -81,12 +114,48 @@ export default function VietnamDeposit() {
     return (
         <div className="deposit-form-split-layout">
             <div className="deposit-form-left text-fields-wrapper">
+                {/* Select Account Dropdown */}
+                <div className="form-group-wallet crypto-custom-select-container" ref={accountDropdownRef}>
+                    <label>{t('Select Account')}</label>
+                    <div
+                        className={`crypto-select-btn ${accountDropdownOpen ? 'active' : ''} ${selectedAccountId ? 'has-value' : ''}`}
+                        onClick={() => setAccountDropdownOpen(!accountDropdownOpen)}
+                    >
+                        {selectedAccountId ? (
+                            <div className="crypto-select-value">
+                                <span>{accountOptions.find(a => a.id === selectedAccountId)?.accountNumber || ''}</span>
+                            </div>
+                        ) : (
+                            <div className="crypto-select-placeholder">
+                                {accountsLoading ? t('Loading accounts...') : t('Select Account')}
+                            </div>
+                        )}
+                        <ChevronDown size={18} className={`crypto-chevron ${accountDropdownOpen ? 'open' : ''}`} />
+                    </div>
+                    {accountDropdownOpen && (
+                        <div className="crypto-dropdown-menu">
+                            {accountOptions.map((acc) => (
+                                <div
+                                    key={acc.id}
+                                    className={`crypto-dropdown-item ${acc.id === selectedAccountId ? 'selected' : ''}`}
+                                    onClick={() => {
+                                        setSelectedAccountId(acc.id);
+                                        setAccountDropdownOpen(false);
+                                    }}
+                                >
+                                    <span>{acc.accountNumber}</span>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
+
                 <div className="form-group-wallet">
                     <label>{t('Amount')}</label>
                     <div className="input-with-label-wrapper">
-                        <input 
-                            type="number" 
-                            placeholder={t('Enter amount to deposit')} 
+                        <input
+                            type="number"
+                            placeholder={t('Enter amount to deposit')}
                             className="wallet-input"
                             min="0"
                             step="any"
@@ -100,10 +169,10 @@ export default function VietnamDeposit() {
 
                 <div className="form-group-wallet">
                     <label>{t('Description (Optional)')}</label>
-                    <input 
-                        type="text" 
-                        placeholder={t('Enter description')} 
-                        className="wallet-input" 
+                    <input
+                        type="text"
+                        placeholder={t('Enter description')}
+                        className="wallet-input"
                         value={formData.description}
                         onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                     />
@@ -116,16 +185,16 @@ export default function VietnamDeposit() {
                     </div>
                 )}
 
-                <button 
-                    className="primary-wallet-btn" 
+                <button
+                    className="primary-wallet-btn"
                     onClick={handleDeposit}
                     disabled={loading}
-                    style={{ 
-                        display: 'flex', 
-                        alignItems: 'center', 
-                        justifyContent: 'center', 
+                    style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
                         gap: '8px',
-                        opacity: loading ? 0.7 : 1 
+                        opacity: loading ? 0.7 : 1
                     }}
                 >
                     {loading && <Loader2 size={18} className="animate-spin" />}
@@ -158,4 +227,3 @@ export default function VietnamDeposit() {
         </div>
     );
 }
-

@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ChevronDown } from 'lucide-react';
+import { getAccounts } from '../../utils/accountsCache';
 
 const CRYPTO_ICONS = {
     usdt: (
@@ -91,6 +92,9 @@ export default function CryptoDeposit() {
     const { t } = useTranslation();
     const [currency, setCurrency] = useState('usdt');
     const [network, setNetwork] = useState('bsc');
+    const [selectedAccountId, setSelectedAccountId] = useState('');
+    const [accountOptions, setAccountOptions] = useState([]);
+    const [accountsLoading, setAccountsLoading] = useState(true);
     const [amount, setAmount] = useState('');
     const [description, setDescription] = useState('Crypto deposit');
     const [loading, setLoading] = useState(false);
@@ -130,9 +134,25 @@ export default function CryptoDeposit() {
             }
         };
         fetchNetworks();
+
+        // Fetch accounts: use cache first, then refresh from API
+        const loadAccounts = async () => {
+            const accounts = await getAccounts();
+            if (accounts.length > 0) {
+                const opts = accounts.map(acc => ({ value: acc.id, label: acc.accountNumber }));
+                setAccountOptions(opts);
+                setSelectedAccountId(opts[0].value);
+            }
+            setAccountsLoading(false);
+        };
+        loadAccounts();
     }, []);
 
     const handleDeposit = async () => {
+        if (!selectedAccountId) {
+            setError('Please select an account');
+            return;
+        }
         if (!amount || parseFloat(amount) <= 0) {
             setError('Please enter a valid amount');
             return;
@@ -145,9 +165,9 @@ export default function CryptoDeposit() {
 
         const payload = {
             amount: parseFloat(amount),
-            baseCurrency: "USD",
-            networkSymbol: network, // Use the symbol directly from the selected network
-            description: description || 'Crypto deposit'
+            baseCurrency: "USDT",
+            networkSymbol: network,
+            tradingAccountId: selectedAccountId
         };
 
         try {
@@ -191,6 +211,14 @@ export default function CryptoDeposit() {
                     value={network} 
                     onChange={setNetwork} 
                     placeholder={networksLoading ? t("Loading networks...") : t("Select Network")}
+                />
+
+                <CryptoCustomSelect 
+                    label={t("Select Account")} 
+                    options={accountOptions} 
+                    value={selectedAccountId} 
+                    onChange={setSelectedAccountId} 
+                    placeholder={accountsLoading ? t("Loading accounts...") : t("Select Account")}
                 />
 
                 <div className="form-group-wallet">
