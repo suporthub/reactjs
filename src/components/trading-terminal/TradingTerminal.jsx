@@ -50,13 +50,16 @@ export default function TradingTerminal() {
         }
 
         if (isDraggingSidebarRef.current && sidebarRef.current && isSidebarVisible) {
-            let newWidthPercent = (e.clientX / window.innerWidth) * 100;
+            let newWidthPx = e.clientX;
 
-            // Constrain width accurately between 20% and 40%
-            if (newWidthPercent < 20) newWidthPercent = 20;
-            if (newWidthPercent > 40) newWidthPercent = 40;
+            // Allow user to shrink sidebar manually below initial sizes
+            const minW = 320;
+            const maxW = window.innerWidth * 0.45;
 
-            sidebarRef.current.style.width = `${newWidthPercent}%`;
+            if (newWidthPx < minW) newWidthPx = minW;
+            if (newWidthPx > maxW) newWidthPx = maxW;
+
+            sidebarRef.current.style.width = `${newWidthPx}px`;
         }
     }, [isSidebarVisible, isOrdersPanelMinimized]);
 
@@ -72,11 +75,21 @@ export default function TradingTerminal() {
 
     // Bind document events globally so drag works even if mouse leaves the resizer pixel
     useEffect(() => {
+        const handleWindowResize = () => {
+            if (sidebarRef.current && !isDraggingSidebarRef.current) {
+                // Clear custom drag width on window resize so it snaps back naturally
+                sidebarRef.current.style.width = '';
+            }
+        };
+
         document.addEventListener('mousemove', handleMouseMove, { passive: true });
         document.addEventListener('mouseup', handleMouseUp);
+        window.addEventListener('resize', handleWindowResize);
+
         return () => {
             document.removeEventListener('mousemove', handleMouseMove);
             document.removeEventListener('mouseup', handleMouseUp);
+            window.removeEventListener('resize', handleWindowResize);
         };
     }, [handleMouseMove, handleMouseUp]);
 
@@ -97,33 +110,35 @@ export default function TradingTerminal() {
                             </button>
                         </div>
                     )}
-                    {isSidebarVisible && (
-                        <>
-                            <div ref={sidebarRef} className="market-sidebar-wrapper" style={{ width: '25%', flexShrink: 0, display: 'flex', flexDirection: 'column' }}>
-                                <MarketSidebar
-                                    selectedSymbol={selectedSymbol}
-                                    setSelectedSymbol={setSelectedSymbol}
-                                    onToggleSidebar={() => setIsSidebarVisible(false)}
-                                />
-                            </div>
+                    
+                    <div 
+                        ref={sidebarRef} 
+                        className="market-sidebar-wrapper"
+                        style={{ display: isSidebarVisible ? 'block' : 'none' }}
+                    >
+                        <MarketSidebar
+                            selectedSymbol={selectedSymbol}
+                            setSelectedSymbol={setSelectedSymbol}
+                            onToggleSidebar={() => setIsSidebarVisible(false)}
+                        />
+                    </div>
 
-                            {/* Vertical Resizer Handle */}
-                            <div
-                                className="terminal-resizer-vertical"
-                                onMouseDown={handleSidebarMouseDown}
-                                style={{
-                                    width: '2px',
-                                    background: 'rgba(139, 148, 158, 0.3)',
-                                    cursor: 'col-resize',
-                                    zIndex: 50,
-                                    transition: 'background 0.2s ease',
-                                    flexShrink: 0
-                                }}
-                                onMouseEnter={(e) => e.currentTarget.style.background = 'var(--primary)'}
-                                onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(139, 148, 158, 0.3)'}
-                            />
-                        </>
-                    )}
+                    {/* Vertical Resizer Handle */}
+                    <div
+                        className="terminal-resizer-vertical"
+                        onMouseDown={handleSidebarMouseDown}
+                        style={{
+                            width: '2px',
+                            background: 'rgba(139, 148, 158, 0.3)',
+                            cursor: 'col-resize',
+                            zIndex: 50,
+                            transition: 'background 0.2s ease',
+                            flexShrink: 0,
+                            display: isSidebarVisible ? 'block' : 'none'
+                        }}
+                        onMouseEnter={(e) => e.currentTarget.style.background = 'var(--primary)'}
+                        onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(139, 148, 158, 0.3)'}
+                    />
 
                     <ChartMain
                         selectedSymbol={selectedSymbol}
@@ -155,17 +170,17 @@ export default function TradingTerminal() {
                 <div
                     ref={ordersPanelRef}
                     className={`orders-panel-wrapper ${isOrdersPanelMinimized ? 'minimized' : ''}`}
-                    style={{ 
-                        height: isOrdersPanelMinimized ? '34px' : '28vh', 
-                        flexShrink: 0, 
-                        display: 'flex', 
+                    style={{
+                        height: isOrdersPanelMinimized ? '34px' : '28vh',
+                        flexShrink: 0,
+                        display: 'flex',
                         flexDirection: 'column',
                         transition: 'height 0.3s ease'
                     }}
                 >
-                    <OrdersPanel 
-                        isMinimized={isOrdersPanelMinimized} 
-                        onToggleMinimize={() => setIsOrdersPanelMinimized(!isOrdersPanelMinimized)} 
+                    <OrdersPanel
+                        isMinimized={isOrdersPanelMinimized}
+                        onToggleMinimize={() => setIsOrdersPanelMinimized(!isOrdersPanelMinimized)}
                     />
                 </div>
 

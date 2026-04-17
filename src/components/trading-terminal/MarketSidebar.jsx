@@ -1,27 +1,156 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import { decode } from '@msgpack/msgpack';
 import { Search, Star, PanelLeftClose } from 'lucide-react';
 import OrderPlacementModal from './OrderPlacementModal';
 
-const MARKET_DATA = [
-    { symbol: 'AUDCAD', bid: '0.9512', ask: '0.9614', change: '+0.12%', bidLow: '0.94741', bidHigh: '0.96329', starred: true, direction: 'up' },
-    { symbol: 'AUDCHF', bid: '0.5468', ask: '0.5470', change: '+0.04%', bidLow: '0.55415', bidHigh: '0.55279', starred: true, direction: 'up' },
-    { symbol: 'AUDCNH', bid: '4.8573', ask: '4.8577', change: '-0.14%', bidLow: '4.85098', bidHigh: '4.86694', starred: true, direction: 'down' },
-    { symbol: 'AUDHKD', bid: '5.4845', ask: '5.4850', change: '+0.07%', bidLow: '5.45889', bidHigh: '5.49799', starred: false, direction: 'up' },
-    { symbol: 'AUDJPY', bid: '111.14', ask: '111.16', change: '-0.01%', bidLow: '110.757', bidHigh: '111.311', starred: false, direction: 'down' },
-    { symbol: 'AUDNZD', bid: '1.1878', ask: '1.1880', change: '-0.24%', bidLow: '1.18743', bidHigh: '1.19095', starred: false, direction: 'down' },
-    { symbol: 'EURUSD', bid: '1.0842', ask: '1.0844', change: '+0.18%', bidLow: '1.08200', bidHigh: '1.08650', starred: true, direction: 'up' },
-    { symbol: 'GBPUSD', bid: '1.2695', ask: '1.2697', change: '+0.09%', bidLow: '1.26780', bidHigh: '1.27100', starred: false, direction: 'up' },
-    { symbol: 'USDJPY', bid: '149.85', ask: '149.87', change: '-0.05%', bidLow: '149.500', bidHigh: '150.200', starred: false, direction: 'down' },
-    { symbol: 'XAUUSD', bid: '2178.5', ask: '2179.0', change: '+0.32%', bidLow: '2170.00', bidHigh: '2185.00', starred: true, direction: 'up' },
-];
+const MARKET_DATA = [];
 
 const CATEGORIES = ['★', 'Currencies', 'Commodities', 'Indices', 'Crypto'];
+
+const formatPrice = (val) => {
+    if (val === undefined || val === null) return '';
+    const num = Number(val);
+    if (isNaN(num)) return val;
+    // toPrecision(6) but converted back to string to avoid trailing zeros/scientific notation where unwanted
+    return Number(num.toPrecision(6)).toString();
+};
 
 export default function MarketSidebar({ selectedSymbol, setSelectedSymbol, onToggleSidebar }) {
     const [marketData, setMarketData] = useState(MARKET_DATA);
     const [searchTerm, setSearchTerm] = useState('');
     const [activeCategory, setActiveCategory] = useState('Currencies');
     const [modalData, setModalData] = useState(null);
+    const wsRef = useRef(null);
+    const updatesBufferRef = useRef({});
+    const marketDataMapRef = useRef(new Map()); // O(1) lookups by symbol
+    const prevPricesRef = useRef({}); // Track previous bid prices for tick direction
+
+    useEffect(() => {
+        const token = localStorage.getItem('tradingAccessToken');
+        if (!token) return;
+
+        // Establish connection passing token per instructions
+        const ws = new WebSocket(`wss://v3.livefxhub.com:8444/token=${token}`);
+        ws.binaryType = "arraybuffer"; // Important requirement for decoding msgpack
+        wsRef.current = ws;
+
+        ws.onopen = () => {
+            console.log('[MarketSidebar] Connected to LiveFXHub Market Data WS');
+            ws.send(JSON.stringify({
+                action: "subscribe",
+                symbols: ["EURUSD", "GBPUSD", "USDJPY", "XAUUSD", "XAGUSD", "AUDCAD", "AUDCHF", "AUDCNH", "AUDHKD", "AUDJPY", "AUDNZD"]
+            }));
+        };
+
+        ws.onmessage = (event) => {
+            try {
+                let parsed;
+                if (typeof event.data === 'string') {
+                    // Handle text frames (JSON or ping)
+                    parsed = JSON.parse(event.data);
+                } else if (event.data instanceof ArrayBuffer) {
+                    if (event.data.byteLength === 0) return;
+                    // Binary MessagePack decoding
+                    parsed = decode(new Uint8Array(event.data));
+                } else {
+                    return;
+                }
+
+                // Handle ping/pong keepalive
+                if (parsed && parsed.type === 'ping') {
+                    if (ws.readyState === WebSocket.OPEN) {
+                        ws.send(JSON.stringify({ action: 'pong' }));
+                    }
+                    return;
+                }
+
+                // Helper to process a single symbol's price array into the buffer
+                const processSymbolUpdate = (symbol, vals) => {
+                    if (!symbol || !Array.isArray(vals)) return;
+                    
+                    const existing = updatesBufferRef.current[symbol] || marketDataMapRef.current.get(symbol) || {};
+                    const updateEntry = { ...existing, symbol };
+
+                    // Compare new bid with previous bid to determine tick direction
+                    if (vals[0] !== undefined) {
+                        const newBid = parseFloat(vals[0]);
+                        const prevBid = prevPricesRef.current[symbol];
+                        if (prevBid !== undefined) {
+                            if (newBid > prevBid) {
+                                updateEntry.tickDirection = 'up';
+                            } else if (newBid < prevBid) {
+                                updateEntry.tickDirection = 'down';
+                            }
+                            // If equal, keep the previous tickDirection
+                        }
+                        prevPricesRef.current[symbol] = newBid;
+                        updateEntry.bid = formatPrice(vals[0]);
+                    }
+
+                    if (vals[1] !== undefined) updateEntry.ask = formatPrice(vals[1]);
+                    if (vals[2] !== undefined) updateEntry.bidHigh = formatPrice(vals[2]);
+                    if (vals[3] !== undefined) updateEntry.bidLow = formatPrice(vals[3]);
+
+                    if (vals[4] !== undefined) {
+                        const changeVal = parseFloat(vals[4]);
+                        updateEntry.direction = changeVal >= 0 ? 'up' : 'down';
+                        updateEntry.change = (changeVal > 0 ? '+' : '') + changeVal.toFixed(2) + '%';
+                    }
+
+                    updatesBufferRef.current[symbol] = updateEntry;
+                };
+
+                // Format 1: Snapshot/batch — { type: "snapshot", data: { "XAUUSD": [...], "EURUSD": [...] } }
+                if (parsed && parsed.data && typeof parsed.data === 'object') {
+                    Object.entries(parsed.data).forEach(([symbol, vals]) => {
+                        processSymbolUpdate(symbol, vals);
+                    });
+                }
+
+                // Format 2: Individual tick update — { s: "XAUUSD", p: [bid, ask, high, low, change] }
+                if (parsed && parsed.s && parsed.p) {
+                    processSymbolUpdate(parsed.s, parsed.p);
+                }
+            } catch (err) {
+                // Silently ignore malformed frames (heartbeats, etc.)
+            }
+        };
+
+        ws.onerror = (e) => {
+            console.error('[MarketSidebar] WS error:', e);
+        };
+
+        ws.onclose = () => {
+            console.log('[MarketSidebar] WS disconnected');
+        };
+
+        // Flush buffered updates to React state at ~10 FPS
+        const renderInterval = setInterval(() => {
+            const pending = updatesBufferRef.current;
+            const keys = Object.keys(pending);
+            if (keys.length === 0) return;
+
+            // Merge into the persistent Map for O(1) future lookups
+            keys.forEach(sym => {
+                marketDataMapRef.current.set(sym, { 
+                    ...(marketDataMapRef.current.get(sym) || {}), 
+                    ...pending[sym] 
+                });
+            });
+
+            // Convert Map to array and force a new reference for React
+            setMarketData(Array.from(marketDataMapRef.current.values()));
+            updatesBufferRef.current = {};
+        }, 100);
+
+        return () => {
+            clearInterval(renderInterval);
+            wsRef.current = null;
+            if (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING) {
+                ws.close();
+            }
+        };
+    }, []);
 
     const toggleStar = (e, symbol) => {
         e.stopPropagation(); // Prevent opening modal when clicking star
@@ -45,8 +174,9 @@ export default function MarketSidebar({ selectedSymbol, setSelectedSymbol, onTog
             {modalData ? (
                 <OrderPlacementModal
                     symbol={modalData.symbol}
-                    bid={modalData.bid}
-                    ask={modalData.ask}
+                    bid={marketData.find(m => m.symbol === modalData.symbol)?.bid || modalData.bid}
+                    ask={marketData.find(m => m.symbol === modalData.symbol)?.ask || modalData.ask}
+                    tickDirection={marketData.find(m => m.symbol === modalData.symbol)?.tickDirection}
                     onClose={() => setModalData(null)}
                 />
             ) : (
@@ -113,24 +243,22 @@ export default function MarketSidebar({ selectedSymbol, setSelectedSymbol, onTog
                                         />
                                     </div>
                                     <span className="market-symbol-name">{item.symbol}</span>
-                                    <span className={`market-arrow ${item.direction === 'up' ? 'arrow-up' : 'arrow-down'}`}>
-                                        {item.direction === 'up' ? '▲' : '▼'}
+                                    <span className={`market-arrow ${item.tickDirection === 'down' ? 'arrow-down' : 'arrow-up'}`}>
+                                        {item.tickDirection === 'down' ? '▼' : '▲'}
                                     </span>
-                                    <span className={`market-change ${item.direction === 'up' ? 'positive' : 'negative'}`}>
+                                    <span className={`market-change ${item.tickDirection === 'down' ? 'negative' : 'positive'}`}>
                                         {item.change}
                                     </span>
                                 </div>
                                 <div className="market-price-col">
-                                    <span className={`market-bid-price ${item.direction === 'up' ? 'price-up' : 'price-down'}`}>
+                                    <span className={`market-bid-price ${item.tickDirection === 'up' ? 'price-up' : item.tickDirection === 'down' ? 'price-down' : ''}`}>
                                         {item.bid}
-                                        <sup className="market-price-sup">{Math.floor(Math.random() * 9) + 1}</sup>
                                     </span>
                                     <span className="market-price-range-val">L: {item.bidLow}</span>
                                 </div>
                                 <div className="market-price-col">
-                                    <span className={`market-ask-price ${item.direction === 'up' ? 'price-up' : 'price-down'}`}>
+                                    <span className={`market-ask-price ${item.tickDirection === 'up' ? 'price-up' : item.tickDirection === 'down' ? 'price-down' : ''}`}>
                                         {item.ask}
-                                        <sup className="market-price-sup">{Math.floor(Math.random() * 9) + 1}</sup>
                                     </span>
                                     <span className="market-price-range-val">H: {item.bidHigh}</span>
                                 </div>

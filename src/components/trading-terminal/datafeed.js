@@ -10,21 +10,21 @@
 
 // ── Interval mappings ──────────────────────────────────────────
 const TV_TO_API = {
-    '1':     '1m',
-    '5':     '5m',
-    '15':    '15m',
-    '30':    '30m',
-    '60':    '1h',
-    '120':   '2h',
-    '240':   '4h',
-    '480':   '8h',
-    '1D':    '1d',
-    '1W':    '1w',
-    '1M':    '1mo',
-    '1S':    '1s',
-    '5S':    '5s',
-    '15S':   '15s',
-    '30S':   '30s',
+    '1': '1m',
+    '5': '5m',
+    '15': '15m',
+    '30': '30m',
+    '60': '1h',
+    '120': '2h',
+    '240': '4h',
+    '480': '8h',
+    '1D': '1d',
+    '1W': '1w',
+    '1M': '1mo',
+    '1S': '1s',
+    '5S': '5s',
+    '15S': '15s',
+    '30S': '30s',
 };
 
 // TradingView resolution → seconds per bar
@@ -39,12 +39,12 @@ const RES_TO_SEC = {
 const SYMBOLS = ['XAUUSD', 'XAGUSD', 'BTCUSD', 'AUDCAD', 'AUDJPY', 'JPN225'];
 
 const SYMBOL_INFO = {
-    XAUUSD:  { description: 'Gold vs US Dollar',     type: 'forex',  pricescale: 100,    minmov: 1 },
-    XAGUSD:  { description: 'Silver vs US Dollar',   type: 'forex',  pricescale: 1000,   minmov: 1 },
-    BTCUSD:  { description: 'Bitcoin vs US Dollar',  type: 'crypto', pricescale: 100,    minmov: 1 },
-    AUDCAD:  { description: 'Australian Dollar/CAD', type: 'forex',  pricescale: 100000, minmov: 1 },
-    AUDJPY:  { description: 'Australian Dollar/JPY', type: 'forex',  pricescale: 1000,   minmov: 1 },
-    JPN225:  { description: 'Nikkei 225',            type: 'index',  pricescale: 100,    minmov: 1 },
+    XAUUSD: { description: 'Gold vs US Dollar', type: 'forex', pricescale: 100, minmov: 1 },
+    XAGUSD: { description: 'Silver vs US Dollar', type: 'forex', pricescale: 1000, minmov: 1 },
+    BTCUSD: { description: 'Bitcoin vs US Dollar', type: 'crypto', pricescale: 100, minmov: 1 },
+    AUDCAD: { description: 'Australian Dollar/CAD', type: 'forex', pricescale: 100000, minmov: 1 },
+    AUDJPY: { description: 'Australian Dollar/JPY', type: 'forex', pricescale: 1000, minmov: 1 },
+    JPN225: { description: 'Nikkei 225', type: 'index', pricescale: 100, minmov: 1 },
 };
 
 // ── Load protobufjs (CDN) — self-contained ────────────────────
@@ -76,13 +76,41 @@ function ensureProtobuf() {
 let _protoPromise = null;
 let _wssProtoPromise = null;
 
+const CHART_PROTO = `
+syntax = "proto3";
+package chartfeed;
+message Candle {
+  int64 timeUnixMs = 1;
+  double open = 2;
+  double high = 3;
+  double low = 4;
+  double close = 5;
+  double volume = 6;
+}
+message ChartResponse {
+  repeated Candle candles = 1;
+}
+`;
+
+const PRICE_PROTO = `
+syntax = "proto3";
+package pricefeed;
+message PriceUpdate {
+  string symbol = 1;
+  string buy = 2;
+  string sell = 3;
+}
+message ServerMessage {
+  string type = 1;
+  repeated PriceUpdate updates = 2;
+}
+`;
+
 function loadChartProto() {
     if (_protoPromise) return _protoPromise;
     _protoPromise = ensureProtobuf()
-        .then(() => fetch('/chart.proto'))
-        .then(r => r.text())
-        .then(schema => {
-            const root = window.protobuf.parse(schema).root;
+        .then(() => {
+            const root = window.protobuf.parse(CHART_PROTO).root;
             return root.lookupType('chartfeed.ChartResponse');
         });
     return _protoPromise;
@@ -91,10 +119,8 @@ function loadChartProto() {
 function loadWssProto() {
     if (_wssProtoPromise) return _wssProtoPromise;
     _wssProtoPromise = ensureProtobuf()
-        .then(() => fetch('/prices.proto'))
-        .then(r => r.text())
-        .then(schema => {
-            const root = window.protobuf.parse(schema).root;
+        .then(() => {
+            const root = window.protobuf.parse(PRICE_PROTO).root;
             return root.lookupType('pricefeed.ServerMessage');
         });
     return _wssProtoPromise;
@@ -155,15 +181,15 @@ async function _fetchCandlesImpl(symbol, resolution, fromMs, toMs) {
     const barDuration = RES_TO_SEC[resolution] || 60;
     const bars = data.candles.map(c => {
         const timeMs = toNum(c.timeUnixMs);
-        
+
         // Enforce strict OHLC rules: High must be maximum, Low must be minimum
         const open = c.open;
         const close = c.close;
         const high = Math.max(open, close, c.high);
         const low = Math.min(open, close, c.low);
-        
+
         return {
-            time:   alignToBarMs(timeMs, barDuration),
+            time: alignToBarMs(timeMs, barDuration),
             open,
             high,
             low,
@@ -381,11 +407,11 @@ class WssManager {
 }
 
 // Singleton WSS instance
-const WSS_URL = 'wss://v3.livefxhub.com:8444/ws';
-let _wssManager = null;
 function getWssManager() {
-    if (!_wssManager) _wssManager = new WssManager(WSS_URL);
-    return _wssManager;
+    const token = localStorage.getItem('tradingAccessToken');
+    const WSS_URL = `wss://v3.livefxhub.com:8444/token=${token}`;
+    if (!window._wssManager) window._wssManager = new WssManager(WSS_URL);
+    return window._wssManager;
 }
 
 // ── TradingView Datafeed Factory ──────────────────────────────
@@ -399,7 +425,7 @@ export function createDatafeed() {
     return {
         onReady(callback) {
             setTimeout(() => callback({
-                supported_resolutions: ['1S','5S','15S','30S','1','5','15','30','60','120','240','480','1D','1W','1M'],
+                supported_resolutions: ['1S', '5S', '15S', '30S', '1', '5', '15', '30', '60', '120', '240', '480', '1D', '1W', '1M'],
                 supports_group_request: false,
                 supports_marks: false,
                 supports_search: true,
@@ -430,24 +456,24 @@ export function createDatafeed() {
                 return;
             }
             setTimeout(() => onSymbolResolvedCallback({
-                name:           sym,
-                ticker:         sym,
-                description:    info.description,
-                type:           info.type,
-                session:        '24x7',
-                timezone:       'Etc/UTC',
-                exchange:       'LIVEFXHUB',
-                minmov:         info.minmov,
-                pricescale:     info.pricescale,
-                has_intraday:   true,
-                has_seconds:    true,
-                seconds_multipliers: ['1','5','15','30'],
-                has_daily:      true,
+                name: sym,
+                ticker: sym,
+                description: info.description,
+                type: info.type,
+                session: '24x7',
+                timezone: 'Etc/UTC',
+                exchange: 'LIVEFXHUB',
+                minmov: info.minmov,
+                pricescale: info.pricescale,
+                has_intraday: true,
+                has_seconds: true,
+                seconds_multipliers: ['1', '5', '15', '30'],
+                has_daily: true,
                 has_weekly_and_monthly: true,
-                intraday_multipliers: ['1','5','15','30','60','120','240','480'],
-                supported_resolutions: ['1S','5S','15S','30S','1','5','15','30','60','120','240','480','1D','1W','1M'],
+                intraday_multipliers: ['1', '5', '15', '30', '60', '120', '240', '480'],
+                supported_resolutions: ['1S', '5S', '15S', '30S', '1', '5', '15', '30', '60', '120', '240', '480', '1D', '1W', '1M'],
                 volume_precision: 0,
-                data_status:    'streaming',
+                data_status: 'streaming',
             }), 0);
         },
 
@@ -502,7 +528,7 @@ export function createDatafeed() {
                 // Store the last bar for subscribeBars to use
                 const lastBar = result[result.length - 1];
                 const key = `${symbol}|${resolution}`;
-                
+
                 // ONLY update if it's the first data request (most recent data),
                 // OR if the new lastBar is newer than what we already have.
                 const existing = _lastBarMap.get(key);

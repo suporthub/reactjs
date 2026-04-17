@@ -2,9 +2,18 @@ import React, { useState } from 'react';
 import { X, ChevronUp, ChevronDown } from 'lucide-react';
 import './trading-terminal.css';
 
-export default function OrderPlacementModal({ symbol, bid, ask, onClose }) {
+export default function OrderPlacementModal({ symbol, bid, ask, tickDirection, onClose }) {
     const [lots, setLots] = useState('0.01');
+    const [price, setPrice] = useState('');
     const [activeTab, setActiveTab] = useState('Instant');
+
+    const validateNumberInput = (value) => {
+        // Allow only numbers and a single decimal point
+        const cleaned = value.replace(/[^0-9.]/g, '');
+        const parts = cleaned.split('.');
+        if (parts.length > 2) return parts[0] + '.' + parts.slice(1).join('');
+        return cleaned;
+    };
 
     const handleLotChange = (delta) => {
         setLots(prev => {
@@ -38,11 +47,15 @@ export default function OrderPlacementModal({ symbol, bid, ask, onClose }) {
             <div className="order-modal-prices">
                 <div className="order-modal-price-box">
                     <span className="order-modal-price-label">Bid Price:</span>
-                    <span className="order-modal-price-val sell-color">{bid || '0.96531'}</span>
+                    <span className={`order-modal-price-val ${tickDirection === 'up' ? 'price-up' : tickDirection === 'down' ? 'price-down' : ''}`}>
+                        {bid}
+                    </span>
                 </div>
                 <div className="order-modal-price-box">
                     <span className="order-modal-price-label">Ask Price:</span>
-                    <span className="order-modal-price-val buy-color">{ask || '0.96545'}</span>
+                    <span className={`order-modal-price-val ${tickDirection === 'up' ? 'price-up' : tickDirection === 'down' ? 'price-down' : ''}`}>
+                        {ask}
+                    </span>
                 </div>
             </div>
 
@@ -51,7 +64,9 @@ export default function OrderPlacementModal({ symbol, bid, ask, onClose }) {
                     <input 
                         type="text" 
                         className="order-modal-full-input" 
-                        placeholder={`Current market price: ${ask || '0.96545'}`} 
+                        placeholder={`Current market price: ${ask}`} 
+                        value={price}
+                        onChange={(e) => setPrice(validateNumberInput(e.target.value))}
                     />
                 </div>
             )}
@@ -60,7 +75,11 @@ export default function OrderPlacementModal({ symbol, bid, ask, onClose }) {
                 <div className="order-modal-input-group">
                     <label>Lots</label>
                     <div className="order-modal-number-input">
-                        <input type="text" value={lots} onChange={(e) => setLots(e.target.value)} />
+                        <input 
+                            type="text" 
+                            value={lots} 
+                            onChange={(e) => setLots(validateNumberInput(e.target.value))} 
+                        />
                         <div className="order-modal-spinners">
                             <button className="order-btn-spin up" onClick={() => handleLotChange(0.01)}><ChevronUp size={12} /></button>
                             <button className="order-btn-spin down" onClick={() => handleLotChange(-0.01)}><ChevronDown size={12} /></button>

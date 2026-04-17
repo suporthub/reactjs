@@ -58,6 +58,51 @@ export default function Accounts() {
     const userData = userDataStr ? JSON.parse(userDataStr) : null;
     const isIB = userData?.isIB || false;
 
+    const handleTradeClick = async (accountNumber) => {
+        const token = localStorage.getItem('portalToken');
+        const fingerprint = localStorage.getItem('deviceFingerprint');
+        
+        try {
+            const response = await fetch('https://v3.livefxhub.com:8444/api/live/select-account', {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    accountNumber,
+                    deviceFingerprint: fingerprint,
+                    deviceLabel: `Web Browser on ${navigator.platform}`
+                })
+            });
+
+            const result = await response.json();
+
+            if (result.success && result.data) {
+                // Store tokens separately for trading terminal
+                localStorage.setItem('tradingAccessToken', result.data.accessToken);
+                
+                // Store refresh token in cookie
+                const expiry = new Date();
+                expiry.setDate(expiry.getDate() + 7);
+                document.cookie = `tradingRefreshToken=${result.data.refreshToken}; path=/; expires=${expiry.toUTCString()}; SameSite=Strict; Secure`;
+                
+                if (result.data.sessionId) {
+                    localStorage.setItem('tradingSessionId', result.data.sessionId);
+                }
+
+                // Redirect to trading terminal in a new tab
+                window.open('/trading-terminal', '_blank');
+            } else {
+                // Stay here and show error
+                alert(result.message || t('Failed to initialize trading account.'));
+            }
+        } catch (error) {
+            console.error("Trade redirection failed:", error);
+            alert(t('A connection error occurred. Please try again.'));
+        }
+    };
+
     const fetchAccounts = async () => {
         const token = localStorage.getItem('portalToken');
         const fingerprint = localStorage.getItem('deviceFingerprint');
@@ -464,7 +509,7 @@ export default function Accounts() {
                                     </div>
 
                                     <div className="account-actions">
-                                        <button className="btn-action btn-trade" onClick={() => window.open('/trading-terminal', '_blank')}>
+                                        <button className="btn-action btn-trade" onClick={() => handleTradeClick(acc.accountNumber)}>
                                             <span style={{ transform: 'rotate(90deg)', display: 'inline-block' }}>&#x21c4;</span>
                                             {t('Trade')}
                                         </button>

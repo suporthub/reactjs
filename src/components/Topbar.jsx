@@ -64,8 +64,8 @@ export default function Topbar({ theme, toggleTheme, sidebarOpen, setSidebarOpen
             <div className="topbar-right">
                 <div className="balance-box">
                     <Wallet size={18} color="var(--text-muted)" />
-                    <span className="balance-val">0.00</span>
-                    <span>USD</span>
+                    <span className="balance-val">{userData?.totalPortfolioBalance !== undefined ? userData.totalPortfolioBalance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '0.00'}</span>
+                    <span>{userData?.balanceCurrency || 'USD'}</span>
                 </div>
 
                 <button className="icon-button no-border" onClick={toggleTheme} aria-label="Toggle Theme">

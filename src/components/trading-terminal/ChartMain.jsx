@@ -6,21 +6,21 @@ import { createDatafeed } from './datafeed';
 export const CHART_SYMBOLS = ['XAUUSD', 'XAGUSD', 'BTCUSD', 'AUDCAD', 'AUDJPY', 'JPN225'];
 
 const TIMEFRAMES = [
-    { label: '1s',  tv: '1S'  },
-    { label: '5s',  tv: '5S'  },
+    { label: '1s', tv: '1S' },
+    { label: '5s', tv: '5S' },
     { label: '15s', tv: '15S' },
     { label: '30s', tv: '30S' },
-    { label: '1m',  tv: '1'   },
-    { label: '5m',  tv: '5'   },
-    { label: '15m', tv: '15'  },
-    { label: '30m', tv: '30'  },
-    { label: '1H',  tv: '60'  },
-    { label: '2H',  tv: '120' },
-    { label: '4H',  tv: '240' },
-    { label: '8H',  tv: '480' },
-    { label: '1D',  tv: '1D'  },
-    { label: '1W',  tv: '1W'  },
-    { label: '1M',  tv: '1M'  },
+    { label: '1m', tv: '1' },
+    { label: '5m', tv: '5' },
+    { label: '15m', tv: '15' },
+    { label: '30m', tv: '30' },
+    { label: '1H', tv: '60' },
+    { label: '2H', tv: '120' },
+    { label: '4H', tv: '240' },
+    { label: '8H', tv: '480' },
+    { label: '1D', tv: '1D' },
+    { label: '1W', tv: '1W' },
+    { label: '1M', tv: '1M' },
 ];
 
 // ── TradingView chart loader ──────────────────────────────────
@@ -46,10 +46,10 @@ function loadTradingViewScript() {
 // ── Main ChartMain component ─────────────────────────────────
 export default function ChartMain({ selectedSymbol, selectedTimeframe, setSelectedTimeframe, onSelectSymbol }) {
     const containerRef = useRef(null);
-    const widgetRef    = useRef(null);
+    const widgetRef = useRef(null);
     const [utcTime, setUtcTime] = useState('');
     const [loading, setLoading] = useState(true);
-    const [error, setError]     = useState(null);
+    const [error, setError] = useState(null);
 
     // Singleton datafeed — preserves WSS connection across widget rebuilds
     const datafeed = useMemo(() => createDatafeed(), []);
@@ -78,7 +78,7 @@ export default function ChartMain({ selectedSymbol, selectedTimeframe, setSelect
 
             // Destroy previous widget
             if (widgetRef.current) {
-                try { widgetRef.current.remove(); } catch (_) {}
+                try { widgetRef.current.remove(); } catch (_) { }
                 widgetRef.current = null;
             }
 
@@ -89,8 +89,8 @@ export default function ChartMain({ selectedSymbol, selectedTimeframe, setSelect
                 locale: 'en',
 
                 // Symbol & interval
-                symbol:    selectedSymbol || 'XAUUSD',
-                interval:  activeTf,
+                symbol: selectedSymbol || 'XAUUSD',
+                interval: activeTf,
 
                 // Datafeed
                 datafeed: datafeed,
@@ -100,23 +100,23 @@ export default function ChartMain({ selectedSymbol, selectedTimeframe, setSelect
                 style: '1',   // candlestick
                 toolbar_bg: '#0d1117',
                 overrides: {
-                    'mainSeriesProperties.candleStyle.upColor':        '#3687ED',
-                    'mainSeriesProperties.candleStyle.downColor':      '#DA5244',
-                    'mainSeriesProperties.candleStyle.wickUpColor':    '#3687ED',
-                    'mainSeriesProperties.candleStyle.wickDownColor':  '#DA5244',
-                    'mainSeriesProperties.candleStyle.borderUpColor':  '#3687ED',
-                    'mainSeriesProperties.candleStyle.borderDownColor':'#DA5244',
-                    'paneProperties.background':                       '#0d1117',
-                    'paneProperties.backgroundType':                   'solid',
-                    'scalesProperties.textColor':                      '#8b949e',
-                    'scalesProperties.lineColor':                      '#21262d',
-                    'paneProperties.vertGridProperties.color':         '#21262d',
-                    'paneProperties.horzGridProperties.color':         '#21262d',
+                    'mainSeriesProperties.candleStyle.upColor': '#3687ED',
+                    'mainSeriesProperties.candleStyle.downColor': '#DA5244',
+                    'mainSeriesProperties.candleStyle.wickUpColor': '#3687ED',
+                    'mainSeriesProperties.candleStyle.wickDownColor': '#DA5244',
+                    'mainSeriesProperties.candleStyle.borderUpColor': '#3687ED',
+                    'mainSeriesProperties.candleStyle.borderDownColor': '#DA5244',
+                    'paneProperties.background': '#0d1117',
+                    'paneProperties.backgroundType': 'solid',
+                    'scalesProperties.textColor': '#8b949e',
+                    'scalesProperties.lineColor': '#21262d',
+                    'paneProperties.vertGridProperties.color': '#21262d',
+                    'paneProperties.horzGridProperties.color': '#21262d',
                 },
 
                 // UI features
                 fullscreen: false,
-                autosize:   true,
+                autosize: true,
                 disabled_features: [
                     'header_symbol_search',   // we handle symbol from sidebar
                     'header_compare',
@@ -137,13 +137,13 @@ export default function ChartMain({ selectedSymbol, selectedTimeframe, setSelect
                 // Defines the intervals in the top resolution dropdown
                 custom_resolutions: true,
                 favorites: {
-                    intervals: ['1S','5S','15S','30S','1','5','15','30','60','120','240','480','1D','1W','1M'],
+                    intervals: ['1S', '5S', '15S', '30S', '1', '5', '15', '30', '60', '120', '240', '480', '1D', '1W', '1M'],
                 },
 
                 // Saved layouts per user session (localStorage key includes symbol)
                 charts_storage_url: undefined,
-                client_id:   'livefxhub',
-                user_id:     'public',
+                client_id: 'livefxhub',
+                user_id: 'public',
                 load_last_chart: true,
             });
 
@@ -162,7 +162,7 @@ export default function ChartMain({ selectedSymbol, selectedTimeframe, setSelect
         buildWidget();
         return () => {
             if (widgetRef.current) {
-                try { widgetRef.current.remove(); } catch (_) {}
+                try { widgetRef.current.remove(); } catch (_) { }
                 widgetRef.current = null;
             }
         };
@@ -173,7 +173,7 @@ export default function ChartMain({ selectedSymbol, selectedTimeframe, setSelect
         setSelectedTimeframe(tf.label);
         if (widgetRef.current && widgetRef.current.chart) {
             try {
-                widgetRef.current.chart().setResolution(tf.tv, () => {});
+                widgetRef.current.chart().setResolution(tf.tv, () => { });
             } catch (_) {
                 // If chart not ready yet, the buildWidget effect will handle it
             }
@@ -193,8 +193,8 @@ export default function ChartMain({ selectedSymbol, selectedTimeframe, setSelect
                             if (onSelectSymbol) onSelectSymbol(sym);
                             if (widgetRef.current?.chart) {
                                 try {
-                                    widgetRef.current.chart().setSymbol(sym, () => {});
-                                } catch (_) {}
+                                    widgetRef.current.chart().setSymbol(sym, () => { });
+                                } catch (_) { }
                             }
                         }}
                     >

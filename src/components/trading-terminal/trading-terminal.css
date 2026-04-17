@@ -110,10 +110,17 @@
     letter-spacing: -0.5px;
 }
 
+.terminal-topbar-center {
+    display: flex;
+    flex: 1;
+    align-items: center;
+    justify-content: center;
+}
+
 .terminal-topbar-right {
     display: flex;
     align-items: center;
-    gap: 18px;
+    gap: 12px;
 }
 
 .terminal-account-selector {
@@ -200,8 +207,16 @@
 }
 
 /* =============== MARKET SIDEBAR =============== */
+.market-sidebar-wrapper {
+    width: 320px;
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+}
+
 .market-sidebar {
     width: 100%;
+    min-width: 320px;
     height: 100%;
     background: var(--surface);
     display: flex;
@@ -209,6 +224,7 @@
     overflow: hidden;
     font-family: Arial, sans-serif;
 }
+
 
 body.resizing-active-col * {
     user-select: none !important;
@@ -231,7 +247,7 @@ body.resizing-active-col {
     display: flex;
     align-items: center;
     gap: 8px;
-    padding: 10px 12px;
+    padding: 6px 10px;
     flex: 1;
 }
 
@@ -263,7 +279,7 @@ body.resizing-active-col {
     border: none;
     outline: none;
     color: var(--text-main);
-    font-size: 13px;
+    font-size: 10px;
     font-family: inherit;
 }
 
@@ -275,7 +291,7 @@ body.resizing-active-col {
     display: flex;
     align-items: center;
     gap: 2px;
-    padding: 8px 8px;
+    padding: 5px 6px;
     border-bottom: 1px solid var(--border-color);
     overflow-x: auto;
     scrollbar-width: none;
@@ -288,9 +304,9 @@ body.resizing-active-col {
 }
 
 .market-cat-btn {
-    padding: 4px 10px;
+    padding: 3px 8px;
     border-radius: 5px;
-    font-size: 11px;
+    font-size: 10px;
     font-weight: 500;
     color: var(--text-muted);
     background: transparent;
@@ -311,8 +327,8 @@ body.resizing-active-col {
 }
 
 [data-theme='light'] .market-cat-btn {
-     color: #000000;
-     border-color: #e1e4e8;
+    color: #000000;
+    border-color: #e1e4e8;
 }
 
 [data-theme='light'] .market-cat-btn:hover {
@@ -339,12 +355,22 @@ body.resizing-active-col {
 
 .market-col-symbol {
     flex: 1;
+    text-align: left;
+    padding-left: 20px;
 }
 
 .market-col-bid,
 .market-col-ask {
-    width: 90px;
+    width: 70px;
     text-align: center;
+}
+
+@media (min-width: 1200px) {
+
+    .market-col-bid,
+    .market-col-ask {
+        width: 80px;
+    }
 }
 
 .market-list {
@@ -379,9 +405,11 @@ body.resizing-active-col {
 .market-item-left {
     display: flex;
     align-items: center;
-    gap: 6px;
+    justify-content: flex-start;
+    gap: 4px;
     flex: 1;
     min-width: 0;
+    overflow: hidden;
 }
 
 .market-star {
@@ -393,7 +421,7 @@ body.resizing-active-col {
 .market-symbol-name {
     font-size: 10px;
     font-weight: 600;
-    color: #ffffffa4;
+    color: #ffffffd7;
 }
 
 [data-theme='light'] .market-symbol-name {
@@ -430,8 +458,14 @@ body.resizing-active-col {
     display: flex;
     flex-direction: column;
     align-items: center;
-    width: 90px;
-    padding-left: 10px;
+    width: 70px;
+    flex-shrink: 0;
+}
+
+@media (min-width: 1200px) {
+    .market-price-col {
+        width: 80px;
+    }
 }
 
 .market-price-range-val {
@@ -446,12 +480,13 @@ body.resizing-active-col {
     font-size: 10px;
     font-weight: 600;
     font-family: Arial, sans-serif;
-    color: #ffffffa4;
+    color: #ffffffd7;
 }
 
 [data-theme='light'] .market-bid-price,
 [data-theme='light'] .market-ask-price {
     font-weight: 700;
+    color: #000;
 }
 
 .market-bid-price.price-up,
@@ -683,15 +718,17 @@ body.resizing-active-col {
     align-items: center;
     gap: 0;
     background: var(--surface);
-    border-bottom: 1px solid var(--border-color);
-    min-height: 30px;
-    padding: 0 8px;
+    border-bottom: 2px solid var(--border-color);
+    min-height: 38px;
+    padding: 0 4px;
     overflow-x: auto;
     scrollbar-width: none;
     flex-shrink: 0;
 }
 
-.chart-symbol-tabs::-webkit-scrollbar { display: none; }
+.chart-symbol-tabs::-webkit-scrollbar {
+    display: none;
+}
 
 .chart-symbol-tab {
     padding: 5px 14px;
@@ -705,7 +742,9 @@ body.resizing-active-col {
     flex-shrink: 0;
 }
 
-.chart-symbol-tab:hover { color: var(--text-main); }
+.chart-symbol-tab:hover {
+    color: var(--text-main);
+}
 
 .chart-symbol-tab.active {
     color: var(--text-main);
@@ -750,7 +789,11 @@ body.resizing-active-col {
     animation: spin 0.8s linear infinite;
 }
 
-@keyframes spin { to { transform: rotate(360deg); } }
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
 
 .chart-error-overlay button {
     padding: 6px 16px;
@@ -1055,12 +1098,14 @@ td.negative {
     display: flex;
     align-items: center;
     gap: 16px;
+    flex-shrink: 0;
 }
 
 .margin-profit {
     display: flex;
     align-items: center;
     gap: 5px;
+    white-space: nowrap;
 }
 
 .profit-highlight {
@@ -1132,34 +1177,208 @@ td.negative {
 }
 
 /* =============== RESPONSIVE =============== */
-@media (max-width: 1024px) {
+
+/* Large screens (1200px+): comfortable sidebar */
+@media (min-width: 1200px) {
     .market-sidebar {
-        width: 220px;
-        min-width: 220px;
+        min-width: 320px;
+    }
+
+    .market-col-bid,
+    .market-col-ask {
+        width: 80px;
+        padding-right: 8px;
+    }
+
+    .market-price-col {
+        width: 80px;
+    }
+}
+
+/* Below 1200px: compress topbar & margin bar */
+@media (max-width: 1199px) {
+    .market-sidebar-wrapper {
+        width: 320px;
+    }
+
+    .terminal-topbar {
+        padding: 0 10px;
+    }
+
+    .terminal-topbar-right {
+        gap: 10px;
+    }
+
+    .terminal-account-selector {
+        padding: 3px 8px;
+        font-size: 10px;
+    }
+
+    .terminal-logo-text {
+        font-size: 15px;
+    }
+
+    .margin-bar {
+        padding: 4px 10px;
+        min-height: 30px;
+    }
+
+    .margin-bar-items {
+        gap: 10px;
+    }
+
+    .margin-label,
+    .margin-value,
+    .profit-highlight {
+        font-size: 9px;
+    }
+
+    .margin-bar-right {
+        gap: 10px;
+    }
+}
+
+/* Below 1024px: tighter everything */
+@media (max-width: 1024px) {
+    .terminal-topbar {
+        padding: 0 8px;
+        height: 34px;
+        min-height: 34px;
+    }
+
+    .terminal-topbar-left {
+        margin-left: 4px;
     }
 
     .terminal-topbar-center {
         display: none;
     }
 
+    .terminal-logo-text {
+        font-size: 14px;
+    }
+
+    .terminal-topbar-right {
+        gap: 8px;
+    }
+
+    .terminal-account-selector {
+        padding: 2px 6px;
+        font-size: 9px;
+        gap: 3px;
+    }
+
+    .terminal-live-badge {
+        padding: 2px 5px;
+        font-size: 9px;
+        gap: 3px;
+    }
+
+    .terminal-icon-btn {
+        width: 24px;
+        height: 24px;
+    }
+
+    /* Margin bar: tighter single row */
+    .margin-bar {
+        padding: 3px 8px;
+        min-height: 26px;
+    }
+
     .margin-bar-items {
-        gap: 12px;
+        gap: 6px;
+    }
+
+    .margin-label,
+    .margin-value,
+    .profit-highlight {
+        font-size: 8px;
+    }
+
+    .margin-bar-right {
+        gap: 6px;
+    }
+
+    /* Orders tabs */
+    .orders-tab {
+        padding: 6px 10px;
+        font-size: 10px;
+    }
+
+    /* Sidebar columns tighter */
+    .market-col-bid,
+    .market-col-ask {
+        width: 65px;
+    }
+
+    .market-price-col {
+        width: 65px;
+    }
+
+    .market-symbol-name {
+        font-size: 9px;
+    }
+
+    .market-change {
+        font-size: 9px;
+    }
+
+    .market-bid-price,
+    .market-ask-price {
+        font-size: 9px;
+    }
+
+    .market-price-range-val {
+        font-size: 7px;
+    }
+
+    .market-cat-btn {
+        padding: 3px 7px;
+        font-size: 10px;
+    }
+
+    .market-list-header {
+        font-size: 10px;
+        padding: 6px 8px;
+    }
+
+    .market-item {
+        padding: 6px 8px;
     }
 }
 
+/* Below 768px: overlay sidebar, stack margin bar */
 @media (max-width: 768px) {
-    .market-sidebar {
-        position: absolute;
+    .market-sidebar-wrapper {
+        position: absolute !important;
         left: 0;
-        top: 48px;
+        top: 38px;
         bottom: 0;
         z-index: 50;
-        width: 260px;
+        width: 320px !important;
+        height: auto;
         box-shadow: 8px 0 24px rgba(0, 0, 0, 0.3);
     }
 
+    .market-sidebar {
+        width: 100%;
+        min-width: unset;
+    }
+
+    .terminal-resizer-vertical {
+        display: none !important;
+    }
+
+    .sidebar-collapsed-bar {
+        position: absolute;
+        left: 0;
+        top: 38px;
+        bottom: 0;
+        z-index: 40;
+    }
+
     .terminal-topbar {
-        padding: 0 10px;
+        padding: 0 6px;
     }
 
     .terminal-account-selector,
@@ -1168,17 +1387,41 @@ td.negative {
     }
 
     .margin-bar {
-        flex-direction: column;
-        gap: 6px;
-        padding: 8px 12px;
+        flex-wrap: wrap;
+        gap: 2px;
+        padding: 4px 6px;
+        min-height: auto;
     }
 
     .margin-bar-items {
+        gap: 6px;
+        flex-wrap: wrap;
+    }
+
+    .margin-bar-right {
+        width: 100%;
+        justify-content: flex-start;
         gap: 8px;
+        margin-top: 2px;
     }
 
     .orders-panel {
-        min-height: 140px;
+        min-height: 120px;
+    }
+
+    .orders-tab {
+        padding: 5px 6px;
+        font-size: 9px;
+    }
+}
+
+/* Below 770px: Completely hide sidebar and collapse button as requested */
+@media (max-width: 770px) {
+
+    .market-sidebar-wrapper,
+    .sidebar-collapsed-bar,
+    .terminal-resizer-vertical {
+        display: none !important;
     }
 }
 
