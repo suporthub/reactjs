@@ -21,8 +21,8 @@ const translations = {
         promoH1: 'Trade Smarter. \nExecute Faster. \nProfit Anywhere.',
         promoP: 'From rapid market execution to deep institutional analytics, our powerful trading engine lets you work seamlessly across all your devices.',
         resetTitle: 'Reset Password',
-        resetSubtitle: 'Enter your email address and we will send you instructions to reset your password.',
-        sendBtn: 'Send Instructions',
+        resetSubtitle: 'Enter your email address and we will send you an OTP code to reset your password.',
+        sendBtn: 'Send OTP',
         close: 'Close',
         verifyTitle: 'Verify OTP',
         verifySubtitle: 'Enter the 6-digit code sent to your email.',
@@ -48,8 +48,8 @@ const translations = {
         promoH1: 'तेजी से ट्रेड करें। \nबेहतर लाभ और \nसुविधाजनक अनुभव।',
         promoP: 'रैपिड मार्केट निष्पादन से लेकर गहन संस्थागत विश्लेषण तक, हमारा शक्तिशाली ट्रेडिंग इंजन आपको अपने सभी उपकरणों पर निर्बाズ रूप से काम करने देता है।',
         resetTitle: 'पासवर्ड रीसेट करें',
-        resetSubtitle: 'अपना ईमेल पता दर्ज करें और हम आपको पासवर्ड रीसेट करने के निर्देश भेजेंगे।',
-        sendBtn: 'निर्देश भेजें',
+        resetSubtitle: 'अपना ईमेल पता दर्ज करें और हम आपको पासवर्ड रीसेट करने के लिए एक ओटीपी कोड भेजेंगे।',
+        sendBtn: 'ओटीपी भेजें',
         close: 'बंद करें',
         verifyTitle: 'ओटीपी सत्यापित करें',
         verifySubtitle: 'अपने ईमेल पर भेजा गया 6-अंकीय कोड दर्ज करें।',
@@ -75,8 +75,8 @@ const translations = {
         promoH1: 'Giao dịch Thông minh. \nThực thi Nhanh hơn. \nLợi nhuận Mọi nơi.',
         promoP: 'Từ việc khớp lệnh thị trường nhanh chóng đến các phân tích chuyên sâu, công cụ giao dịch mạnh mẽ của chúng tôi giúp bạn làm việc mượt mà trên mọi thiết bị.',
         resetTitle: 'Đặt lại mật khẩu',
-        resetSubtitle: 'Nhập địa chỉ email của bạn và chúng tôi sẽ gửi cho bạn hướng dẫn để đặt lại mật khẩu.',
-        sendBtn: 'Gửi hướng dẫn',
+        resetSubtitle: 'Nhập địa chỉ email của bạn và chúng tôi sẽ gửi cho bạn mã OTP để đặt lại mật khẩu.',
+        sendBtn: 'Gửi mã OTP',
         close: 'Đóng',
         verifyTitle: 'Xác minh OTP',
         verifySubtitle: 'Nhập mã 6 chữ số được gửi đến email của bạn.',
@@ -102,8 +102,8 @@ const translations = {
         promoH1: 'Trading Lebih Pintar. \nEksekusi Lebih Cepat. \nProfit di Mana Saja.',
         promoP: 'Dari eksekusi pasar yang cepat hingga analitik institusional yang mendalam, mesin trading kami yang kuat memungkinkan Anda bekerja tanpa hambatan di semua perangkat Anda.',
         resetTitle: 'Atur Ulang Kata Sandi',
-        resetSubtitle: 'Masukkan alamat email Anda dan kami akan mengirimkan instruksi untuk mengatur ulang kata sandi Anda.',
-        sendBtn: 'Girim Instruksi',
+        resetSubtitle: 'Masukkan alamat email Anda dan kami akan mengirimkan kode OTP untuk mengatur ulang kata sandi Anda.',
+        sendBtn: 'Kirim OTP',
         close: 'Tutup',
         verifyTitle: 'Verifikasi OTP',
         verifySubtitle: 'Masukkan 6 digit kode yang dikirim ke email Anda.',
@@ -129,8 +129,8 @@ const translations = {
         promoH1: 'تداول بذكاء. \nنفذ أسرع. \nاربح في كل مكان.',
         promoP: 'من تنفيذ السوق بسرعة إلى التحليلات المؤسسية العميقة، يتيح لك محرك التداول المطور لدينا العمل بسلاسة عبر جميع أجهزتك.',
         resetTitle: 'إعادة تعيين كلمة المرور',
-        resetSubtitle: 'أدخل عنوان بريدك الإلكتروني وسنرسل لك تعليمات لإعادة تعيين كلمة مرورك.',
-        sendBtn: 'إرسال التعليمات',
+        resetSubtitle: 'أدخل عنوان بريدك الإلكتروني وسنرسل لك رمز OTP لإعادة تعيين كلمة مرورك.',
+        sendBtn: 'إرسال رمز OTP',
         close: 'إغلاق',
         verifyTitle: 'تفعيل الرمز',
         verifySubtitle: 'أدخل الرمز المكون من 6 أرقام المرسل إلى بريدك.',
@@ -156,8 +156,8 @@ const translations = {
         promoH1: 'تیزی سے ٹریڈ کریں۔ \nبہتر منافع اور \nآسان تجربہ۔',
         promoP: 'ریپڈ مارکیٹ پروسیسنگ سے لے کر گہرائی سے تجزیوں تک، ہمارا طاقتور ٹریڈنگ انجن آپ کو اپنے آلات پر بغیر کسی رکاوٹ کے کام کرنے دیتا ہے۔',
         resetTitle: 'پاس ورڈ دوبارہ ترتیب دیں',
-        resetSubtitle: 'اپنا ای میل پتہ درج کریں اور ہم آپ کو ای میل کریں گے۔',
-        sendBtn: 'ہدایات بھیجیں',
+        resetSubtitle: 'اپنا ای میل پتہ درج کریں اور ہم آپ کو او ٹی پی کوڈ بھیجیں گے۔',
+        sendBtn: 'او ٹی پی بھیجیں',
         close: 'بند کریں',
         verifyTitle: 'OTP کی تصدیق کریں',
         verifySubtitle: 'اپنے ای میل پر بھیجا گیا 6 ہندسی کوڈ درج کریں۔',
@@ -568,14 +568,14 @@ export default function Login() {
             {/* Forgot Password Modal (Multi-step) */}
             {showForgotModal && (
                 <div className="modal-overlay">
-                    <div className="reset-modal-content">
+                    <div className="reset-modal-content" style={{ position: 'relative' }}>
+                        <button className="modal-close-btn" onClick={() => setShowForgotModal(false)}>
+                            <X size={18} strokeWidth={3} />
+                        </button>
                         <div className="modal-header">
                             <div className="lock-icon-bg">
                                 <Lock size={20} color="#3687ED" />
                             </div>
-                            <button className="close-modal" onClick={() => setShowForgotModal(false)}>
-                                <X size={20} />
-                            </button>
                         </div>
 
                         <div className="modal-body">
@@ -700,8 +700,8 @@ export default function Login() {
                             <div className="auth-alert-icon-bg">
                                 <ShieldAlert size={22} color="#EF4444" />
                             </div>
-                            <button className="close-modal-top" onClick={() => setShowMfaModal(false)}>
-                                <X size={20} />
+                            <button className="modal-close-btn" onClick={() => setShowMfaModal(false)}>
+                                <X size={18} strokeWidth={3} />
                             </button>
                         </div>
 

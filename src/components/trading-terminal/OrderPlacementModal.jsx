@@ -25,10 +25,10 @@ export default function OrderPlacementModal({ symbol, bid, ask, tickDirection, o
 
     return (
         <div className="order-modal-content">
-            <div className="order-modal-header">
+            <div className="order-modal-header" style={{ position: 'relative' }}>
                 <h3 className="order-modal-title">{symbol}</h3>
-                <button className="order-modal-close" onClick={onClose}>
-                    <X size={18} color="#DA5244" strokeWidth={3} />
+                <button className="modal-close-btn" onClick={onClose}>
+                    <X size={18} strokeWidth={3} />
                 </button>
             </div>
 

@@ -6,7 +6,15 @@
  * – Scroll:   infinite left-scroll triggers older history fetch
  * – Background: visibilitychange gap recovery on tab refocus
  * – Time:     all bar timestamps are UTC-aligned epoch seconds
+ * – Auth:     auto-refresh trading token on 401 / token expiry
  */
+
+import {
+    getTradingAccessToken,
+    refreshTradingToken,
+    isTokenExpiredWsEvent,
+    tradingFetch
+} from './tradingTokenManager';
 
 // ── Interval mappings ──────────────────────────────────────────
 const TV_TO_API = {
@@ -167,7 +175,7 @@ async function _fetchCandlesImpl(symbol, resolution, fromMs, toMs) {
 
     console.log(`[Datafeed] fetch ${symbol} ${apiInterval} from=${from} to=${to}`);
 
-    const res = await fetch(url, { headers: { 'Accept': 'application/x-protobuf' } });
+    const res = await tradingFetch(url, { headers: { 'Accept': 'application/x-protobuf' } });
     if (!res.ok) throw new Error(`chart API ${res.status}`);
 
     const buf = await res.arrayBuffer();
@@ -215,14 +223,40 @@ class WssManager {
         this._lastMessageTime = 0;
         this._pingTimer = null;
         this._destroyed = false;
+        this._refreshAttempted = false; // Prevent infinite refresh loops
 
         this._connect();
         this._setupVisibilityHandler();
         this._setupPingTimer();
+        this._setupTokenRefreshListener();
+    }
+
+    /** Rebuild the WSS URL with a fresh token from localStorage */
+    _refreshUrl() {
+        const token = getTradingAccessToken();
+        if (token) {
+            this._url = `wss://v3.livefxhub.com:8444/token=${token}`;
+        }
+    }
+
+    /** Listen for token-refreshed events dispatched by other components */
+    _setupTokenRefreshListener() {
+        this._tokenRefreshHandler = (e) => {
+            console.log('[WSS] Received tradingTokenRefreshed event — reconnecting with new token');
+            this._refreshUrl();
+            // Force-reconnect if currently disconnected
+            if (!this._ws || this._ws.readyState !== WebSocket.OPEN) {
+                this._refreshAttempted = false;
+                clearTimeout(this._reconnectTimer);
+                this._connect();
+            }
+        };
+        window.addEventListener('tradingTokenRefreshed', this._tokenRefreshHandler);
     }
 
     _connect() {
         if (this._destroyed || this._ws) return;
+        this._refreshUrl(); // Always use the latest token
         try {
             this._ws = new WebSocket(this._url);
             this._ws.binaryType = 'arraybuffer';
@@ -235,6 +269,7 @@ class WssManager {
         this._ws.onopen = () => {
             console.log('[WSS] connected');
             this._reconnectDelay = 1000;
+            this._refreshAttempted = false; // Reset on successful connect
             clearTimeout(this._reconnectTimer);
             const symbols = [...new Set([...this._subscribers.values()].map(s => s.symbol))];
             if (symbols.length > 0) {
@@ -263,15 +298,44 @@ class WssManager {
             }
         };
 
-        this._ws.onclose = () => {
-            console.log('[WSS] disconnected');
+        this._ws.onclose = (closeEvent) => {
+            console.log('[WSS] disconnected', closeEvent?.code, closeEvent?.reason);
             this._ws = null;
-            if (!this._destroyed) this._scheduleReconnect();
+            if (this._destroyed) return;
+
+            // ── Token-expired detection on WebSocket close ──
+            if (isTokenExpiredWsEvent(closeEvent) && !this._refreshAttempted) {
+                this._handleTokenRefreshAndReconnect();
+            } else {
+                this._scheduleReconnect();
+            }
         };
 
         this._ws.onerror = () => {
             this._ws?.close();
         };
+    }
+
+    /**
+     * Refresh the trading token and reconnect the WebSocket.
+     * Only attempts once per disconnect to prevent infinite loops.
+     */
+    async _handleTokenRefreshAndReconnect() {
+        if (this._destroyed || this._refreshAttempted) return;
+        this._refreshAttempted = true;
+
+        console.log('[WSS] Token expired — attempting refresh before reconnect...');
+        const newToken = await refreshTradingToken();
+
+        if (newToken && !this._destroyed) {
+            console.log('[WSS] Token refreshed — reconnecting...');
+            this._refreshUrl();
+            window.dispatchEvent(new CustomEvent('tradingTokenRefreshed', { detail: { accessToken: newToken } }));
+            this._connect();
+        } else {
+            console.error('[WSS] Token refresh failed — scheduling normal reconnect');
+            this._scheduleReconnect();
+        }
     }
 
     _scheduleReconnect() {
@@ -397,6 +461,7 @@ class WssManager {
         clearTimeout(this._reconnectTimer);
         clearInterval(this._pingTimer);
         document.removeEventListener('visibilitychange', this._visibilityHandler);
+        window.removeEventListener('tradingTokenRefreshed', this._tokenRefreshHandler);
         if (this._ws) {
             this._ws.onclose = null;
             this._ws.close();
@@ -408,7 +473,7 @@ class WssManager {
 
 // Singleton WSS instance
 function getWssManager() {
-    const token = localStorage.getItem('tradingAccessToken');
+    const token = getTradingAccessToken();
     const WSS_URL = `wss://v3.livefxhub.com:8444/token=${token}`;
     if (!window._wssManager) window._wssManager = new WssManager(WSS_URL);
     return window._wssManager;

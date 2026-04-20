@@ -864,8 +864,8 @@ export default function Signup() {
             {showOtpModal && (
                 <div className="otp-modal-overlay">
                     <div className={`otp-modal-content ${accountInfo.isConflict ? 'compact-conflict' : ''}`}>
-                        <button className="modal-close" onClick={() => setShowOtpModal(false)}>
-                            <X size={20} />
+                        <button className="modal-close-btn" onClick={() => setShowOtpModal(false)}>
+                            <X size={18} strokeWidth={3} />
                         </button>
 
                         <div className="otp-header">

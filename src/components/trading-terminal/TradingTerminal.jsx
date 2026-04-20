@@ -4,9 +4,13 @@ import MarketSidebar from './MarketSidebar';
 import ChartMain from './ChartMain';
 import OrdersPanel from './OrdersPanel';
 import MarginBar from './MarginBar';
+import { refreshTradingToken, getTradingAccessToken } from './tradingTokenManager';
 import './trading-terminal.css';
 
 import { PanelLeftOpen } from 'lucide-react';
+
+// Token refresh interval: 13 minutes (token expires in 15min / 900s)
+const TOKEN_REFRESH_INTERVAL_MS = 13 * 60 * 1000;
 
 export default function TradingTerminal() {
     const [selectedSymbol, setSelectedSymbol] = useState('AUDCAD');
@@ -92,6 +96,36 @@ export default function TradingTerminal() {
             window.removeEventListener('resize', handleWindowResize);
         };
     }, [handleMouseMove, handleMouseUp]);
+
+    // ── Proactive token refresh timer ──────────────────────────────
+    // Silently refreshes the trading token every ~13min to stay ahead
+    // of the 15-minute expiry window, preventing 401 errors entirely.
+    useEffect(() => {
+        // Only set up if we have a token (i.e. user is authenticated)
+        if (!getTradingAccessToken()) return;
+
+        const refreshInterval = setInterval(async () => {
+            console.log('[TradingTerminal] Proactive token refresh triggered');
+            const newToken = await refreshTradingToken();
+            if (newToken) {
+                // Notify all child components (WebSockets, etc.)
+                window.dispatchEvent(new CustomEvent('tradingTokenRefreshed', {
+                    detail: { accessToken: newToken }
+                }));
+            }
+        }, TOKEN_REFRESH_INTERVAL_MS);
+
+        // Log when any component refreshes the token
+        const handleTokenRefreshed = (e) => {
+            console.log('[TradingTerminal] Token refreshed event received — all connections updated');
+        };
+        window.addEventListener('tradingTokenRefreshed', handleTokenRefreshed);
+
+        return () => {
+            clearInterval(refreshInterval);
+            window.removeEventListener('tradingTokenRefreshed', handleTokenRefreshed);
+        };
+    }, []);
 
     return (
         <div className="terminal-container">

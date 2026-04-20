@@ -239,6 +239,8 @@
   height: 100%;
   display: flex;
   flex-direction: column;
+  position: relative;
+  padding-bottom: 24px;
 }
 
 .grid .account-body {
@@ -248,9 +250,15 @@
 }
 
 .grid .account-actions {
-  width: 100%;
-  margin-top: 24px;
-  justify-content: flex-start;
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  margin-top: 0;
+  width: auto;
+  padding: 0;
+  height: 0;
+  justify-content: flex-end;
+  overflow: visible;
 }
 
 .account-header {
@@ -465,17 +473,36 @@
   color: var(--text-main);
 }
 
-.close-btn-wizard {
-  color: var(--text-muted);
-  padding: 4px;
-  border-radius: 50%;
-  transition: all 0.2s;
+.modal-close-btn {
+    position: absolute;
+    top: 24px;
+    right: 24px;
+    width: 32px;
+    height: 32px;
+    background: #1e293b;
+    border: none;
+    border-radius: 50%;
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    z-index: 100;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
-.close-btn-wizard:hover {
-  background: var(--account-bg-hover);
-  color: var(--text-main);
-  transform: rotate(90deg);
+.modal-close-btn:hover {
+    background: #0f172a;
+    transform: scale(1.1);
+}
+
+.modal-close-btn:active {
+    transform: scale(0.95);
+}
+
+.close-btn-wizard {
+    display: none; /* Deprecated */
 }
 
 /* Step 1: Selection Cards */
@@ -829,8 +856,9 @@
   background: var(--surface);
   border: 1px solid var(--border-color);
   border-radius: 12px;
-  min-width: 200px;
+  min-width: 220px;
   padding: 8px;
+  width: max-content;
   z-index: 100;
   box-shadow: 0 -15px 35px -5px rgba(0, 0, 0, 0.15),
     0 -5px 15px -5px rgba(0, 0, 0, 0.05);
@@ -855,16 +883,84 @@
 .menu-item {
   display: flex;
   align-items: center;
+  justify-content: flex-start;
   gap: 12px;
   padding: 10px 14px;
   width: 100%;
-  border-radius: 8px;
+  border: none;
+  background: transparent;
+  color: var(--text-main);
   font-size: 13.5px;
   font-weight: 500;
-  color: var(--text-main);
-  background: transparent;
-  transition: all 0.2s ease;
+  cursor: pointer;
+  border-radius: 8px;
+  transition: all 0.2s;
   white-space: nowrap;
+}
+
+/* Quick Actions Menu (Horizontal layout in Grid view) */
+.menu-quick-actions {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-around;
+  gap: 4px;
+  padding: 12px 4px 16px 4px;
+  border-bottom: 1px solid var(--border-color);
+  margin-bottom: 8px;
+}
+
+.quick-action-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  min-width: 48px;
+}
+
+.quick-action-btn span {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-main);
+}
+
+.quick-action-btn .icon-circle {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: #f1f5f9;
+  color: var(--text-main);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+[data-theme='dark'] .quick-action-btn .icon-circle {
+  background: #1e293b;
+}
+
+.quick-action-btn:hover .icon-circle {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+  background: #e2e8f0;
+}
+
+[data-theme='dark'] .quick-action-btn:hover .icon-circle {
+  background: #334155;
+}
+
+/* Trade action specific styling (Blue background) */
+.trade-action .icon-circle {
+  background: #3687ED !important;
+  color: white !important;
+}
+
+.trade-action:hover .icon-circle {
+  background: #2563eb !important;
 }
 
 .menu-item:hover {

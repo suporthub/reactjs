@@ -5,11 +5,12 @@ import '../auth/login.css'; // Added for OTP modal styling
 import {
     Plus, ChevronDown, LayoutGrid, List, ArrowDownToLine,
     ArrowUpToLine, MoreVertical, Info, X, DollarSign, Zap, ShieldCheck, Wallet,
-    CreditCard, Globe, Settings, Lock, Target, FileDown, ArrowRightLeft, Copy, Check
+    CreditCard, Globe, Settings, Lock, Target, FileDown, ArrowRightLeft, Copy, Check,
+    CandlestickChart
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
-export default function Accounts() {
+export default function Accounts({ setWalletTab }) {
     const { t } = useTranslation();
     const navigate = useNavigate();
     const [activeTab, setActiveTab] = useState('Live'); // Changed 'Real' to 'Live'
@@ -509,18 +510,34 @@ export default function Accounts() {
                                     </div>
 
                                     <div className="account-actions">
-                                        <button className="btn-action btn-trade" onClick={() => handleTradeClick(acc.accountNumber)}>
-                                            <span style={{ transform: 'rotate(90deg)', display: 'inline-block' }}>&#x21c4;</span>
-                                            {t('Trade')}
-                                        </button>
-                                        <button className="btn-action">
-                                            <ArrowDownToLine size={16} />
-                                            {t('Deposit')}
-                                        </button>
-                                        <button className="btn-action">
-                                            <ArrowUpToLine size={16} />
-                                            {t('Withdraw')}
-                                        </button>
+                                        {viewMode === 'list' && (
+                                            <>
+                                                <button className="btn-action btn-trade" onClick={() => handleTradeClick(acc.accountNumber)}>
+                                                    <span style={{ transform: 'rotate(90deg)', display: 'inline-block' }}>&#x21c4;</span>
+                                                    {t('Trade')}
+                                                </button>
+                                                <button 
+                                                    className="btn-action"
+                                                    onClick={() => {
+                                                        if (setWalletTab) setWalletTab('Deposit');
+                                                        navigate('/wallet');
+                                                    }}
+                                                >
+                                                    <ArrowDownToLine size={16} />
+                                                    {t('Deposit')}
+                                                </button>
+                                                <button 
+                                                    className="btn-action"
+                                                    onClick={() => {
+                                                        if (setWalletTab) setWalletTab('Withdraw');
+                                                        navigate('/wallet');
+                                                    }}
+                                                >
+                                                    <ArrowUpToLine size={16} />
+                                                    {t('Withdraw')}
+                                                </button>
+                                            </>
+                                        )}
                                         <div className="account-menu-wrapper" ref={openMenuAccountId === acc.accountNumber ? menuRef : null}>
                                             <button
                                                 className={`btn-icon ${openMenuAccountId === acc.accountNumber ? 'active' : ''}`}
@@ -531,10 +548,22 @@ export default function Accounts() {
 
                                             {openMenuAccountId === acc.accountNumber && (
                                                 <div className="account-options-menu">
-                                                    <button className="menu-item">
-                                                        <Lock size={16} />
-                                                        Reset Password
-                                                    </button>
+                                                    {viewMode === 'grid' && (
+                                                        <div className="menu-quick-actions">
+                                                            <button className="quick-action-btn trade-action" onClick={() => handleTradeClick(acc.accountNumber)}>
+                                                                <div className="icon-circle"><CandlestickChart size={20} /></div>
+                                                                <span>{t('Trade')}</span>
+                                                            </button>
+                                                            <button className="quick-action-btn" onClick={() => { if (setWalletTab) setWalletTab('Deposit'); navigate('/wallet'); }}>
+                                                                <div className="icon-circle"><ArrowDownToLine size={16} /></div>
+                                                                <span>{t('Deposit')}</span>
+                                                            </button>
+                                                            <button className="quick-action-btn" onClick={() => { if (setWalletTab) setWalletTab('Withdraw'); navigate('/wallet'); }}>
+                                                                <div className="icon-circle"><ArrowUpToLine size={16} /></div>
+                                                                <span>{t('Withdraw')}</span>
+                                                            </button>
+                                                        </div>
+                                                    )}
                                                     <button className="menu-item">
                                                         <FileDown size={16} />
                                                         Download Statement
@@ -550,10 +579,9 @@ export default function Accounts() {
                                                         <Info size={16} />
                                                         Account Info
                                                     </button>
-                                                    <button className="menu-item">
-                                                        <ArrowRightLeft size={16} />
-                                                        Transfer
-                                                    </button>
+                                                    {viewMode !== 'grid' && (
+                                                        <div className="menu-divider" style={{ height: '1px', background: 'var(--border-color)', margin: '6px 0' }}></div>
+                                                    )}
                                                 </div>
                                             )}
                                         </div>
@@ -572,11 +600,13 @@ export default function Accounts() {
                 {/* Account Creation Modal */}
                 {showModal && (
                     <div className="accounts-modal-overlay">
-                        <div className={`account-wizard-modal ${step === 2 ? 'wide' : ''}`}>
-                            <div className="modal-header-wizard">
-                                <h2>{step === 1 ? t('Select Account Type') : accountType === 'live' ? t('Create Live Account') : t('Create Demo Account')}</h2>
-                                <button className="close-btn-wizard" onClick={() => setShowModal(false)}><X size={20} /></button>
-                            </div>
+                            <div className={`account-wizard-modal ${step === 2 ? 'wide' : ''}`} style={{ position: 'relative' }}>
+                                <button className="modal-close-btn" onClick={() => setShowModal(false)}>
+                                    <X size={18} strokeWidth={3} />
+                                </button>
+                                <div className="modal-header-wizard">
+                                    <h2>{step === 1 ? t('Select Account Type') : accountType === 'live' ? t('Create Live Account') : t('Create Demo Account')}</h2>
+                                </div>
 
                             {step === 1 ? (
                                 <div className="wizard-step-1">
@@ -755,9 +785,9 @@ export default function Accounts() {
                 {/* OTP Verification Modal (Matching Signup.jsx layout) */}
                 {showOtpModal && (
                     <div className="accounts-modal-overlay">
-                        <div className="otp-modal-content" style={{ padding: '30px', animation: 'slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1)' }}>
-                            <button className="modal-close" onClick={() => setShowOtpModal(false)}>
-                                <X size={20} />
+                        <div className="otp-modal-content" style={{ padding: '30px', animation: 'slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1)', position: 'relative' }}>
+                            <button className="modal-close-btn" onClick={() => setShowOtpModal(false)}>
+                                <X size={18} strokeWidth={3} />
                             </button>
 
                             <div className="otp-header">
@@ -831,12 +861,12 @@ export default function Accounts() {
                 {/* Account Info Modal */}
                 {showInfoModal && selectedAccountForInfo && (
                     <div className="accounts-modal-overlay account-info-overlay">
-                        <div className="account-info-modal">
+                        <div className="account-info-modal" style={{ position: 'relative' }}>
+                            <button className="modal-close-btn" onClick={() => setShowInfoModal(false)}>
+                                <X size={18} strokeWidth={3} />
+                            </button>
                             <div className="modal-header-wizard">
                                 <h2>{t('Account Information')}</h2>
-                                <button className="close-btn-wizard" onClick={() => setShowInfoModal(false)}>
-                                    <X size={20} />
-                                </button>
                             </div>
 
                              <div className="info-modal-content">

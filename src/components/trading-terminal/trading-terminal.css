@@ -1509,13 +1509,32 @@ td.negative {
     font-family: Arial, sans-serif;
 }
 
-.order-modal-close {
+.modal-close-btn {
     position: absolute;
-    right: -10px;
-    top: -10px;
-    background: none;
+    top: 16px;
+    right: 16px;
+    width: 28px;
+    height: 28px;
+    background: #1e293b;
     border: none;
+    border-radius: 50%;
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     cursor: pointer;
+    transition: all 0.2s ease;
+    z-index: 100;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.modal-close-btn:hover {
+    background: #0f172a;
+    transform: scale(1.1);
+}
+
+.order-modal-close {
+    display: none;
 }
 
 .order-modal-tabs {

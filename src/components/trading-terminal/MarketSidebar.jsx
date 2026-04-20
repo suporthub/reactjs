@@ -2,6 +2,12 @@ import React, { useState, useEffect, useRef } from 'react';
 import { decode } from '@msgpack/msgpack';
 import { Search, Star, PanelLeftClose } from 'lucide-react';
 import OrderPlacementModal from './OrderPlacementModal';
+import {
+    getTradingAccessToken,
+    refreshTradingToken,
+    isTokenExpiredWsEvent,
+    isTokenExpiredWsMessage
+} from './tradingTokenManager';
 
 const MARKET_DATA = [];
 
@@ -24,105 +30,187 @@ export default function MarketSidebar({ selectedSymbol, setSelectedSymbol, onTog
     const updatesBufferRef = useRef({});
     const marketDataMapRef = useRef(new Map()); // O(1) lookups by symbol
     const prevPricesRef = useRef({}); // Track previous bid prices for tick direction
+    const isUnmountedRef = useRef(false);
+    const refreshAttemptedRef = useRef(false); // Prevent infinite refresh loops
 
     useEffect(() => {
-        const token = localStorage.getItem('tradingAccessToken');
-        if (!token) return;
+        isUnmountedRef.current = false;
+        let reconnectTimer = null;
+        let reconnectDelay = 1000;
 
-        // Establish connection passing token per instructions
-        const ws = new WebSocket(`wss://v3.livefxhub.com:8444/token=${token}`);
-        ws.binaryType = "arraybuffer"; // Important requirement for decoding msgpack
-        wsRef.current = ws;
+        function connectWs() {
+            if (isUnmountedRef.current) return;
+            
+            // Clear any pending reconnect
+            if (reconnectTimer) {
+                clearTimeout(reconnectTimer);
+                reconnectTimer = null;
+            }
 
-        ws.onopen = () => {
-            console.log('[MarketSidebar] Connected to LiveFXHub Market Data WS');
-            ws.send(JSON.stringify({
-                action: "subscribe",
-                symbols: ["EURUSD", "GBPUSD", "USDJPY", "XAUUSD", "XAGUSD", "AUDCAD", "AUDCHF", "AUDCNH", "AUDHKD", "AUDJPY", "AUDNZD"]
-            }));
-        };
+            const token = getTradingAccessToken();
+            if (!token) {
+                console.warn('[MarketSidebar] No token available for connection');
+                return;
+            }
 
-        ws.onmessage = (event) => {
-            try {
-                let parsed;
-                if (typeof event.data === 'string') {
-                    // Handle text frames (JSON or ping)
-                    parsed = JSON.parse(event.data);
-                } else if (event.data instanceof ArrayBuffer) {
-                    if (event.data.byteLength === 0) return;
-                    // Binary MessagePack decoding
-                    parsed = decode(new Uint8Array(event.data));
-                } else {
-                    return;
+            // Establish connection passing token per instructions
+            console.log('[MarketSidebar] Connecting WebSocket...');
+            const ws = new WebSocket(`wss://v3.livefxhub.com:8444/token=${token}`);
+            ws.binaryType = "arraybuffer"; // Important requirement for decoding msgpack
+            wsRef.current = ws;
+
+            ws.onopen = () => {
+                console.log('[MarketSidebar] Connected to LiveFXHub Market Data WS');
+                refreshAttemptedRef.current = false; // Reset on successful connect
+                reconnectDelay = 1000; // Reset backoff
+                
+                if (ws.readyState === WebSocket.OPEN) {
+                    ws.send(JSON.stringify({
+                        action: "subscribe",
+                        symbols: ["EURUSD", "GBPUSD", "USDJPY", "XAUUSD", "XAGUSD", "AUDCAD", "AUDCHF", "AUDCNH", "AUDHKD", "AUDJPY", "AUDNZD"]
+                    }));
                 }
+            };
 
-                // Handle ping/pong keepalive
-                if (parsed && parsed.type === 'ping') {
-                    if (ws.readyState === WebSocket.OPEN) {
-                        ws.send(JSON.stringify({ action: 'pong' }));
+            ws.onmessage = (event) => {
+                try {
+                    let parsed;
+                    if (typeof event.data === 'string') {
+                        // Handle text frames (JSON or ping)
+                        parsed = JSON.parse(event.data);
+                    } else if (event.data instanceof ArrayBuffer) {
+                        if (event.data.byteLength === 0) return;
+                        // Binary MessagePack decoding
+                        parsed = decode(new Uint8Array(event.data));
+                    } else {
+                        return;
                     }
-                    return;
-                }
 
-                // Helper to process a single symbol's price array into the buffer
-                const processSymbolUpdate = (symbol, vals) => {
-                    if (!symbol || !Array.isArray(vals)) return;
-                    
-                    const existing = updatesBufferRef.current[symbol] || marketDataMapRef.current.get(symbol) || {};
-                    const updateEntry = { ...existing, symbol };
-
-                    // Compare new bid with previous bid to determine tick direction
-                    if (vals[0] !== undefined) {
-                        const newBid = parseFloat(vals[0]);
-                        const prevBid = prevPricesRef.current[symbol];
-                        if (prevBid !== undefined) {
-                            if (newBid > prevBid) {
-                                updateEntry.tickDirection = 'up';
-                            } else if (newBid < prevBid) {
-                                updateEntry.tickDirection = 'down';
-                            }
-                            // If equal, keep the previous tickDirection
+                    // Handle ping/pong keepalive
+                    if (parsed && parsed.type === 'ping') {
+                        if (ws.readyState === WebSocket.OPEN) {
+                            ws.send(JSON.stringify({ action: 'pong' }));
                         }
-                        prevPricesRef.current[symbol] = newBid;
-                        updateEntry.bid = formatPrice(vals[0]);
+                        return;
                     }
 
-                    if (vals[1] !== undefined) updateEntry.ask = formatPrice(vals[1]);
-                    if (vals[2] !== undefined) updateEntry.bidHigh = formatPrice(vals[2]);
-                    if (vals[3] !== undefined) updateEntry.bidLow = formatPrice(vals[3]);
-
-                    if (vals[4] !== undefined) {
-                        const changeVal = parseFloat(vals[4]);
-                        updateEntry.direction = changeVal >= 0 ? 'up' : 'down';
-                        updateEntry.change = (changeVal > 0 ? '+' : '') + changeVal.toFixed(2) + '%';
+                    // ── Token-expired detection on incoming server messages ──
+                    if (isTokenExpiredWsMessage(parsed)) {
+                        console.warn('[MarketSidebar] Server sent auth error — refreshing token...');
+                        ws.close();
+                        handleTokenRefreshAndReconnect();
+                        return;
                     }
 
-                    updatesBufferRef.current[symbol] = updateEntry;
-                };
+                    // Helper to process a single symbol's price array into the buffer
+                    const processSymbolUpdate = (symbol, vals) => {
+                        if (!symbol || !Array.isArray(vals)) return;
+                        
+                        const existing = updatesBufferRef.current[symbol] || marketDataMapRef.current.get(symbol) || {};
+                        const updateEntry = { ...existing, symbol };
 
-                // Format 1: Snapshot/batch — { type: "snapshot", data: { "XAUUSD": [...], "EURUSD": [...] } }
-                if (parsed && parsed.data && typeof parsed.data === 'object') {
-                    Object.entries(parsed.data).forEach(([symbol, vals]) => {
-                        processSymbolUpdate(symbol, vals);
-                    });
-                }
+                        // Compare new bid with previous bid to determine tick direction
+                        if (vals[0] !== undefined) {
+                            const newBid = parseFloat(vals[0]);
+                            const prevBid = prevPricesRef.current[symbol];
+                            if (prevBid !== undefined) {
+                                if (newBid > prevBid) {
+                                    updateEntry.tickDirection = 'up';
+                                } else if (newBid < prevBid) {
+                                    updateEntry.tickDirection = 'down';
+                                }
+                                // If equal, keep the previous tickDirection
+                            }
+                            prevPricesRef.current[symbol] = newBid;
+                            updateEntry.bid = formatPrice(vals[0]);
+                        }
 
-                // Format 2: Individual tick update — { s: "XAUUSD", p: [bid, ask, high, low, change] }
-                if (parsed && parsed.s && parsed.p) {
-                    processSymbolUpdate(parsed.s, parsed.p);
+                        if (vals[1] !== undefined) updateEntry.ask = formatPrice(vals[1]);
+                        if (vals[2] !== undefined) updateEntry.bidHigh = formatPrice(vals[2]);
+                        if (vals[3] !== undefined) updateEntry.bidLow = formatPrice(vals[3]);
+
+                        if (vals[4] !== undefined) {
+                            const changeVal = parseFloat(vals[4]);
+                            updateEntry.direction = changeVal >= 0 ? 'up' : 'down';
+                            updateEntry.change = (changeVal > 0 ? '+' : '') + changeVal.toFixed(2) + '%';
+                        }
+
+                        updatesBufferRef.current[symbol] = updateEntry;
+                    };
+
+                    // Format 1: Snapshot/batch — { type: "snapshot", data: { "XAUUSD": [...], "EURUSD": [...] } }
+                    if (parsed && parsed.data && typeof parsed.data === 'object') {
+                        Object.entries(parsed.data).forEach(([symbol, vals]) => {
+                            processSymbolUpdate(symbol, vals);
+                        });
+                    }
+
+                    // Format 2: Individual tick update — { s: "XAUUSD", p: [bid, ask, high, low, change] }
+                    if (parsed && parsed.s && parsed.p) {
+                        processSymbolUpdate(parsed.s, parsed.p);
+                    }
+                } catch (err) {
+                    // Silently ignore malformed frames (heartbeats, etc.)
                 }
-            } catch (err) {
-                // Silently ignore malformed frames (heartbeats, etc.)
+            };
+
+            ws.onerror = (e) => {
+                console.error('[MarketSidebar] WS error:', e);
+            };
+
+            ws.onclose = (closeEvent) => {
+                console.log('[MarketSidebar] WS disconnected', closeEvent?.code, closeEvent?.reason);
+                wsRef.current = null;
+                if (isUnmountedRef.current) return;
+
+                // ── Token-expired detection on WebSocket close ──
+                if (isTokenExpiredWsEvent(closeEvent)) {
+                    handleTokenRefreshAndReconnect();
+                } else {
+                    // General reconnection logic with backoff
+                    console.log(`[MarketSidebar] Scheduling reconnect in ${reconnectDelay}ms...`);
+                    reconnectTimer = setTimeout(() => {
+                        reconnectDelay = Math.min(reconnectDelay * 2, 30000); // Backoff up to 30s
+                        connectWs();
+                    }, reconnectDelay);
+                }
+            };
+        }
+
+        /**
+         * Refresh the trading token and reconnect the WebSocket.
+         * Only attempts once per disconnect to prevent infinite loops.
+         */
+        async function handleTokenRefreshAndReconnect() {
+            if (isUnmountedRef.current || refreshAttemptedRef.current) return;
+            refreshAttemptedRef.current = true;
+
+            console.log('[MarketSidebar] Attempting token refresh before reconnect...');
+            const newToken = await refreshTradingToken();
+
+            if (newToken && !isUnmountedRef.current) {
+                console.log('[MarketSidebar] Token refreshed — reconnecting WebSocket...');
+                // Dispatch event so other components (datafeed, etc.) know tokens changed
+                window.dispatchEvent(new CustomEvent('tradingTokenRefreshed', { detail: { accessToken: newToken } }));
+                connectWs();
+            } else {
+                console.error('[MarketSidebar] Token refresh failed — cannot reconnect');
+            }
+        }
+
+        // Listen for token updates from other parts of the app
+        const handleGlobalTokenRefresh = (e) => {
+            console.log('[MarketSidebar] Global token refresh detected — reconnecting...');
+            refreshAttemptedRef.current = false;
+            if (wsRef.current) {
+                wsRef.current.close(); // This will trigger onclose -> connectWs
+            } else {
+                connectWs();
             }
         };
+        window.addEventListener('tradingTokenRefreshed', handleGlobalTokenRefresh);
 
-        ws.onerror = (e) => {
-            console.error('[MarketSidebar] WS error:', e);
-        };
-
-        ws.onclose = () => {
-            console.log('[MarketSidebar] WS disconnected');
-        };
+        connectWs();
 
         // Flush buffered updates to React state at ~10 FPS
         const renderInterval = setInterval(() => {
@@ -144,10 +232,16 @@ export default function MarketSidebar({ selectedSymbol, setSelectedSymbol, onTog
         }, 100);
 
         return () => {
+            isUnmountedRef.current = true;
             clearInterval(renderInterval);
-            wsRef.current = null;
-            if (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING) {
-                ws.close();
+            clearTimeout(reconnectTimer);
+            window.removeEventListener('tradingTokenRefreshed', handleGlobalTokenRefresh);
+            if (wsRef.current) {
+                const ws = wsRef.current;
+                wsRef.current = null;
+                if (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING) {
+                    ws.close();
+                }
             }
         };
     }, []);

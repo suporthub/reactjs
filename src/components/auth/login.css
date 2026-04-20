@@ -624,26 +624,38 @@
     padding-bottom: 12px;
 }
 
-.close-modal,
-.close-modal-top {
-    background: none;
-    border: none;
-    color: #94a3b8;
-    cursor: pointer;
-    padding: 8px;
-    border-radius: 50%;
-    transition: all 0.2s;
-    display: flex;
+.modal-close-btn {
     position: absolute;
-    top: 0;
-    right: 0;
+    top: 24px;
+    right: 24px;
+    width: 32px;
+    height: 32px;
+    background: #1e293b;
+    border: none;
+    border-radius: 50%;
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    z-index: 100;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
-.close-modal:hover,
-.close-modal-top:hover {
-    background: #f1f5f9;
-    color: #1e293b;
-    transform: rotate(90deg);
+.modal-close-btn:hover {
+    background: #0f172a;
+    transform: scale(1.1);
+}
+
+.modal-close-btn:active {
+    transform: scale(0.95);
+}
+
+.close-modal,
+.close-modal-top {
+    display: none;
+    /* Deprecated in favor of modal-close-btn */
 }
 
 .modal-body h3 {
@@ -1177,6 +1189,7 @@
         font-size: 1.25rem;
     }
 }
+
 /* Referral Applied Badge */
 .referral-applied-badge {
     display: inline-flex;
@@ -1205,7 +1218,13 @@
 }
 
 @keyframes slideDownIn {
-    from { opacity: 0; transform: translateY(-10px); }
-    to { opacity: 1; transform: translateY(0); }
-}
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
 
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}

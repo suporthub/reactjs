@@ -25,7 +25,6 @@ export default function VietnamDeposit() {
             const accounts = await getAccounts();
             if (accounts.length > 0) {
                 setAccountOptions(accounts);
-                setSelectedAccountId(accounts[0].id);
             }
             setAccountsLoading(false);
         };

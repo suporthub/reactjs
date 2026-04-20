@@ -96,7 +96,7 @@ function DashboardLayout() {
         <Routes>
           <Route path="/" element={<Dashboard />} />
           <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="/accounts" element={<Accounts />} />
+          <Route path="/accounts" element={<Accounts setWalletTab={setWalletTab} />} />
           <Route path="/copy-trading" element={<CopyTrading activeTab={copyTradingTab} setActiveTab={setCopyTradingTab} />} />
           <Route path="/wallet" element={<Wallet activeTab={walletTab} setActiveTab={setWalletTab} />} />
           <Route path="/refer-and-earn" element={<ReferAndEarn />} />

@@ -141,7 +141,6 @@ export default function CryptoDeposit() {
             if (accounts.length > 0) {
                 const opts = accounts.map(acc => ({ value: acc.id, label: acc.accountNumber }));
                 setAccountOptions(opts);
-                setSelectedAccountId(opts[0].value);
             }
             setAccountsLoading(false);
         };
