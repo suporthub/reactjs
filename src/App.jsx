@@ -15,6 +15,7 @@ import Signup from './components/auth/Signup';
 import TradingTerminal from './components/trading-terminal/TradingTerminal';
 import IBRegistration from './components/ib/IBRegistration';
 import AuthGuard from './components/auth/AuthGuard';
+import { tradingConfigManager } from './utils/tradingConfigCache';
 import './App.css';
 
 import { useTranslation } from 'react-i18next';
@@ -115,6 +116,9 @@ function App() {
   useEffect(() => {
     const savedTheme = localStorage.getItem('theme') || 'dark';
     document.documentElement.setAttribute('data-theme', savedTheme);
+    
+    // Initial fetch and cache of trading configurations
+    tradingConfigManager.getConfig();
   }, []);
 
   return (

@@ -5,6 +5,7 @@ import ChartMain from './ChartMain';
 import OrdersPanel from './OrdersPanel';
 import MarginBar from './MarginBar';
 import { refreshTradingToken, getTradingAccessToken } from './tradingTokenManager';
+import { tradingConfigManager } from '../../utils/tradingConfigCache';
 import './trading-terminal.css';
 
 import { PanelLeftOpen } from 'lucide-react';
@@ -13,8 +14,19 @@ import { PanelLeftOpen } from 'lucide-react';
 const TOKEN_REFRESH_INTERVAL_MS = 13 * 60 * 1000;
 
 export default function TradingTerminal() {
-    const [selectedSymbol, setSelectedSymbol] = useState('AUDCAD');
+    const [selectedSymbol, setSelectedSymbol] = useState('');
     const [selectedTimeframe, setSelectedTimeframe] = useState('30m');
+
+    // Initialize default symbol from configuration
+    useEffect(() => {
+        const initDefaultSymbol = async () => {
+            const config = await tradingConfigManager.getConfig();
+            if (config?.symbols?.length > 0 && !selectedSymbol) {
+                setSelectedSymbol(config.symbols[0].symbol);
+            }
+        };
+        initDefaultSymbol();
+    }, [selectedSymbol]);
     const [isSidebarVisible, setIsSidebarVisible] = useState(true);
     const [isOrdersPanelMinimized, setIsOrdersPanelMinimized] = useState(false);
     const isDraggingRef = useRef(false);
@@ -103,6 +115,9 @@ export default function TradingTerminal() {
     useEffect(() => {
         // Only set up if we have a token (i.e. user is authenticated)
         if (!getTradingAccessToken()) return;
+
+        // Ensure trading configuration is loaded/cached immediately
+        tradingConfigManager.getConfig();
 
         const refreshInterval = setInterval(async () => {
             console.log('[TradingTerminal] Proactive token refresh triggered');

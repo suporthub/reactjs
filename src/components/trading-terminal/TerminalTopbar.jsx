@@ -3,8 +3,9 @@ import { useNavigate } from 'react-router-dom';
 import {
     BarChart3, Wallet, Gift, Copy, ChevronDown,
     Video, Circle, User, Settings, LogOut,
-    ArrowLeft, Sun, Moon
+    ArrowLeft, Sun, Moon, Info
 } from 'lucide-react';
+import { tradingConfigManager } from '../../utils/tradingConfigCache';
 
 export default function TerminalTopbar() {
     const navigate = useNavigate();
@@ -23,10 +24,30 @@ export default function TerminalTopbar() {
         localStorage.setItem('theme', newTheme);
     };
 
+    const [leverage, setLeverage] = useState(null);
+
     useEffect(() => {
         const theme = isDark ? 'dark' : 'light';
         document.documentElement.setAttribute('data-theme', theme);
         localStorage.setItem('theme', theme);
+
+        // Fetch leverage from config
+        const fetchConfig = async () => {
+            const config = await tradingConfigManager.getConfig();
+            if (config?.account?.leverage) {
+                setLeverage(config.account.leverage);
+            }
+        };
+        fetchConfig();
+
+        // Listen for config updates (e.g. if version changes in background)
+        const handleConfigUpdate = (e) => {
+            if (e.detail?.account?.leverage) {
+                setLeverage(e.detail.account.leverage);
+            }
+        };
+        window.addEventListener('tradingConfigUpdated', handleConfigUpdate);
+        return () => window.removeEventListener('tradingConfigUpdated', handleConfigUpdate);
     }, [isDark]);
 
     return (
@@ -44,6 +65,13 @@ export default function TerminalTopbar() {
                     <span>Main Account</span>
                     <ChevronDown size={14} />
                 </div>
+
+                {leverage && (
+                    <div className="terminal-leverage-badge" title={`Account Leverage: 1:${leverage}`}>
+                        <Info size={12} />
+                        <span>1:{leverage}</span>
+                    </div>
+                )}
 
                 <div className="terminal-live-badge live" title="Live account">
                     <Circle size={8} fill="#27ae60" color="#27ae60" />

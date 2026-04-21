@@ -8,16 +8,22 @@ import {
     isTokenExpiredWsEvent,
     isTokenExpiredWsMessage
 } from './tradingTokenManager';
+import { tradingConfigManager } from '../../utils/tradingConfigCache';
 
 const MARKET_DATA = [];
 
 const CATEGORIES = ['★', 'Currencies', 'Commodities', 'Indices', 'Crypto'];
 
-const formatPrice = (val) => {
-    if (val === undefined || val === null) return '';
+const formatPrice = (val, precision) => {
+    if (val === undefined || val === null || val === '-') return val || '-';
     const num = Number(val);
     if (isNaN(num)) return val;
-    // toPrecision(6) but converted back to string to avoid trailing zeros/scientific notation where unwanted
+
+    if (precision !== undefined) {
+        return num.toFixed(precision);
+    }
+
+    // Fallback if precision is not provided
     return Number(num.toPrecision(6)).toString();
 };
 
@@ -26,12 +32,53 @@ export default function MarketSidebar({ selectedSymbol, setSelectedSymbol, onTog
     const [searchTerm, setSearchTerm] = useState('');
     const [activeCategory, setActiveCategory] = useState('Currencies');
     const [modalData, setModalData] = useState(null);
+    const [config, setConfig] = useState(null);
     const wsRef = useRef(null);
     const updatesBufferRef = useRef({});
     const marketDataMapRef = useRef(new Map()); // O(1) lookups by symbol
     const prevPricesRef = useRef({}); // Track previous bid prices for tick direction
     const isUnmountedRef = useRef(false);
     const refreshAttemptedRef = useRef(false); // Prevent infinite refresh loops
+    const configRef = useRef(null);
+
+    // ── Load Config & Initialize Symbols ──────────────────────────
+    useEffect(() => {
+        const loadConfig = async () => {
+            const data = await tradingConfigManager.getConfig();
+            if (data && data.symbols) {
+                setConfig(data);
+                configRef.current = data;
+
+                // Initialize marketData with all symbols from config
+                const initialDataMap = new Map();
+                data.symbols.forEach(s => {
+                    initialDataMap.set(s.symbol, {
+                        symbol: s.symbol,
+                        bid: '-',
+                        ask: '-',
+                        bidHigh: '-',
+                        bidLow: '-',
+                        change: '0.00%',
+                        tickDirection: 'neutral',
+                        instrumentType: s.instrumentType,
+                        starred: false
+                    });
+                });
+                marketDataMapRef.current = initialDataMap;
+                setMarketData(Array.from(initialDataMap.values()));
+            }
+        };
+        loadConfig();
+
+        const handleConfigUpdate = (e) => {
+            if (e.detail) {
+                setConfig(e.detail);
+                configRef.current = e.detail;
+            }
+        };
+        window.addEventListener('tradingConfigUpdated', handleConfigUpdate);
+        return () => window.removeEventListener('tradingConfigUpdated', handleConfigUpdate);
+    }, []);
 
     useEffect(() => {
         isUnmountedRef.current = false;
@@ -40,7 +87,7 @@ export default function MarketSidebar({ selectedSymbol, setSelectedSymbol, onTog
 
         function connectWs() {
             if (isUnmountedRef.current) return;
-            
+
             // Clear any pending reconnect
             if (reconnectTimer) {
                 clearTimeout(reconnectTimer);
@@ -59,16 +106,23 @@ export default function MarketSidebar({ selectedSymbol, setSelectedSymbol, onTog
             ws.binaryType = "arraybuffer"; // Important requirement for decoding msgpack
             wsRef.current = ws;
 
-            ws.onopen = () => {
+            ws.onopen = async () => {
                 console.log('[MarketSidebar] Connected to LiveFXHub Market Data WS');
                 refreshAttemptedRef.current = false; // Reset on successful connect
                 reconnectDelay = 1000; // Reset backoff
-                
+
                 if (ws.readyState === WebSocket.OPEN) {
-                    ws.send(JSON.stringify({
-                        action: "subscribe",
-                        symbols: ["EURUSD", "GBPUSD", "USDJPY", "XAUUSD", "XAGUSD", "AUDCAD", "AUDCHF", "AUDCNH", "AUDHKD", "AUDJPY", "AUDNZD"]
-                    }));
+                    // Fetch dynamic symbol list from the cached trading config
+                    const currentConfig = configRef.current || await tradingConfigManager.getConfig();
+                    const symbols = currentConfig?.symbols?.map(s => s.symbol) || [];
+
+                    if (symbols.length > 0) {
+                        console.log(`[MarketSidebar] Subscribing to ${symbols.length} symbols from config`);
+                        ws.send(JSON.stringify({
+                            action: "subscribe",
+                            symbols: symbols
+                        }));
+                    }
                 }
             };
 
@@ -105,9 +159,14 @@ export default function MarketSidebar({ selectedSymbol, setSelectedSymbol, onTog
                     // Helper to process a single symbol's price array into the buffer
                     const processSymbolUpdate = (symbol, vals) => {
                         if (!symbol || !Array.isArray(vals)) return;
-                        
+
                         const existing = updatesBufferRef.current[symbol] || marketDataMapRef.current.get(symbol) || {};
                         const updateEntry = { ...existing, symbol };
+
+                        // ── Precision handling ──
+                        // Retrieve showPoints from config for consistent decimal places
+                        const symbolInfo = configRef.current?.symbols?.find(s => s.symbol === symbol);
+                        const precision = symbolInfo?.showPoints;
 
                         // Compare new bid with previous bid to determine tick direction
                         if (vals[0] !== undefined) {
@@ -122,12 +181,12 @@ export default function MarketSidebar({ selectedSymbol, setSelectedSymbol, onTog
                                 // If equal, keep the previous tickDirection
                             }
                             prevPricesRef.current[symbol] = newBid;
-                            updateEntry.bid = formatPrice(vals[0]);
+                            updateEntry.bid = formatPrice(vals[0], precision);
                         }
 
-                        if (vals[1] !== undefined) updateEntry.ask = formatPrice(vals[1]);
-                        if (vals[2] !== undefined) updateEntry.bidHigh = formatPrice(vals[2]);
-                        if (vals[3] !== undefined) updateEntry.bidLow = formatPrice(vals[3]);
+                        if (vals[1] !== undefined) updateEntry.ask = formatPrice(vals[1], precision);
+                        if (vals[2] !== undefined) updateEntry.bidHigh = formatPrice(vals[2], precision);
+                        if (vals[3] !== undefined) updateEntry.bidLow = formatPrice(vals[3], precision);
 
                         if (vals[4] !== undefined) {
                             const changeVal = parseFloat(vals[4]);
@@ -220,9 +279,9 @@ export default function MarketSidebar({ selectedSymbol, setSelectedSymbol, onTog
 
             // Merge into the persistent Map for O(1) future lookups
             keys.forEach(sym => {
-                marketDataMapRef.current.set(sym, { 
-                    ...(marketDataMapRef.current.get(sym) || {}), 
-                    ...pending[sym] 
+                marketDataMapRef.current.set(sym, {
+                    ...(marketDataMapRef.current.get(sym) || {}),
+                    ...pending[sym]
                 });
             });
 
@@ -248,8 +307,8 @@ export default function MarketSidebar({ selectedSymbol, setSelectedSymbol, onTog
 
     const toggleStar = (e, symbol) => {
         e.stopPropagation(); // Prevent opening modal when clicking star
-        setMarketData(prevData => 
-            prevData.map(item => 
+        setMarketData(prevData =>
+            prevData.map(item =>
                 item.symbol === symbol ? { ...item, starred: !item.starred } : item
             )
         );
@@ -257,9 +316,21 @@ export default function MarketSidebar({ selectedSymbol, setSelectedSymbol, onTog
 
     const filteredData = marketData.filter(item => {
         const matchesSearch = item.symbol.toLowerCase().includes(searchTerm.toLowerCase());
+
         if (activeCategory === '★') {
             return matchesSearch && item.starred;
         }
+
+        // Instrument Type Filtering Logic
+        // Mapping: forex=Currencies, commodity=Commodities, index=Indices, crypto=Crypto
+        const symbolInfo = config?.symbols?.find(s => s.symbol === item.symbol);
+        const type = (symbolInfo?.instrumentType || item.instrumentType || '').toLowerCase();
+
+        if (activeCategory === 'Currencies' && type !== 'forex') return false;
+        if (activeCategory === 'Commodities' && type !== 'commodity') return false;
+        if (activeCategory === 'Indices' && type !== 'index') return false;
+        if (activeCategory === 'Crypto' && type !== 'crypto') return false;
+
         return matchesSearch;
     });
 
@@ -324,8 +395,8 @@ export default function MarketSidebar({ selectedSymbol, setSelectedSymbol, onTog
                                 }}
                             >
                                 <div className="market-item-left">
-                                    <div 
-                                        className="market-star-wrapper" 
+                                    <div
+                                        className="market-star-wrapper"
                                         onClick={(e) => toggleStar(e, item.symbol)}
                                         style={{ cursor: 'pointer', display: 'flex', alignItems: 'center' }}
                                     >
