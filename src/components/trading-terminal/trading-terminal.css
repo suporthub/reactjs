@@ -1507,6 +1507,7 @@ td.negative {
     gap: 8px;
     font-family: Arial, sans-serif;
     overflow-y: auto;
+    position: relative;
     -ms-overflow-style: none;
     scrollbar-width: none;
 }
@@ -1531,6 +1532,26 @@ td.negative {
     text-align: center;
     color: var(--text-main);
     font-family: Arial, sans-serif;
+}
+
+.order-modal-close-btn {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    background: transparent;
+    border: none;
+    padding: 0;
+    color: var(--text-muted);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: color 0.2s ease;
+    z-index: 100;
+}
+
+.order-modal-close-btn:hover {
+    color: var(--text-main);
 }
 
 .modal-close-btn {
@@ -1723,7 +1744,7 @@ td.negative {
 }
 
 [data-theme='light'] .order-modal-spinners {
-    background: #f1f1f1;
+    background: #DA5244;
 }
 
 .order-btn-spin {
@@ -1738,7 +1759,7 @@ td.negative {
 }
 
 [data-theme='light'] .order-btn-spin {
-    color: #666;
+    color: #fff;
 }
 
 .order-btn-spin:hover {
@@ -1746,7 +1767,7 @@ td.negative {
 }
 
 [data-theme='light'] .order-btn-spin:hover {
-    background: #e1e1e1;
+    background: rgba(255, 255, 255, 0.1);
 }
 
 .order-btn-spin.up {
@@ -1755,8 +1776,8 @@ td.negative {
 }
 
 [data-theme='light'] .order-btn-spin.up {
-    background: #f1f1f1;
-    border-bottom: 1px solid #ddd;
+    background: #DA5244;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.2);
 }
 
 .order-btn-spin.down {
@@ -1764,7 +1785,7 @@ td.negative {
 }
 
 [data-theme='light'] .order-btn-spin.down {
-    background: #f1f1f1;
+    background: #DA5244;
 }
 
 .order-modal-info-row {
@@ -1827,4 +1848,17 @@ td.negative {
 
 .buy-color {
     color: #3687ED;
+}
+
+.market-no-results {
+    padding: 30px 20px;
+    text-align: center;
+    color: var(--text-muted);
+    font-size: 13px;
+    font-weight: 500;
+    font-style: italic;
+    background: rgba(139, 148, 158, 0.05);
+    border-radius: 8px;
+    margin: 10px;
+    border: 1px dashed var(--border-color);
 }

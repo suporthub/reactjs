@@ -1,11 +1,32 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { X, ChevronUp, ChevronDown } from 'lucide-react';
+import { tradingConfigManager } from '../../utils/tradingConfigCache';
 import './trading-terminal.css';
 
 export default function OrderPlacementModal({ symbol, bid, ask, tickDirection, onClose }) {
     const [lots, setLots] = useState('0.01');
     const [price, setPrice] = useState('');
     const [activeTab, setActiveTab] = useState('Instant');
+    const [symbolConfig, setSymbolConfig] = useState(null);
+    const [leverage, setLeverage] = useState(100);
+
+    useEffect(() => {
+        const loadConfig = async () => {
+            const config = await tradingConfigManager.getConfig();
+            if (config) {
+                if (config.account && config.account.leverage) {
+                    setLeverage(config.account.leverage);
+                }
+                if (config.symbols) {
+                    const currentSymbol = config.symbols.find(s => s.symbol === symbol);
+                    if (currentSymbol) {
+                        setSymbolConfig(currentSymbol);
+                    }
+                }
+            }
+        };
+        loadConfig();
+    }, [symbol]);
 
     const validateNumberInput = (value) => {
         // Allow only numbers and a single decimal point
@@ -25,11 +46,12 @@ export default function OrderPlacementModal({ symbol, bid, ask, tickDirection, o
 
     return (
         <div className="order-modal-content">
-            <div className="order-modal-header" style={{ position: 'relative' }}>
+            <button className="order-modal-close-btn" onClick={onClose}>
+                <X size={16} strokeWidth={2.5} />
+            </button>
+
+            <div className="order-modal-header">
                 <h3 className="order-modal-title">{symbol}</h3>
-                <button className="modal-close-btn" onClick={onClose}>
-                    <X size={18} strokeWidth={3} />
-                </button>
             </div>
 
             <div className="order-modal-tabs">
@@ -88,31 +110,61 @@ export default function OrderPlacementModal({ symbol, bid, ask, tickDirection, o
                 </div>
                 <div className="order-modal-input-group">
                     <label>Contract</label>
-                    <input className="order-modal-basic-input" type="text" value="1000.00" readOnly />
+                    <input 
+                        className="order-modal-basic-input" 
+                        type="text" 
+                        value={symbolConfig ? (symbolConfig.contractSize * parseFloat(lots || 0)).toLocaleString() : '0.00'} 
+                        readOnly 
+                    />
                 </div>
                 <div className="order-modal-input-group">
                     <label>Margin</label>
-                    <input className="order-modal-basic-input" type="text" value="7.11" readOnly />
+                    <input 
+                        className="order-modal-basic-input" 
+                        type="text" 
+                        value={(() => {
+                            if (!symbolConfig || !ask) return '0.00';
+                            const contractValue = symbolConfig.contractSize * parseFloat(lots || 0);
+                            const askPrice = parseFloat(ask);
+                            if (isNaN(askPrice)) return '0.00';
+                            
+                            let calculatedMargin = (contractValue * askPrice) / leverage;
+                            
+                            // If mode is not standard, apply marginPct multiplier
+                            if (symbolConfig.marginCalcMode !== 'standard') {
+                                calculatedMargin = calculatedMargin * (symbolConfig.marginPct || 1);
+                            }
+                            
+                            return calculatedMargin.toFixed(2);
+                        })()} 
+                        readOnly 
+                    />
                 </div>
             </div>
 
             <div className="order-modal-info-row">
                 <div className="order-info-item">
                     <span className="order-info-label">Spread</span>
-                    <span className="order-info-val">1.40</span>
+                    <span className="order-info-val">
+                        {symbolConfig ? symbolConfig.spread.toFixed(2) : '0.00'}
+                    </span>
                 </div>
                 <div className="order-info-item">
                     <span className="order-info-label">Comm</span>
-                    <span className="order-info-val">10.00</span>
+                    <span className="order-info-val">
+                        {symbolConfig ? symbolConfig.commission.toFixed(2) : '0.00'}
+                    </span>
                 </div>
                 <div className="order-info-item">
                     <span className="order-info-label">Pip</span>
-                    <span className="order-info-val">10 USD</span>
+                    <span className="order-info-val">
+                        {symbolConfig ? `${(symbolConfig.spreadPip * symbolConfig.contractSize).toFixed(2)} USD` : '10.00 USD'}
+                    </span>
                 </div>
                 <div className="order-info-item swap-item">
                     <span className="order-info-label">Swap</span>
-                    <span className="order-info-val">Buy: -1.595</span>
-                    <span className="order-info-val">Sell: -1.104</span>
+                    <span className="order-info-val">Buy: {symbolConfig ? symbolConfig.swapBuy : '0.00'}</span>
+                    <span className="order-info-val">Sell: {symbolConfig ? symbolConfig.swapSell : '0.00'}</span>
                 </div>
             </div>
 

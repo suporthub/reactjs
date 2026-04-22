@@ -173,7 +173,7 @@ async function _fetchCandlesImpl(symbol, resolution, fromMs, toMs) {
     const to = new Date(toMs).toISOString();
     const url = `/candles?symbol=${encodeURIComponent(symbol)}&interval=${apiInterval}&from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`;
 
-    console.log(`[Datafeed] fetch ${symbol} ${apiInterval} from=${from} to=${to}`);
+    // console.log(`[Datafeed] fetch ${symbol} ${apiInterval} from=${from} to=${to}`);
 
     const res = await tradingFetch(url, { headers: { 'Accept': 'application/x-protobuf' } });
     if (!res.ok) throw new Error(`chart API ${res.status}`);
@@ -183,7 +183,7 @@ async function _fetchCandlesImpl(symbol, resolution, fromMs, toMs) {
     const data = ChartResponse.toObject(decoded, { longs: Number });
 
     if (!data.candles || data.candles.length === 0) {
-        console.log(`[Datafeed] ${symbol} ${apiInterval}: 0 candles returned`);
+        // console.log(`[Datafeed] ${symbol} ${apiInterval}: 0 candles returned`);
         return [];
     }
     const barDuration = RES_TO_SEC[resolution] || 60;
@@ -206,7 +206,7 @@ async function _fetchCandlesImpl(symbol, resolution, fromMs, toMs) {
         };
     });
 
-    console.log(`[Datafeed] ${symbol} ${apiInterval}: ${bars.length} candles, first=${new Date(bars[0].time).toISOString()}, last=${new Date(bars[bars.length - 1].time).toISOString()}`);
+    // console.log(`[Datafeed] ${symbol} ${apiInterval}: ${bars.length} candles, first=${new Date(bars[0].time).toISOString()}, last=${new Date(bars[bars.length - 1].time).toISOString()}`);
     return bars;
 }
 
@@ -242,7 +242,7 @@ class WssManager {
     /** Listen for token-refreshed events dispatched by other components */
     _setupTokenRefreshListener() {
         this._tokenRefreshHandler = (e) => {
-            console.log('[WSS] Received tradingTokenRefreshed event — reconnecting with new token');
+            // console.log('[WSS] Received tradingTokenRefreshed event — reconnecting with new token');
             this._refreshUrl();
             // Force-reconnect if currently disconnected
             if (!this._ws || this._ws.readyState !== WebSocket.OPEN) {
@@ -267,7 +267,7 @@ class WssManager {
         }
 
         this._ws.onopen = () => {
-            console.log('[WSS] connected');
+            // console.log('[WSS] connected');
             this._reconnectDelay = 1000;
             this._refreshAttempted = false; // Reset on successful connect
             clearTimeout(this._reconnectTimer);
@@ -299,7 +299,7 @@ class WssManager {
         };
 
         this._ws.onclose = (closeEvent) => {
-            console.log('[WSS] disconnected', closeEvent?.code, closeEvent?.reason);
+            // console.log('[WSS] disconnected', closeEvent?.code, closeEvent?.reason);
             this._ws = null;
             if (this._destroyed) return;
 
@@ -324,11 +324,11 @@ class WssManager {
         if (this._destroyed || this._refreshAttempted) return;
         this._refreshAttempted = true;
 
-        console.log('[WSS] Token expired — attempting refresh before reconnect...');
+        // console.log('[WSS] Token expired — attempting refresh before reconnect...');
         const newToken = await refreshTradingToken();
 
         if (newToken && !this._destroyed) {
-            console.log('[WSS] Token refreshed — reconnecting...');
+            // console.log('[WSS] Token refreshed — reconnecting...');
             this._refreshUrl();
             window.dispatchEvent(new CustomEvent('tradingTokenRefreshed', { detail: { accessToken: newToken } }));
             this._connect();
@@ -369,7 +369,7 @@ class WssManager {
             } else if (this._wasHidden) {
                 this._wasHidden = false;
                 const hiddenDuration = Date.now() - (this._hiddenAt || 0);
-                console.log(`[WSS] Tab returned after ${Math.round(hiddenDuration / 1000)}s`);
+                // console.log(`[WSS] Tab returned after ${Math.round(hiddenDuration / 1000)}s`);
                 if (hiddenDuration > 5000) this._recoverGap();
             }
         };
@@ -377,7 +377,7 @@ class WssManager {
     }
 
     async _recoverGap() {
-        console.log('[WSS] Recovering gap after background tab...');
+        // console.log('[WSS] Recovering gap after background tab...');
         for (const [, sub] of this._subscribers) {
             if (sub.onResetCache) {
                 sub.onResetCache();
@@ -439,7 +439,7 @@ class WssManager {
             onResetCache: onResetCache || null,
         });
         this._send({ action: 'subscribe', symbols: [symbol] });
-        console.log(`[WSS] subscribed ${symbol} res=${resolution} lastBar=${lastBar ? new Date(lastBar.time).toISOString() : 'null'}`);
+        // console.log(`[WSS] subscribed ${symbol} res=${resolution} lastBar=${lastBar ? new Date(lastBar.time).toISOString() : 'null'}`);
     }
 
     unsubscribe(listenerGuid) {
@@ -550,7 +550,7 @@ export function createDatafeed() {
             let fromMs = from * 1000;
             let toMs = firstDataRequest ? Date.now() : to * 1000;
 
-            console.log(`[Datafeed] getBars ${symbol} res=${resolution} from=${new Date(fromMs).toISOString()} to=${new Date(toMs).toISOString()} first=${firstDataRequest} countBack=${countBack}`);
+            // console.log(`[Datafeed] getBars ${symbol} res=${resolution} from=${new Date(fromMs).toISOString()} to=${new Date(toMs).toISOString()} first=${firstDataRequest} countBack=${countBack}`);
 
             try {
                 let bars = await fetchCandles(symbol, resolution, fromMs, toMs);
@@ -561,12 +561,12 @@ export function createDatafeed() {
                     const barDuration = RES_TO_SEC[resolution] || 60;
                     // Try up to 24 hours back
                     const widerFrom = Date.now() - (86400 * 1000);
-                    console.log(`[Datafeed] No data in range, trying wider: from=${new Date(widerFrom).toISOString()}`);
+                    // console.log(`[Datafeed] No data in range, trying wider: from=${new Date(widerFrom).toISOString()}`);
                     bars = await fetchCandles(symbol, resolution, widerFrom, Date.now());
                 }
 
                 if (bars.length === 0) {
-                    console.log(`[Datafeed] ${symbol}: noData=true`);
+                    // console.log(`[Datafeed] ${symbol}: noData=true`);
                     onHistoryCallback([], { noData: true });
                     return;
                 }
@@ -601,7 +601,7 @@ export function createDatafeed() {
                     _lastBarMap.set(key, { ...lastBar });
                 }
 
-                console.log(`[Datafeed] ${symbol} res=${resolution}: returning ${result.length} bars, lastBar time=${new Date(lastBar.time).toISOString()} close=${lastBar.close}`);
+                // console.log(`[Datafeed] ${symbol} res=${resolution}: returning ${result.length} bars, lastBar time=${new Date(lastBar.time).toISOString()} close=${lastBar.close}`);
 
                 onHistoryCallback(result, { noData: false });
             } catch (err) {
@@ -618,7 +618,7 @@ export function createDatafeed() {
             // Using a different lastBar would cause TradingView to reject updates
             const lastBar = _lastBarMap.get(key) || null;
 
-            console.log(`[Datafeed] subscribeBars ${symbol} res=${resolution} lastBar=${lastBar ? new Date(lastBar.time).toISOString() : 'null'}`);
+            // console.log(`[Datafeed] subscribeBars ${symbol} res=${resolution} lastBar=${lastBar ? new Date(lastBar.time).toISOString() : 'null'}`);
 
             wss.subscribe(
                 listenerGuid,
