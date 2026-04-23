@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { decode } from '@msgpack/msgpack';
 import { Search, Star, PanelLeftClose } from 'lucide-react';
 import OrderPlacementModal from './OrderPlacementModal';
@@ -10,24 +10,16 @@ import {
 } from '../../utils/tradingTokenManager';
 import { tradingConfigManager } from '../../utils/tradingConfigCache';
 
-const MARKET_DATA = [];
-
 const CATEGORIES = ['★', 'Currencies', 'Commodities', 'Indices', 'Crypto'];
 
 const formatPrice = (val, precision) => {
     if (val === undefined || val === null || val === '-') return val || '-';
     const num = Number(val);
     if (isNaN(num)) return val;
-
-    if (precision !== undefined) {
-        return num.toFixed(precision);
-    }
-
-    // Fallback if precision is not provided
+    if (precision !== undefined) return num.toFixed(precision);
     return Number(num.toPrecision(6)).toString();
 };
 
-// Helper for institutional price display (small last digit / pipette)
 const renderPrice = (price, className) => {
     if (!price || price === '-' || typeof price !== 'string') return <span className={className}>{price}</span>;
     const main = price.slice(0, -1);
@@ -39,155 +31,166 @@ const renderPrice = (price, className) => {
     );
 };
 
-// ── Memoized Market Item Component ──────────────────────────
-const MarketItem = React.memo(({ item, selectedSymbol, setSelectedSymbol, setModalData, tradingMode }) => {
+// ── Memoized Market Item ─────────────────────────────────────
+// CRITICAL: Props must be primitive or stable references to avoid
+// breaking React.memo. The `onToggleStar` callback is passed as
+// a separate stable prop, NOT spread into the item object.
+const MarketItem = React.memo(({
+    symbol, bid, ask, tickDirection, starred, change,
+    bidHigh, bidLow, instrumentType,
+    isSelected, onSelect, onToggleStar, tradingMode
+}) => {
     return (
         <div
-            className={`market-item ${selectedSymbol === item.symbol ? 'selected' : ''}`}
-            onClick={() => {
-                setSelectedSymbol(item.symbol);
-                setModalData(item);
-            }}
+            className={`market-item ${isSelected ? 'selected' : ''}`}
+            onClick={() => onSelect(symbol)}
         >
             <div className="market-item-left">
                 <div
                     className="market-star-wrapper"
-                    onClick={(e) => {
-                        e.stopPropagation();
-                        // Star logic moved to parent via a dedicated toggle function
-                        item.onToggleStar(item.symbol);
-                    }}
+                    onClick={(e) => { e.stopPropagation(); onToggleStar(symbol); }}
                     style={{ cursor: 'pointer', display: 'flex', alignItems: 'center' }}
                 >
                     <Star
                         size={12}
-                        className={`market-star ${item.starred ? 'starred' : ''}`}
-                        fill={item.starred ? '#f59e0b' : 'none'}
-                        color={item.starred ? '#f59e0b' : 'var(--text-muted)'}
+                        className={`market-star ${starred ? 'starred' : ''}`}
+                        fill={starred ? '#f59e0b' : 'none'}
+                        color={starred ? '#f59e0b' : 'var(--text-muted)'}
                     />
                 </div>
-                <span className="market-symbol-name">{item.symbol}</span>
-                <span className={`market-arrow ${item.tickDirection === 'down' ? 'arrow-down' : 'arrow-up'}`}>
-                    {item.tickDirection === 'down' ? '▼' : '▲'}
+                <span className="market-symbol-name">{symbol}</span>
+                <span className={`market-arrow ${tickDirection === 'down' ? 'arrow-down' : 'arrow-up'}`}>
+                    {tickDirection === 'down' ? '▼' : '▲'}
                 </span>
                 {tradingMode === 'Advanced' && (
-                    <span className={`market-change ${item.tickDirection === 'down' ? 'negative' : 'positive'}`}>
-                        {item.change}
+                    <span className={`market-change ${tickDirection === 'down' ? 'negative' : 'positive'}`}>
+                        {change}
                     </span>
                 )}
             </div>
             <div className="market-price-col">
-                {renderPrice(item.bid, `market-bid-price ${item.tickDirection === 'up' ? 'price-up' : item.tickDirection === 'down' ? 'price-down' : ''}`)}
+                {renderPrice(bid, `market-bid-price ${tickDirection === 'up' ? 'price-up' : tickDirection === 'down' ? 'price-down' : ''}`)}
                 {tradingMode === 'Advanced' && (
-                    <span className="market-price-range-val">
-                        L: {renderPrice(item.bidLow)}
-                    </span>
+                    <span className="market-price-range-val">L: {renderPrice(bidLow)}</span>
                 )}
             </div>
             <div className="market-price-col">
-                {renderPrice(item.ask, `market-ask-price ${item.tickDirection === 'up' ? 'price-up' : item.tickDirection === 'down' ? 'price-down' : ''}`)}
+                {renderPrice(ask, `market-ask-price ${tickDirection === 'up' ? 'price-up' : tickDirection === 'down' ? 'price-down' : ''}`)}
                 {tradingMode === 'Advanced' && (
-                    <span className="market-price-range-val">
-                        H: {renderPrice(item.bidHigh)}
-                    </span>
+                    <span className="market-price-range-val">H: {renderPrice(bidHigh)}</span>
                 )}
             </div>
         </div>
     );
-}, (prev, next) => {
-    // Only re-render if essential properties changed
-    return (
-        prev.item.bid === next.item.bid &&
-        prev.item.ask === next.item.ask &&
-        prev.item.tickDirection === next.item.tickDirection &&
-        prev.item.starred === next.item.starred &&
-        prev.item.change === next.item.change &&
-        prev.selectedSymbol === next.selectedSymbol &&
-        prev.tradingMode === next.tradingMode
-    );
 });
 
 export default function MarketSidebar({ selectedSymbol, setSelectedSymbol, onToggleSidebar }) {
-    const [marketData, setMarketData] = useState(MARKET_DATA);
+    // ── State ──
+    const [marketData, setMarketData] = useState([]);
     const [searchTerm, setSearchTerm] = useState('');
     const [activeCategory, setActiveCategory] = useState('Currencies');
     const [modalData, setModalData] = useState(null);
-    const [config, setConfig] = useState(null);
+    const [tradingMode, setTradingMode] = useState('Normal');
+
+    // ── Refs (never trigger re-renders) ──
     const wsRef = useRef(null);
-    const updatesBufferRef = useRef(new Map());
-    const marketDataMapRef = useRef(new Map()); // O(1) lookups by symbol
-    const prevPricesRef = useRef({}); // Track previous bid prices for tick direction
+    const masterMapRef = useRef(new Map());     // symbol → data object (source of truth)
+    const prevPricesRef = useRef({});            // symbol → last bid number
     const isUnmountedRef = useRef(false);
     const refreshAttemptedRef = useRef(false);
     const configRef = useRef(null);
-    const [tradingMode, setTradingMode] = useState('Normal');
+    const pendingCountRef = useRef(0);           // count of pending updates since last flush
+    const rafIdRef = useRef(null);               // requestAnimationFrame ID
 
-    // ── Load Config (metadata only) ──
+    // ── Load Config ──
     useEffect(() => {
-        const loadConfig = async () => {
+        const load = async () => {
             const data = await tradingConfigManager.getConfig();
-            if (data && data.symbols) {
-                setConfig(data);
+            if (data?.symbols) {
                 configRef.current = data;
-                
-                // Initialize map with config symbols immediately
-                const initialMap = new Map();
+                const map = new Map();
                 data.symbols.forEach(s => {
-                    initialMap.set(s.symbol, { 
-                        symbol: s.symbol, 
-                        bid: '-', ask: '-', 
-                        instrumentType: s.instrumentType,
-                        starred: false 
+                    map.set(s.symbol, {
+                        symbol: s.symbol, bid: '-', ask: '-',
+                        instrumentType: s.instrumentType, starred: false
                     });
                 });
-                marketDataMapRef.current = initialMap;
-                setMarketData(Array.from(initialMap.values()));
+                masterMapRef.current = map;
+                setMarketData(Array.from(map.values()));
             }
         };
-        loadConfig();
-
-        const handleConfigUpdate = (e) => {
-            if (e.detail) {
-                setConfig(e.detail);
-                configRef.current = e.detail;
-            }
-        };
-        window.addEventListener('tradingConfigUpdated', handleConfigUpdate);
-        return () => window.removeEventListener('tradingConfigUpdated', handleConfigUpdate);
+        load();
+        const handler = (e) => { if (e.detail) configRef.current = e.detail; };
+        window.addEventListener('tradingConfigUpdated', handler);
+        return () => window.removeEventListener('tradingConfigUpdated', handler);
     }, []);
 
-    // ── Listen for Trading Mode Changes ──
     useEffect(() => {
-        const handleModeChange = (e) => {
-            if (e.detail?.mode) setTradingMode(e.detail.mode);
-        };
-        window.addEventListener('tradingModeChanged', handleModeChange);
-        return () => window.removeEventListener('tradingModeChanged', handleModeChange);
+        const handler = (e) => { if (e.detail?.mode) setTradingMode(e.detail.mode); };
+        window.addEventListener('tradingModeChanged', handler);
+        return () => window.removeEventListener('tradingModeChanged', handler);
     }, []);
 
+    // ── WebSocket Connection ──
     useEffect(() => {
         isUnmountedRef.current = false;
         let reconnectTimer = null;
         let reconnectDelay = 1000;
-        let heartbeatInterval = null;
         let lastDataTimestamp = Date.now();
-        let staleWatchdogInterval = null;
         let intentionalClose = false;
 
-        const handleTokenRefresh = () => {
-            console.log('[MarketSidebar] Token refreshed, reconnecting WebSocket...');
-            connectWs();
-        };
-        window.addEventListener('tradingTokenRefreshed', handleTokenRefresh);
+        // === FLUSH MECHANISM ===
+        // Uses requestAnimationFrame to sync with browser paint cycle.
+        // This is far more efficient than setInterval because:
+        // 1. It automatically pauses when the tab is hidden
+        // 2. It runs at the optimal time for the browser to repaint
+        // 3. It never blocks the main thread
+        function scheduleFlush() {
+            if (rafIdRef.current) return; // already scheduled
+            rafIdRef.current = requestAnimationFrame(() => {
+                rafIdRef.current = null;
+                if (pendingCountRef.current === 0) return;
+                pendingCountRef.current = 0;
+                setMarketData(Array.from(masterMapRef.current.values()));
+            });
+        }
+
+        function processSymbolUpdate(symbol, vals) {
+            if (!symbol || !Array.isArray(vals)) return;
+            lastDataTimestamp = Date.now();
+
+            const existing = masterMapRef.current.get(symbol);
+            if (!existing) return; // Not in our config, ignore
+
+            const symbolInfo = configRef.current?.symbols?.find(s => s.symbol === symbol);
+            const precision = symbolInfo?.showPoints;
+
+            if (vals[0] !== undefined) {
+                const newBid = parseFloat(vals[0]);
+                const prevBid = prevPricesRef.current[symbol];
+                if (prevBid !== undefined) {
+                    existing.tickDirection = newBid > prevBid ? 'up' : newBid < prevBid ? 'down' : existing.tickDirection;
+                }
+                prevPricesRef.current[symbol] = newBid;
+                existing.bid = formatPrice(vals[0], precision);
+            }
+            if (vals[1] !== undefined) existing.ask = formatPrice(vals[1], precision);
+            if (vals[2] !== undefined) existing.bidHigh = formatPrice(vals[2], precision);
+            if (vals[3] !== undefined) existing.bidLow = formatPrice(vals[3], precision);
+            if (vals[4] !== undefined) {
+                const v = parseFloat(vals[4]);
+                existing.change = (v > 0 ? '+' : '') + v.toFixed(2) + '%';
+            }
+
+            pendingCountRef.current++;
+            scheduleFlush();
+        }
 
         function cleanupWs() {
             if (wsRef.current) {
                 const ws = wsRef.current;
                 wsRef.current = null;
-                ws.onopen = null;
-                ws.onmessage = null;
-                ws.onerror = null;
-                ws.onclose = null;
+                ws.onopen = ws.onmessage = ws.onerror = ws.onclose = null;
                 if (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING) {
                     ws.close();
                 }
@@ -205,21 +208,20 @@ export default function MarketSidebar({ selectedSymbol, setSelectedSymbol, onTog
                 return;
             }
 
-            console.log('[MarketSidebar] Connecting WebSocket...');
             const ws = new WebSocket(`wss://v3.livefxhub.com:8444/?token=${token}`);
-            ws.binaryType = "arraybuffer";
+            ws.binaryType = 'arraybuffer';
             wsRef.current = ws;
 
             ws.onopen = async () => {
-                console.log('[MarketSidebar] Connected to LiveFXHub Market Data WS');
+                console.log('[MarketSidebar] WS connected');
                 refreshAttemptedRef.current = false;
                 reconnectDelay = 1000;
                 lastDataTimestamp = Date.now();
 
-                const currentConfig = configRef.current || await tradingConfigManager.getConfig();
-                const symbols = currentConfig?.symbols?.map(s => s.symbol) || [];
+                const cfg = configRef.current || await tradingConfigManager.getConfig();
+                const symbols = cfg?.symbols?.map(s => s.symbol) || [];
                 if (symbols.length > 0 && ws.readyState === WebSocket.OPEN) {
-                    ws.send(JSON.stringify({ action: "subscribe", symbols }));
+                    ws.send(JSON.stringify({ action: 'subscribe', symbols }));
                 }
             };
 
@@ -237,11 +239,16 @@ export default function MarketSidebar({ selectedSymbol, setSelectedSymbol, onTog
                         parsed = decode(new Uint8Array(event.data));
                     } else return;
 
-                    if (parsed && (parsed.type === 'ping' || parsed.action === 'ping')) {
+                    // Handle pings
+                    if (parsed?.type === 'ping' || parsed?.action === 'ping') {
                         if (ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify({ action: 'pong' }));
                         return;
                     }
 
+                    // Handle connection confirmation (ignore silently)
+                    if (parsed?.type === 'connected') return;
+
+                    // Handle token expiry
                     if (isTokenExpiredWsMessage(parsed)) {
                         intentionalClose = true;
                         ws.close();
@@ -249,61 +256,30 @@ export default function MarketSidebar({ selectedSymbol, setSelectedSymbol, onTog
                         return;
                     }
 
-                    const processSymbolUpdate = (symbol, vals) => {
-                        if (!symbol || !Array.isArray(vals)) return;
-                        lastDataTimestamp = Date.now();
-
-                        // Access map directly for extreme performance
-                        const existing = marketDataMapRef.current.get(symbol) || { symbol, starred: false };
-                        const updateEntry = { ...existing };
-
-                        const symbolInfo = configRef.current?.symbols?.find(s => s.symbol === symbol);
-                        const precision = symbolInfo?.showPoints;
-                        if (symbolInfo?.instrumentType) updateEntry.instrumentType = symbolInfo.instrumentType;
-
-                        if (vals[0] !== undefined) {
-                            const newBid = parseFloat(vals[0]);
-                            const prevBid = prevPricesRef.current[symbol];
-                            if (prevBid !== undefined) {
-                                if (newBid > prevBid) updateEntry.tickDirection = 'up';
-                                else if (newBid < prevBid) updateEntry.tickDirection = 'down';
-                            }
-                            prevPricesRef.current[symbol] = newBid;
-                            updateEntry.bid = formatPrice(vals[0], precision);
+                    // Batched prices: { type: 'prices', data: { SYMBOL: [bid,ask,h,l,chg] } }
+                    if (parsed?.data && typeof parsed.data === 'object') {
+                        const entries = Object.entries(parsed.data);
+                        for (let i = 0; i < entries.length; i++) {
+                            processSymbolUpdate(entries[i][0], entries[i][1]);
                         }
-
-                        if (vals[1] !== undefined) updateEntry.ask = formatPrice(vals[1], precision);
-                        if (vals[2] !== undefined) updateEntry.bidHigh = formatPrice(vals[2], precision);
-                        if (vals[3] !== undefined) updateEntry.bidLow = formatPrice(vals[3], precision);
-
-                        if (vals[4] !== undefined) {
-                            const changeVal = parseFloat(vals[4]);
-                            updateEntry.change = (changeVal > 0 ? '+' : '') + changeVal.toFixed(2) + '%';
-                        }
-
-                        updatesBufferRef.current.set(symbol, updateEntry);
-                    };
-
-                    // Handle batched prices (type: "prices") or initial snapshots (type: "snapshot")
-                    if (parsed && (parsed.type === 'prices' || parsed.type === 'snapshot') && parsed.data) {
-                        Object.entries(parsed.data).forEach(([symbol, vals]) => processSymbolUpdate(symbol, vals));
                     }
-                    
-                    // Fallback for legacy single-tick format (if any)
-                    if (parsed && parsed.s && parsed.p) {
+
+                    // Legacy single tick: { s: 'SYMBOL', p: [...] }
+                    if (parsed?.s && parsed?.p) {
                         processSymbolUpdate(parsed.s, parsed.p);
                     }
                 } catch (err) {
-                    console.error('[MarketSidebar] WS parsing error:', err);
+                    console.error('[MarketSidebar] Parse error:', err);
                 }
             };
 
-            ws.onclose = (closeEvent) => {
-                console.log('[MarketSidebar] WS disconnected', closeEvent?.code);
+            ws.onerror = () => {}; // onclose handles reconnection
+
+            ws.onclose = (e) => {
                 wsRef.current = null;
                 if (isUnmountedRef.current || intentionalClose) return;
 
-                if (isTokenExpiredWsEvent(closeEvent)) {
+                if (isTokenExpiredWsEvent(e)) {
                     handleTokenRefreshAndReconnect();
                 } else {
                     reconnectTimer = setTimeout(() => {
@@ -329,25 +305,17 @@ export default function MarketSidebar({ selectedSymbol, setSelectedSymbol, onTog
             }
         }
 
-        // Flush buffered updates to React state at 10 FPS (100ms)
-        const renderInterval = setInterval(() => {
-            const pending = updatesBufferRef.current;
-            if (pending.size === 0) return;
+        // Token refresh from other components (e.g. TradingTerminal timer)
+        const onTokenRefresh = () => {
+            refreshAttemptedRef.current = false;
+            intentionalClose = true;
+            cleanupWs();
+            setTimeout(connectWs, 100);
+        };
+        window.addEventListener('tradingTokenRefreshed', onTokenRefresh);
 
-            // Update the master map
-            pending.forEach((update, symbol) => {
-                marketDataMapRef.current.set(symbol, update);
-            });
-
-            // Trigger re-render with a NEW array reference
-            // Because MarketItem is memoized, only the rows that actually had an update will re-draw.
-            setMarketData(Array.from(marketDataMapRef.current.values()));
-            
-            // Clear buffer safely
-            updatesBufferRef.current = new Map();
-        }, 100);
-
-        staleWatchdogInterval = setInterval(() => {
+        // Stale data watchdog — reconnect if no data for 60s
+        const watchdog = setInterval(() => {
             if (isUnmountedRef.current) return;
             if (Date.now() - lastDataTimestamp > 60000) {
                 console.warn('[MarketSidebar] Stale data — reconnecting');
@@ -357,32 +325,36 @@ export default function MarketSidebar({ selectedSymbol, setSelectedSymbol, onTog
             }
         }, 15000);
 
-        setTimeout(() => connectWs(), 50);
+        // Start connection
+        setTimeout(connectWs, 50);
 
         return () => {
             isUnmountedRef.current = true;
-            clearInterval(renderInterval);
-            clearInterval(staleWatchdogInterval);
+            if (rafIdRef.current) cancelAnimationFrame(rafIdRef.current);
+            clearInterval(watchdog);
             clearTimeout(reconnectTimer);
-            window.removeEventListener('tradingTokenRefreshed', handleTokenRefresh);
+            window.removeEventListener('tradingTokenRefreshed', onTokenRefresh);
             cleanupWs();
         };
     }, []);
 
+    // ── Stable callbacks (never change identity) ──
     const toggleStar = useCallback((symbol) => {
-        setMarketData(prevData =>
-            prevData.map(item =>
-                item.symbol === symbol ? { ...item, starred: !item.starred } : item
-            )
-        );
-        // Sync back to map so it survives the next render flush
-        const existing = marketDataMapRef.current.get(symbol);
+        const existing = masterMapRef.current.get(symbol);
         if (existing) {
-            marketDataMapRef.current.set(symbol, { ...existing, starred: !existing.starred });
+            existing.starred = !existing.starred;
+            setMarketData(Array.from(masterMapRef.current.values()));
         }
     }, []);
 
-    const filteredData = React.useMemo(() => {
+    const onSelectItem = useCallback((symbol) => {
+        setSelectedSymbol(symbol);
+        const item = masterMapRef.current.get(symbol);
+        if (item) setModalData(item);
+    }, [setSelectedSymbol]);
+
+    // ── Filtering (memoized) ──
+    const filteredData = useMemo(() => {
         return marketData
             .filter(item => {
                 const matchesSearch = item.symbol.toLowerCase().includes(searchTerm.toLowerCase());
@@ -402,9 +374,9 @@ export default function MarketSidebar({ selectedSymbol, setSelectedSymbol, onTog
             {modalData ? (
                 <OrderPlacementModal
                     symbol={modalData.symbol}
-                    bid={marketDataMapRef.current.get(modalData.symbol)?.bid || modalData.bid}
-                    ask={marketDataMapRef.current.get(modalData.symbol)?.ask || modalData.ask}
-                    tickDirection={marketDataMapRef.current.get(modalData.symbol)?.tickDirection}
+                    bid={masterMapRef.current.get(modalData.symbol)?.bid || modalData.bid}
+                    ask={masterMapRef.current.get(modalData.symbol)?.ask || modalData.ask}
+                    tickDirection={masterMapRef.current.get(modalData.symbol)?.tickDirection}
                     allMarketData={marketData}
                     onClose={() => setModalData(null)}
                 />
@@ -421,7 +393,7 @@ export default function MarketSidebar({ selectedSymbol, setSelectedSymbol, onTog
                                 className="market-search-input"
                             />
                         </div>
-                        <button className="market-sidebar-toggle-btn" onClick={onToggleSidebar}>
+                        <button className="market-sidebar-toggle-btn" onClick={onToggleSidebar} title="Close Sidebar">
                             <PanelLeftClose size={16} />
                         </button>
                     </div>
@@ -446,13 +418,21 @@ export default function MarketSidebar({ selectedSymbol, setSelectedSymbol, onTog
 
                     <div className="market-list">
                         {filteredData.length > 0 ? (
-                            filteredData.map((item) => (
+                            filteredData.map(item => (
                                 <MarketItem
                                     key={item.symbol}
-                                    item={{ ...item, onToggleStar: toggleStar }}
-                                    selectedSymbol={selectedSymbol}
-                                    setSelectedSymbol={setSelectedSymbol}
-                                    setModalData={setModalData}
+                                    symbol={item.symbol}
+                                    bid={item.bid}
+                                    ask={item.ask}
+                                    tickDirection={item.tickDirection}
+                                    starred={item.starred}
+                                    change={item.change}
+                                    bidHigh={item.bidHigh}
+                                    bidLow={item.bidLow}
+                                    instrumentType={item.instrumentType}
+                                    isSelected={selectedSymbol === item.symbol}
+                                    onSelect={onSelectItem}
+                                    onToggleStar={toggleStar}
                                     tradingMode={tradingMode}
                                 />
                             ))

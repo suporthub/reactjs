@@ -143,7 +143,7 @@ class WssManager {
 
     _refreshUrl() {
         const token = getTradingAccessToken();
-        if (token) this._url = `wss://v3.livefxhub.com:8444/token=${token}`;
+        if (token) this._url = `wss://v3.livefxhub.com:8444/?token=${token}`;
     }
 
     _setupTokenRefreshListener() {
@@ -178,11 +178,25 @@ class WssManager {
         this._ws.onmessage = (event) => {
             this._lastMessageTime = Date.now();
             try {
+                // Server sends text for control messages, binary for prices
+                if (typeof event.data === 'string') {
+                    // Handle text ping/pong
+                    if (event.data === 'ping') {
+                        this._send({ action: 'pong' });
+                        return;
+                    }
+                    // Ignore JSON control messages (connected, error, etc.)
+                    return;
+                }
+
+                if (!(event.data instanceof ArrayBuffer) || event.data.byteLength === 0) return;
+
                 const data = decode(new Uint8Array(event.data));
 
                 // Handle batched updates from optimized backend
-                if (data.type === 'prices' && data.data) {
+                if (data.data && typeof data.data === 'object') {
                     for (const [symbol, vals] of Object.entries(data.data)) {
+                        if (!Array.isArray(vals)) continue;
                         const price = parseFloat(vals[0]);
                         if (!isNaN(price)) {
                             this._lastPrices.set(symbol, price);
@@ -190,15 +204,19 @@ class WssManager {
                         }
                     }
                 }
-                // Legacy / Snapshot support
-                if (data.type === 'snapshot' && data.data) {
-                    for (const [symbol, vals] of Object.entries(data.data)) {
-                        const price = parseFloat(vals[0]);
-                        if (!isNaN(price)) this._lastPrices.set(symbol, price);
+                // Legacy single tick
+                if (data.s && data.p) {
+                    const price = parseFloat(data.p[0]);
+                    if (!isNaN(price)) {
+                        this._lastPrices.set(data.s, price);
+                        this._dispatchTick(data.s, price);
                     }
                 }
             } catch (e) {
-                console.error('[WSS] Decode error:', e);
+                // Only log actual decode errors, not expected text messages
+                if (event.data instanceof ArrayBuffer) {
+                    console.error('[WSS] Decode error:', e);
+                }
             }
         };
 
