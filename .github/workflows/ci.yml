@@ -23,11 +23,14 @@ jobs:
             git fetch origin
             git reset --hard origin/${{ github.ref_name }}
             
+            # Get short SHA for precise tagging
+            export SHA=$(git rev-parse --short HEAD)
+
             # Build the Vite React app + NGINX container natively (no cache to ensure updates)
-            docker build --no-cache -t reactjs:latest .
+            docker build --no-cache -t reactjs:${SHA} .
             
             # Import image to local k3s registry
-            docker save reactjs:latest | sudo k3s ctr images import -
+            docker save reactjs:${SHA} | sudo k3s ctr images import -
             
-            # Restart the deployment to serve the newly built web app
-            kubectl rollout restart deployment/reactjs -n default
+            # Update the deployment to use the new precise image tag
+            kubectl set image deployment/reactjs reactjs=reactjs:${SHA} -n default
