@@ -46,6 +46,20 @@ function setTradingTokens(accessToken, refreshToken) {
     }
 }
 
+/**
+ * Clears all trading-related session data.
+ */
+export function clearTradingSession() {
+    console.log('[TradingTokenManager] Clearing trading session...');
+    localStorage.removeItem('tradingAccessToken');
+    localStorage.removeItem('tradingSessionId');
+    localStorage.removeItem('trading_config');
+    localStorage.removeItem('trading_config_version');
+    
+    // Clear tradingRefreshToken cookie
+    document.cookie = 'tradingRefreshToken=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/; SameSite=Strict; Secure';
+}
+
 // ── Singleton refresh guard ─────────────────────────────────────
 // Prevents multiple simultaneous refresh calls (request coalescing)
 let _isRefreshing = false;
@@ -112,12 +126,15 @@ export async function refreshTradingToken() {
         }
 
         const result = await response.json();
+        const data = result.data || result; // Handle both {data: {...}} and flat response
 
-        if (result.success && result.data && result.data.status === 'success') {
-            const { accessToken, refreshToken: newRefreshToken, sessionId } = result.data;
+        if ((result.success || data.status === 'success') && (data.accessToken || data.token || data.portalToken)) {
+            const accessToken = data.accessToken || data.token || data.portalToken;
+            const refreshToken = data.refreshToken || data.portalRefreshToken;
+            const sessionId = data.sessionId;
 
             // Update localStorage & cookie
-            setTradingTokens(accessToken, newRefreshToken);
+            setTradingTokens(accessToken, refreshToken);
 
             // Update sessionId if provided
             if (sessionId) {
@@ -126,11 +143,16 @@ export async function refreshTradingToken() {
 
             console.log('[TradingTokenManager] Tokens refreshed successfully');
 
+            // Dispatch global event so components (like MarketSidebar WS) can reconnect
+            window.dispatchEvent(new CustomEvent('tradingTokenRefreshed', { 
+                detail: { accessToken } 
+            }));
+
             _isRefreshing = false;
             notifyListeners(accessToken);
             return accessToken;
         } else {
-            console.error('[TradingTokenManager] Refresh response unsuccessful:', result);
+            console.error('[TradingTokenManager] Refresh response unsuccessful or missing token:', result);
             _isRefreshing = false;
             notifyListeners(null);
             return null;
@@ -167,8 +189,20 @@ export async function tradingFetch(url, options = {}) {
         const newToken = await refreshTradingToken();
 
         if (newToken) {
-            headers['Authorization'] = `Bearer ${newToken}`;
-            response = await fetch(url, { ...options, headers });
+            const newOptions = { ...options };
+            const newHeaders = {};
+            
+            // Re-build headers to avoid Header object vs plain object issues
+            if (options.headers instanceof Headers) {
+                options.headers.forEach((v, k) => { newHeaders[k] = v; });
+            } else if (options.headers) {
+                Object.assign(newHeaders, options.headers);
+            }
+            
+            newHeaders['Authorization'] = `Bearer ${newToken}`;
+            newOptions.headers = newHeaders;
+            
+            response = await fetch(url, newOptions);
         }
     }
 

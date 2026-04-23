@@ -43,7 +43,8 @@ export default function Topbar({ theme, toggleTheme, sidebarOpen, setSidebarOpen
 
     const kycStatusColor = () => {
         switch (userData?.kycStatus?.toLowerCase()) {
-            case 'verified': return '#10b981';
+            case 'verified':
+            case 'approved': return '#10b981';
             case 'pending': return '#f59e0b';
             case 'rejected': return '#ef4444';
             default: return '#64748b';

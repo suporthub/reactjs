@@ -157,6 +157,10 @@
   font-weight: 500;
   color: var(--text-muted);
   border-radius: 4px;
+  border: 1px solid transparent; /* Prevents jumping when active state adds border */
+  transition: all 0.2s ease;
+  cursor: pointer;
+  background: transparent;
 }
 
 .tab-button.active {

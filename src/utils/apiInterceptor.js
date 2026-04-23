@@ -16,15 +16,15 @@ const setCookie = (name, value, days) => {
     date.setTime(date.getTime() + (days * 24 * 60 * 60 * 1000));
     expires = "; expires=" + date.toUTCString();
   }
-  document.cookie = name + "=" + (value || "") + expires + "; path=/";
+  document.cookie = name + "=" + (value || "") + expires + "; path=/; SameSite=Strict; Secure";
 };
 
 const clearAuthAndRedirect = () => {
   localStorage.removeItem('portalToken');
   localStorage.removeItem('userData');
   localStorage.removeItem('accounts');
-  // Clear portalRefreshToken cookie
-  document.cookie = 'portalRefreshToken=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/';
+  // Clear portalRefreshToken cookie securely
+  document.cookie = 'portalRefreshToken=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/; SameSite=Strict; Secure';
   // Only redirect if not already on login/signup
   if (!window.location.pathname.includes('/login') && !window.location.pathname.includes('/signup')) {
     window.location.href = '/login';
@@ -45,7 +45,12 @@ const onRefreshed = (token) => {
 
 const isAuthEndpoint = (url) => {
   if (typeof url !== 'string') return false;
-  const skipPaths = ['/login', '/signup', '/refresh-token', '/forgot', '/verify', '/reset', '/otp'];
+  // Skip paths that are either public or handled by the dedicated trading token manager
+  const skipPaths = [
+    '/login', '/signup', '/refresh-token', '/forgot',
+    '/verify', '/reset', '/otp',
+    '/trading-config', '/order/place', '/order/close'
+  ];
   return skipPaths.some(path => url.includes(path));
 };
 
@@ -109,7 +114,8 @@ window.fetch = async (...args) => {
           const refreshResponse = await originalFetch('https://v3.livefxhub.com:8444/api/live/refresh-token', {
             method: 'POST',
             headers: {
-              'Content-Type': 'application/json'
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${currentToken}`
             },
             body: JSON.stringify({ refreshToken })
           });

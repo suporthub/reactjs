@@ -1,4 +1,4 @@
-import { tradingFetch, getTradingAccessToken } from '../components/trading-terminal/tradingTokenManager';
+import { tradingFetch, getTradingAccessToken } from './tradingTokenManager';
 
 /**
  * Advanced Trading Configuration Manager

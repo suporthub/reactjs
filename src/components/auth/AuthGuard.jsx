@@ -39,7 +39,10 @@ export default function AuthGuard({ children }) {
                 try {
                     const refreshResponse = await fetch('https://v3.livefxhub.com:8444/api/live/refresh-token', {
                         method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
+                        headers: { 
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${token}` 
+                        },
                         body: JSON.stringify({ refreshToken })
                     });
 
@@ -53,7 +56,7 @@ export default function AuthGuard({ children }) {
                         if (data.portalRefreshToken) {
                             const date = new Date();
                             date.setTime(date.getTime() + (7 * 24 * 60 * 60 * 1000));
-                            document.cookie = `portalRefreshToken=${data.portalRefreshToken}; expires=${date.toUTCString()}; path=/`;
+                            document.cookie = `portalRefreshToken=${data.portalRefreshToken}; expires=${date.toUTCString()}; path=/; SameSite=Strict; Secure`;
                         }
                     } else {
                         throw new Error("Refresh failed");
@@ -107,7 +110,7 @@ export default function AuthGuard({ children }) {
         const clearAllAndGoToLogin = () => {
             localStorage.removeItem('portalToken');
             localStorage.removeItem('userData');
-            document.cookie = 'portalRefreshToken=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/';
+            document.cookie = 'portalRefreshToken=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/; SameSite=Strict; Secure';
             setAuthState('unauthenticated');
             navigate('/login', { replace: true });
         };

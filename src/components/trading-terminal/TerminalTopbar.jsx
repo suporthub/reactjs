@@ -3,9 +3,10 @@ import { useNavigate } from 'react-router-dom';
 import {
     BarChart3, Wallet, Gift, Copy, ChevronDown,
     Video, Circle, User, Settings, LogOut,
-    ArrowLeft, Sun, Moon, Info
+    ArrowLeft, Sun, Moon, Info, Zap, Trophy
 } from 'lucide-react';
 import { tradingConfigManager } from '../../utils/tradingConfigCache';
+import { clearTradingSession } from './tradingTokenManager';
 
 export default function TerminalTopbar() {
     const navigate = useNavigate();
@@ -24,31 +25,25 @@ export default function TerminalTopbar() {
         localStorage.setItem('theme', newTheme);
     };
 
-    const [leverage, setLeverage] = useState(null);
+    const [tradingMode, setTradingMode] = useState('Normal');
+
+    const toggleTradingMode = () => {
+        const newMode = tradingMode === 'Normal' ? 'Advanced' : 'Normal';
+        setTradingMode(newMode);
+        // Dispatch event for other components to react to mode change
+        window.dispatchEvent(new CustomEvent('tradingModeChanged', { detail: { mode: newMode } }));
+    };
 
     useEffect(() => {
         const theme = isDark ? 'dark' : 'light';
         document.documentElement.setAttribute('data-theme', theme);
         localStorage.setItem('theme', theme);
-
-        // Fetch leverage from config
-        const fetchConfig = async () => {
-            const config = await tradingConfigManager.getConfig();
-            if (config?.account?.leverage) {
-                setLeverage(config.account.leverage);
-            }
-        };
-        fetchConfig();
-
-        // Listen for config updates (e.g. if version changes in background)
-        const handleConfigUpdate = (e) => {
-            if (e.detail?.account?.leverage) {
-                setLeverage(e.detail.account.leverage);
-            }
-        };
-        window.addEventListener('tradingConfigUpdated', handleConfigUpdate);
-        return () => window.removeEventListener('tradingConfigUpdated', handleConfigUpdate);
     }, [isDark]);
+
+    const handleLogout = () => {
+        clearTradingSession();
+        navigate('/dashboard');
+    };
 
     return (
         <header className="terminal-topbar">
@@ -61,17 +56,21 @@ export default function TerminalTopbar() {
             </div>
 
             <div className="terminal-topbar-right">
+                <div className="terminal-mode-switcher" onClick={toggleTradingMode} title="Switch Trading Mode">
+                    <div className={`mode-option ${tradingMode === 'Normal' ? 'active' : ''}`}>
+                        <Zap size={12} />
+                        <span>Normal</span>
+                    </div>
+                    <div className={`mode-option ${tradingMode === 'Advanced' ? 'active' : ''}`}>
+                        <Trophy size={12} />
+                        <span>Advanced</span>
+                    </div>
+                </div>
+
                 <div className="terminal-account-selector" onClick={() => setAccountDropdown(!accountDropdown)}>
                     <span>Main Account</span>
                     <ChevronDown size={14} />
                 </div>
-
-                {leverage && (
-                    <div className="terminal-leverage-badge" title={`Account Leverage: 1:${leverage}`}>
-                        <Info size={12} />
-                        <span>1:{leverage}</span>
-                    </div>
-                )}
 
                 <div className="terminal-live-badge live" title="Live account">
                     <Circle size={8} fill="#27ae60" color="#27ae60" />
@@ -86,7 +85,7 @@ export default function TerminalTopbar() {
                     {isDark ? <Sun size={18} /> : <Moon size={18} />}
                 </button>
 
-                <button className="terminal-icon-btn terminal-logout-btn" title="Logout" onClick={() => navigate('/login')}>
+                <button className="terminal-icon-btn terminal-logout-btn" title="Logout" onClick={handleLogout}>
                     <LogOut size={18} />
                 </button>
             </div>

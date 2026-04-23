@@ -27,6 +27,18 @@ const formatPrice = (val, precision) => {
     return Number(num.toPrecision(6)).toString();
 };
 
+// Helper for institutional price display (small last digit / pipette)
+const renderPrice = (price, className) => {
+    if (!price || price === '-' || typeof price !== 'string') return <span className={className}>{price}</span>;
+    const main = price.slice(0, -1);
+    const pipette = price.slice(-1);
+    return (
+        <span className={className}>
+            {main}<span className="price-pipette">{pipette}</span>
+        </span>
+    );
+};
+
 export default function MarketSidebar({ selectedSymbol, setSelectedSymbol, onToggleSidebar }) {
     const [marketData, setMarketData] = useState(MARKET_DATA);
     const [searchTerm, setSearchTerm] = useState('');
@@ -40,6 +52,7 @@ export default function MarketSidebar({ selectedSymbol, setSelectedSymbol, onTog
     const isUnmountedRef = useRef(false);
     const refreshAttemptedRef = useRef(false); // Prevent infinite refresh loops
     const configRef = useRef(null);
+    const [tradingMode, setTradingMode] = useState('Normal');
 
     // ── Load Config (metadata only — instrumentType, showPoints etc.) ──
     useEffect(() => {
@@ -56,10 +69,30 @@ export default function MarketSidebar({ selectedSymbol, setSelectedSymbol, onTog
             if (e.detail) {
                 setConfig(e.detail);
                 configRef.current = e.detail;
+
+                // Proactive re-subscription if symbols changed while connected
+                if (wsRef.current?.readyState === WebSocket.OPEN) {
+                    const symbols = e.detail.symbols?.map(s => s.symbol) || [];
+                    if (symbols.length > 0) {
+                        wsRef.current.send(JSON.stringify({
+                            action: "subscribe",
+                            symbols: symbols
+                        }));
+                    }
+                }
             }
         };
         window.addEventListener('tradingConfigUpdated', handleConfigUpdate);
         return () => window.removeEventListener('tradingConfigUpdated', handleConfigUpdate);
+    }, []);
+
+    // ── Listen for Trading Mode Changes ──────────────────────────
+    useEffect(() => {
+        const handleModeChange = (e) => {
+            if (e.detail?.mode) setTradingMode(e.detail.mode);
+        };
+        window.addEventListener('tradingModeChanged', handleModeChange);
+        return () => window.removeEventListener('tradingModeChanged', handleModeChange);
     }, []);
 
     useEffect(() => {
@@ -70,6 +103,12 @@ export default function MarketSidebar({ selectedSymbol, setSelectedSymbol, onTog
         let lastDataTimestamp = Date.now();
         let staleWatchdogInterval = null;
         let intentionalClose = false;
+
+        const handleTokenRefresh = () => {
+            console.log('[MarketSidebar] Token refreshed, reconnecting WebSocket...');
+            connectWs();
+        };
+        window.addEventListener('tradingTokenRefreshed', handleTokenRefresh);
 
         function cleanupWs() {
             if (heartbeatInterval) {
@@ -108,7 +147,7 @@ export default function MarketSidebar({ selectedSymbol, setSelectedSymbol, onTog
             }
 
             console.log('[MarketSidebar] Connecting WebSocket...');
-            const ws = new WebSocket(`wss://v3.livefxhub.com:8444/token=${token}`);
+            const ws = new WebSocket(`wss://v3.livefxhub.com:8444/?token=${token}`);
             ws.binaryType = "arraybuffer";
             wsRef.current = ws;
 
@@ -131,19 +170,11 @@ export default function MarketSidebar({ selectedSymbol, setSelectedSymbol, onTog
                     }
                 }
 
-                // The backend requires the client to proactively send ping heartbeats to keep the connection open.
-                if (heartbeatInterval) clearInterval(heartbeatInterval);
-                heartbeatInterval = setInterval(() => {
-                    if (ws.readyState === WebSocket.OPEN) {
-                        try {
-                            ws.send(JSON.stringify({ action: 'ping' }));
-                        } catch (e) { /* ignore */ }
-                    }
-                }, 10000);
+                // No proactive client-side ping/pong; only respond to server pings per user request.
             };
 
             ws.onmessage = (event) => {
-                lastDataTimestamp = Date.now();
+                // lastDataTimestamp removed from here to exclude pings from "data alive" check
 
                 try {
                     let parsed;
@@ -170,10 +201,6 @@ export default function MarketSidebar({ selectedSymbol, setSelectedSymbol, onTog
                         return;
                     }
 
-                    if (parsed && (parsed.type === 'pong' || parsed.action === 'pong')) {
-                        return;
-                    }
-
                     if (isTokenExpiredWsMessage(parsed)) {
                         console.warn('[MarketSidebar] Server sent auth error — refreshing token...');
                         intentionalClose = true;
@@ -184,6 +211,9 @@ export default function MarketSidebar({ selectedSymbol, setSelectedSymbol, onTog
 
                     const processSymbolUpdate = (symbol, vals) => {
                         if (!symbol || !Array.isArray(vals)) return;
+
+                        // Only update "data alive" timestamp when actual price data is received
+                        lastDataTimestamp = Date.now();
 
                         const existing = updatesBufferRef.current[symbol] || marketDataMapRef.current.get(symbol) || {};
                         const updateEntry = { ...existing, symbol };
@@ -237,7 +267,7 @@ export default function MarketSidebar({ selectedSymbol, setSelectedSymbol, onTog
                         processSymbolUpdate(parsed.s, parsed.p);
                     }
                 } catch (err) {
-                    // Silently ignore malformed frames
+                    console.error('[MarketSidebar] WS parsing error:', err, event.data);
                 }
             };
 
@@ -357,23 +387,25 @@ export default function MarketSidebar({ selectedSymbol, setSelectedSymbol, onTog
         );
     };
 
-    const filteredData = marketData.filter(item => {
-        const matchesSearch = item.symbol.toLowerCase().includes(searchTerm.toLowerCase());
+    const filteredData = marketData
+        .filter(item => {
+            const matchesSearch = item.symbol.toLowerCase().includes(searchTerm.toLowerCase());
 
-        if (activeCategory === '★') {
-            return matchesSearch && item.starred;
-        }
+            if (activeCategory === '★') {
+                return matchesSearch && item.starred;
+            }
 
-        // instrumentType is attached directly by processSymbolUpdate from config metadata
-        const type = (item.instrumentType || '').toLowerCase();
+            // instrumentType is attached directly by processSymbolUpdate from config metadata
+            const type = (item.instrumentType || '').toLowerCase();
 
-        if (activeCategory === 'Currencies' && type !== 'forex') return false;
-        if (activeCategory === 'Commodities' && type !== 'commodity') return false;
-        if (activeCategory === 'Indices' && type !== 'index') return false;
-        if (activeCategory === 'Crypto' && type !== 'crypto') return false;
+            if (activeCategory === 'Currencies' && type !== 'forex') return false;
+            if (activeCategory === 'Commodities' && type !== 'commodity') return false;
+            if (activeCategory === 'Indices' && type !== 'index') return false;
+            if (activeCategory === 'Crypto' && type !== 'crypto') return false;
 
-        return matchesSearch;
-    });
+            return matchesSearch;
+        })
+        .sort((a, b) => a.symbol.localeCompare(b.symbol));
 
     return (
         <div className="market-sidebar">
@@ -383,6 +415,7 @@ export default function MarketSidebar({ selectedSymbol, setSelectedSymbol, onTog
                     bid={marketData.find(m => m.symbol === modalData.symbol)?.bid || modalData.bid}
                     ask={marketData.find(m => m.symbol === modalData.symbol)?.ask || modalData.ask}
                     tickDirection={marketData.find(m => m.symbol === modalData.symbol)?.tickDirection}
+                    allMarketData={marketData}
                     onClose={() => setModalData(null)}
                 />
             ) : (
@@ -453,21 +486,27 @@ export default function MarketSidebar({ selectedSymbol, setSelectedSymbol, onTog
                                         <span className={`market-arrow ${item.tickDirection === 'down' ? 'arrow-down' : 'arrow-up'}`}>
                                             {item.tickDirection === 'down' ? '▼' : '▲'}
                                         </span>
-                                        <span className={`market-change ${item.tickDirection === 'down' ? 'negative' : 'positive'}`}>
-                                            {item.change}
-                                        </span>
+                                        {tradingMode === 'Advanced' && (
+                                            <span className={`market-change ${item.tickDirection === 'down' ? 'negative' : 'positive'}`}>
+                                                {item.change}
+                                            </span>
+                                        )}
                                     </div>
                                     <div className="market-price-col">
-                                        <span className={`market-bid-price ${item.tickDirection === 'up' ? 'price-up' : item.tickDirection === 'down' ? 'price-down' : ''}`}>
-                                            {item.bid}
-                                        </span>
-                                        <span className="market-price-range-val">L: {item.bidLow}</span>
+                                        {renderPrice(item.bid, `market-bid-price ${item.tickDirection === 'up' ? 'price-up' : item.tickDirection === 'down' ? 'price-down' : ''}`)}
+                                        {tradingMode === 'Advanced' && (
+                                            <span className="market-price-range-val">
+                                                L: {renderPrice(item.bidLow)}
+                                            </span>
+                                        )}
                                     </div>
                                     <div className="market-price-col">
-                                        <span className={`market-ask-price ${item.tickDirection === 'up' ? 'price-up' : item.tickDirection === 'down' ? 'price-down' : ''}`}>
-                                            {item.ask}
-                                        </span>
-                                        <span className="market-price-range-val">H: {item.bidHigh}</span>
+                                        {renderPrice(item.ask, `market-ask-price ${item.tickDirection === 'up' ? 'price-up' : item.tickDirection === 'down' ? 'price-down' : ''}`)}
+                                        {tradingMode === 'Advanced' && (
+                                            <span className="market-price-range-val">
+                                                H: {renderPrice(item.bidHigh)}
+                                            </span>
+                                        )}
                                     </div>
                                 </div>
                             ))

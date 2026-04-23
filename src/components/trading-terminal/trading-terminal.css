@@ -160,28 +160,40 @@
     color: #e74c3c;
 }
 
-.terminal-leverage-badge {
+.terminal-mode-switcher {
     display: flex;
     align-items: center;
-    gap: 4px;
-    padding: 3px 8px;
-    border-radius: 6px;
-    font-size: 11px;
-    font-weight: 600;
+    background: rgba(255, 255, 255, 0.03);
     border: 1px solid var(--border-color);
-    color: var(--text-muted);
-    background: rgba(88, 166, 255, 0.05);
-    transition: all 0.2s ease;
+    border-radius: 20px;
+    padding: 2px;
+    cursor: pointer;
+    user-select: none;
+    transition: all 0.3s ease;
+    margin-right: 8px;
 }
 
-.terminal-leverage-badge svg {
-    opacity: 0.7;
-}
-
-.terminal-leverage-badge:hover {
+.terminal-mode-switcher:hover {
     border-color: var(--primary);
-    color: var(--text-main);
-    background: rgba(88, 166, 255, 0.1);
+    background: rgba(88, 166, 255, 0.05);
+}
+
+.mode-option {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 3px 12px;
+    border-radius: 18px;
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--text-muted);
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.mode-option.active {
+    background: var(--primary);
+    color: #fff;
+    box-shadow: 0 2px 8px rgba(88, 166, 255, 0.3);
 }
 
 .terminal-icon-btn {
@@ -228,6 +240,16 @@
     flex: 1;
     overflow: hidden;
     min-height: 0;
+}
+
+/* Institutional Price Pipette (small last digit) */
+.price-pipette {
+    font-size: 0.72em;
+    vertical-align: top;
+    position: relative;
+    top: -2px;
+    margin-left: 0.5px;
+    font-weight: 500;
 }
 
 /* =============== MARKET SIDEBAR =============== */
@@ -454,7 +476,10 @@ body.resizing-active-col {
 
 .market-arrow {
     font-size: 8px;
-    line-height: 1;
+    display: inline-flex;
+    align-items: center;
+    margin-top: 1px;
+    /* Fine-tune for perfect baseline alignment with text */
 }
 
 .market-arrow.arrow-up {
@@ -468,6 +493,8 @@ body.resizing-active-col {
 .market-change {
     font-size: 10px;
     font-weight: 500;
+    display: inline-flex;
+    align-items: center;
 }
 
 .market-change.positive {
@@ -1526,7 +1553,7 @@ td.negative {
 }
 
 .order-modal-title {
-    font-size: 14px;
+    font-size: 12px;
     font-weight: 700;
     margin: 0;
     text-align: center;
@@ -1595,7 +1622,7 @@ td.negative {
 .order-modal-tab {
     flex: 1;
     padding: 6px;
-    font-size: 11px;
+    font-size: 10px;
     font-family: Arial, sans-serif;
     font-weight: 600;
     text-align: center;
@@ -1642,7 +1669,7 @@ td.negative {
 }
 
 .order-modal-price-val {
-    font-size: 12px;
+    font-size: 10px;
     font-weight: 500;
     font-family: Arial, sans-serif;
     color: #ffffffa4;
@@ -1689,6 +1716,7 @@ td.negative {
     align-items: flex-end;
     justify-content: center;
     flex-shrink: 0;
+    margin-bottom: 12px;
 }
 
 .order-modal-input-group {
@@ -1723,7 +1751,28 @@ td.negative {
     border: 1px solid var(--border-color);
     border-radius: 4px;
     overflow: hidden;
+    /* Restored to clip internal buttons */
+    position: relative;
+    width: 100%;
 }
+
+
+.order-modal-number-input.has-error {
+    border-color: #ef4444 !important;
+}
+
+.lots-error-tooltip {
+    position: absolute;
+    bottom: -16px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 9px;
+    color: #ef4444;
+    font-weight: 600;
+    pointer-events: none;
+    white-space: nowrap;
+}
+
 
 .order-modal-number-input input {
     flex: 1;
@@ -1792,8 +1841,9 @@ td.negative {
     display: flex;
     justify-content: space-between;
     text-align: center;
-    padding: 4px 0px;
+    padding: 8px 0px;
     flex-shrink: 0;
+    margin-top: 4px;
 }
 
 .order-info-item {
@@ -1829,7 +1879,7 @@ td.negative {
 .order-action-btn {
     flex: 1;
     padding: 10px;
-    font-size: 12px;
+    font-size: 10px;
     font-family: Arial, sans-serif;
     font-weight: 600;
     color: #fff;

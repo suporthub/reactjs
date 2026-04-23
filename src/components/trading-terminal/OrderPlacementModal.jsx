@@ -1,14 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { X, ChevronUp, ChevronDown } from 'lucide-react';
 import { tradingConfigManager } from '../../utils/tradingConfigCache';
+import { calculateMarginInUSD } from '../../utils/marginCalculator';
 import './trading-terminal.css';
 
-export default function OrderPlacementModal({ symbol, bid, ask, tickDirection, onClose }) {
+export default function OrderPlacementModal({ symbol, bid, ask, tickDirection, allMarketData, onClose }) {
     const [lots, setLots] = useState('0.01');
     const [price, setPrice] = useState('');
     const [activeTab, setActiveTab] = useState('Instant');
     const [symbolConfig, setSymbolConfig] = useState(null);
     const [leverage, setLeverage] = useState(100);
+    const [lotsError, setLotsError] = useState('');
 
     useEffect(() => {
         const loadConfig = async () => {
@@ -21,6 +23,8 @@ export default function OrderPlacementModal({ symbol, bid, ask, tickDirection, o
                     const currentSymbol = config.symbols.find(s => s.symbol === symbol);
                     if (currentSymbol) {
                         setSymbolConfig(currentSymbol);
+                        // Initialize lots to the symbol's minimum lot
+                        setLots(currentSymbol.minLot.toString());
                     }
                 }
             }
@@ -36,11 +40,36 @@ export default function OrderPlacementModal({ symbol, bid, ask, tickDirection, o
         return cleaned;
     };
 
+    const validateLots = (val) => {
+        if (!symbolConfig) return;
+        const num = parseFloat(val);
+        if (isNaN(num)) {
+            setLotsError('');
+            return;
+        }
+
+        if (num < symbolConfig.minLot) {
+            setLotsError(`Min: ${symbolConfig.minLot}`);
+        } else if (num > symbolConfig.maxLot) {
+            setLotsError(`Max: ${symbolConfig.maxLot}`);
+        } else {
+            setLotsError('');
+        }
+    };
+
     const handleLotChange = (delta) => {
         setLots(prev => {
             const current = parseFloat(prev) || 0;
-            const newValue = Math.max(0.01, current + delta);
-            return newValue.toFixed(2);
+            const min = symbolConfig?.minLot || 0.01;
+            const max = symbolConfig?.maxLot || 100;
+            
+            let newValue = current + delta;
+            if (newValue < min) newValue = min;
+            if (newValue > max) newValue = max;
+            
+            const fixedValue = newValue.toFixed(2);
+            setLotsError(''); // Clear error when using buttons as they respect bounds
+            return fixedValue;
         });
     };
 
@@ -96,16 +125,23 @@ export default function OrderPlacementModal({ symbol, bid, ask, tickDirection, o
             <div className="order-modal-inputs">
                 <div className="order-modal-input-group">
                     <label>Lots</label>
-                    <div className="order-modal-number-input">
-                        <input 
-                            type="text" 
-                            value={lots} 
-                            onChange={(e) => setLots(validateNumberInput(e.target.value))} 
-                        />
-                        <div className="order-modal-spinners">
-                            <button className="order-btn-spin up" onClick={() => handleLotChange(0.01)}><ChevronUp size={12} /></button>
-                            <button className="order-btn-spin down" onClick={() => handleLotChange(-0.01)}><ChevronDown size={12} /></button>
+                    <div style={{ position: 'relative', width: '100%' }}>
+                        <div className={`order-modal-number-input ${lotsError ? 'has-error' : ''}`}>
+                            <input 
+                                type="text" 
+                                value={lots} 
+                                onChange={(e) => {
+                                    const val = validateNumberInput(e.target.value);
+                                    setLots(val);
+                                    validateLots(val);
+                                }} 
+                            />
+                            <div className="order-modal-spinners">
+                                <button className="order-btn-spin up" onClick={() => handleLotChange(0.01)}><ChevronUp size={12} /></button>
+                                <button className="order-btn-spin down" onClick={() => handleLotChange(-0.01)}><ChevronDown size={12} /></button>
+                            </div>
                         </div>
+                        {lotsError && <div className="lots-error-tooltip">{lotsError}</div>}
                     </div>
                 </div>
                 <div className="order-modal-input-group">
@@ -113,7 +149,7 @@ export default function OrderPlacementModal({ symbol, bid, ask, tickDirection, o
                     <input 
                         className="order-modal-basic-input" 
                         type="text" 
-                        value={symbolConfig ? (symbolConfig.contractSize * parseFloat(lots || 0)).toLocaleString() : '0.00'} 
+                        value={symbolConfig ? (symbolConfig.contractSize * parseFloat(lots || 0)).toFixed(2) : '0.00'} 
                         readOnly 
                     />
                 </div>
@@ -124,18 +160,9 @@ export default function OrderPlacementModal({ symbol, bid, ask, tickDirection, o
                         type="text" 
                         value={(() => {
                             if (!symbolConfig || !ask) return '0.00';
-                            const contractValue = symbolConfig.contractSize * parseFloat(lots || 0);
-                            const askPrice = parseFloat(ask);
-                            if (isNaN(askPrice)) return '0.00';
                             
-                            let calculatedMargin = (contractValue * askPrice) / leverage;
-                            
-                            // If mode is not standard, apply marginPct multiplier
-                            if (symbolConfig.marginCalcMode !== 'standard') {
-                                calculatedMargin = calculatedMargin * (symbolConfig.marginPct || 1);
-                            }
-                            
-                            return calculatedMargin.toFixed(2);
+                            const marginVal = calculateMarginInUSD(symbol, symbolConfig, ask, lots, leverage, allMarketData);
+                            return marginVal.toFixed(2);
                         })()} 
                         readOnly 
                     />
