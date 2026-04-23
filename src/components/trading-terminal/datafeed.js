@@ -280,15 +280,22 @@ class WssManager {
         this._ws.onmessage = async (event) => {
             this._lastMessageTime = Date.now();
             try {
-                const ServerMessage = await loadWssProto();
-                const msg = ServerMessage.decode(new Uint8Array(event.data));
-                const data = ServerMessage.toObject(msg, { longs: Number });
+                // Cache the proto type lookup
+                if (!this._priceProtoType) {
+                    this._priceProtoType = await loadWssProto();
+                }
+                
+                const msg = this._priceProtoType.decode(new Uint8Array(event.data));
+                const data = this._priceProtoType.toObject(msg, { longs: Number });
 
                 if (data.type === 'prices' && data.updates) {
-                    for (const update of data.updates) {
+                    for (let i = 0; i < data.updates.length; i++) {
+                        const update = data.updates[i];
                         if (!update.symbol || !update.buy) continue;
+                        
                         const price = parseFloat(update.buy);
                         if (isNaN(price)) continue;
+                        
                         this._lastPrices.set(update.symbol, price);
                         this._dispatchTick(update.symbol, price);
                     }
