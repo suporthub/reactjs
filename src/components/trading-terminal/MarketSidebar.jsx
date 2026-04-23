@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { decode } from '@msgpack/msgpack';
 import { Search, Star, PanelLeftClose } from 'lucide-react';
 import OrderPlacementModal from './OrderPlacementModal';
