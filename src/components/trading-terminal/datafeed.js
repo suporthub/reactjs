@@ -137,6 +137,7 @@ class WssManager {
         this._refreshAttempted = false;
 
         this._connect();
+        this._setupWatchdog();
         this._setupVisibilityHandler();
         this._setupTokenRefreshListener();
     }
@@ -256,10 +257,24 @@ class WssManager {
         if (this._ws?.readyState === WebSocket.OPEN) this._ws.send(JSON.stringify(obj));
     }
 
+    _setupWatchdog() {
+        this._watchdog = setInterval(() => {
+            if (this._destroyed) return;
+            if (this._lastMessageTime && Date.now() - this._lastMessageTime > 35000) {
+                console.warn('[Datafeed] Stale data — reconnecting');
+                if (this._ws) this._ws.close();
+                this._connect();
+            }
+        }, 5000);
+    }
+
     _setupVisibilityHandler() {
         document.addEventListener('visibilitychange', () => {
-            if (!document.hidden && (!this._ws || this._ws.readyState !== WebSocket.OPEN)) {
-                this._connect();
+            if (!document.hidden) {
+                if (!this._ws || this._ws.readyState !== WebSocket.OPEN || (this._lastMessageTime && Date.now() - this._lastMessageTime > 35000)) {
+                    if (this._ws) this._ws.close();
+                    this._connect();
+                }
             }
         });
     }
@@ -299,6 +314,7 @@ class WssManager {
     destroy() {
         this._destroyed = true;
         clearTimeout(this._reconnectTimer);
+        clearInterval(this._watchdog);
         window.removeEventListener('tradingTokenRefreshed', this._tokenRefreshHandler);
         if (this._ws) this._ws.close();
     }

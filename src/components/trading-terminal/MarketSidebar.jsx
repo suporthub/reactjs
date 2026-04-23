@@ -314,16 +314,26 @@ export default function MarketSidebar({ selectedSymbol, setSelectedSymbol, onTog
         };
         window.addEventListener('tradingTokenRefreshed', onTokenRefresh);
 
-        // Stale data watchdog — reconnect if no data for 60s
-        const watchdog = setInterval(() => {
+        // Stale data watchdog — reconnect if no data for 35s
+        const checkStaleData = () => {
             if (isUnmountedRef.current) return;
-            if (Date.now() - lastDataTimestamp > 60000) {
+            if (Date.now() - lastDataTimestamp > 35000) {
                 console.warn('[MarketSidebar] Stale data — reconnecting');
                 intentionalClose = true;
                 cleanupWs();
                 connectWs();
             }
-        }, 15000);
+        };
+        const watchdog = setInterval(checkStaleData, 5000);
+
+        const onVisibilityChange = () => {
+            if (document.visibilityState === 'visible') {
+                checkStaleData();
+                // Force a flush in case there are pending updates that were paused
+                if (pendingCountRef.current > 0) scheduleFlush();
+            }
+        };
+        document.addEventListener('visibilitychange', onVisibilityChange);
 
         // Start connection
         setTimeout(connectWs, 50);
@@ -334,6 +344,7 @@ export default function MarketSidebar({ selectedSymbol, setSelectedSymbol, onTog
             clearInterval(watchdog);
             clearTimeout(reconnectTimer);
             window.removeEventListener('tradingTokenRefreshed', onTokenRefresh);
+            document.removeEventListener('visibilitychange', onVisibilityChange);
             cleanupWs();
         };
     }, []);
