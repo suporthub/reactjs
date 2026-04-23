@@ -253,7 +253,7 @@ export default function MarketSidebar({ selectedSymbol, setSelectedSymbol, onTog
                         if (!symbol || !Array.isArray(vals)) return;
                         lastDataTimestamp = Date.now();
 
-                        // Access map directly for extreme performance (no object copies here)
+                        // Access map directly for extreme performance
                         const existing = marketDataMapRef.current.get(symbol) || { symbol, starred: false };
                         const updateEntry = { ...existing };
 
@@ -281,13 +281,15 @@ export default function MarketSidebar({ selectedSymbol, setSelectedSymbol, onTog
                             updateEntry.change = (changeVal > 0 ? '+' : '') + changeVal.toFixed(2) + '%';
                         }
 
-                        // Buffer the update for the next batch cycle
                         updatesBufferRef.current.set(symbol, updateEntry);
                     };
 
-                    if (parsed && parsed.data && typeof parsed.data === 'object') {
+                    // Handle batched prices (type: "prices") or initial snapshots (type: "snapshot")
+                    if (parsed && (parsed.type === 'prices' || parsed.type === 'snapshot') && parsed.data) {
                         Object.entries(parsed.data).forEach(([symbol, vals]) => processSymbolUpdate(symbol, vals));
                     }
+                    
+                    // Fallback for legacy single-tick format (if any)
                     if (parsed && parsed.s && parsed.p) {
                         processSymbolUpdate(parsed.s, parsed.p);
                     }
