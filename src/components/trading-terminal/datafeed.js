@@ -14,7 +14,7 @@ import {
     refreshTradingToken,
     isTokenExpiredWsEvent,
     tradingFetch
-} from './tradingTokenManager';
+} from '../../utils/tradingTokenManager';
 
 // ── Interval mappings ──────────────────────────────────────────
 const TV_TO_API = {

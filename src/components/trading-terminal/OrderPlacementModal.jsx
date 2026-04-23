@@ -185,7 +185,28 @@ export default function OrderPlacementModal({ symbol, bid, ask, tickDirection, a
                 <div className="order-info-item">
                     <span className="order-info-label">Pip</span>
                     <span className="order-info-val">
-                        {symbolConfig ? `${(symbolConfig.spreadPip * symbolConfig.contractSize).toFixed(2)} USD` : '10.00 USD'}
+                        {(() => {
+                            if (!symbolConfig) return '10.00 USD';
+                            const pipSize = symbolConfig.spreadPip || 0.0001;
+                            const lotsNum = parseFloat(lots || 0);
+                            const basePipValue = lotsNum * symbolConfig.contractSize * pipSize;
+                            
+                            // Simple USD conversion for common forex pairs
+                            const baseSymbol = symbol.split('.')[0].replace('+', '');
+                            const quoteCurrency = baseSymbol.length >= 6 ? baseSymbol.substring(3, 6) : baseSymbol.slice(-3);
+                            
+                            let conversionRate = 1;
+                            if (quoteCurrency !== 'USD' && allMarketData) {
+                                const direct = allMarketData.find(m => m.symbol.startsWith(quoteCurrency + 'USD'));
+                                if (direct) conversionRate = parseFloat(direct.bid);
+                                else {
+                                    const indirect = allMarketData.find(m => m.symbol.startsWith('USD' + quoteCurrency));
+                                    if (indirect) conversionRate = 1 / parseFloat(indirect.bid);
+                                }
+                            }
+                            
+                            return `${(basePipValue * conversionRate).toFixed(2)} USD`;
+                        })()}
                     </span>
                 </div>
                 <div className="order-info-item swap-item">

@@ -6,7 +6,7 @@ import {
     ArrowLeft, Sun, Moon, Info, Zap, Trophy
 } from 'lucide-react';
 import { tradingConfigManager } from '../../utils/tradingConfigCache';
-import { clearTradingSession } from './tradingTokenManager';
+import { clearTradingSession } from '../../utils/tradingTokenManager';
 
 export default function TerminalTopbar() {
     const navigate = useNavigate();

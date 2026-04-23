@@ -1,23 +1,36 @@
+const normalizeSymbol = (s) => {
+    if (!s) return "";
+    // Remove common suffixes like .pro, .m, +, etc. 
+    // Usually anything after the first 6 chars in forex or first 3-4 in others
+    return s.split('.')[0].replace('+', '');
+};
+
 export const calculateMarginInUSD = (symbol, symbolData, ask, lots, leverage, allMarketData) => {
     if (!symbolData || isNaN(parseFloat(ask)) || isNaN(parseFloat(lots)) || !leverage) return 0;
     
     const buyPrice = parseFloat(ask);
     const contractValue = symbolData.contractSize * parseFloat(lots);
-    let marginInBaseCurrency = (contractValue * buyPrice) / leverage;
     
-    // If mode is not standard, apply marginPct multiplier (from existing logic)
+    // Base margin calculation (in Quote currency for Forex, or direct for others)
+    let marginVal = (contractValue * buyPrice) / leverage;
+    
+    // Apply margin percentage multiplier if applicable
     if (symbolData.marginCalcMode !== 'standard' && symbolData.marginPct !== undefined) {
-        marginInBaseCurrency = marginInBaseCurrency * symbolData.marginPct;
+        marginVal = marginVal * symbolData.marginPct;
     }
 
-    let marginInUSD = marginInBaseCurrency;
+    let marginInUSD = marginVal;
 
     const marketDataCache = new Map();
     if (allMarketData && Array.isArray(allMarketData)) {
-        allMarketData.forEach(m => marketDataCache.set(m.symbol, m));
+        allMarketData.forEach(m => {
+            marketDataCache.set(normalizeSymbol(m.symbol), m);
+        });
     }
 
     const getUSDConversionRate = (currency) => {
+        if (!currency || currency === 'USD') return 1;
+
         // Direct pair (e.g. EURUSD)
         const directPair = marketDataCache.get(`${currency}USD`);
         if (directPair && directPair.bid) return parseFloat(directPair.bid);
@@ -31,29 +44,28 @@ export const calculateMarginInUSD = (symbol, symbolData, ask, lots, leverage, al
 
     try {
         const typeStr = symbolData.instrumentType ? symbolData.instrumentType.toString() : symbolData.type ? symbolData.type.toString() : "";
-
-        // Normalize type matching
         const type = typeStr.toLowerCase();
+        const baseSymbol = normalizeSymbol(symbol);
 
         if (type === "1" || type === "forex") {
-            const quoteCurrency = symbol.slice(-3);
+            // For forex, the quote currency is usually the last 3 chars of the base 6-char pair
+            const quoteCurrency = baseSymbol.length >= 6 ? baseSymbol.substring(3, 6) : baseSymbol.slice(-3);
+            
             if (quoteCurrency !== 'USD') {
                 const usdRate = getUSDConversionRate(quoteCurrency);
                 if (usdRate) {
-                    marginInUSD = marginInBaseCurrency * usdRate;
+                    marginInUSD = marginVal * usdRate;
                 }
             }
         } else if (type === "2" || type === "commodities" || type === "commodity") {
-            if (symbol.startsWith('XAU')) { // Gold
+            if (baseSymbol.startsWith('XAU')) { // Gold
                 const goldData = marketDataCache.get('XAUUSD');
-                if (goldData && goldData.ask) {
-                    marginInUSD = (contractValue * parseFloat(goldData.ask)) / leverage;
-                }
-            } else if (symbol.startsWith('XAG')) { // Silver
+                const price = (goldData && goldData.ask) ? parseFloat(goldData.ask) : buyPrice;
+                marginInUSD = (contractValue * price) / leverage;
+            } else if (baseSymbol.startsWith('XAG')) { // Silver
                 const silverData = marketDataCache.get('XAGUSD');
-                if (silverData && silverData.ask) {
-                    marginInUSD = (contractValue * parseFloat(silverData.ask)) / leverage;
-                }
+                const price = (silverData && silverData.ask) ? parseFloat(silverData.ask) : buyPrice;
+                marginInUSD = (contractValue * price) / leverage;
             } else {
                 marginInUSD = (contractValue * buyPrice) / leverage;
             }
@@ -72,52 +84,22 @@ export const calculateMarginInUSD = (symbol, symbolData, ask, lots, leverage, al
             };
 
             const indexConfigEntry = Object.entries(indexCurrencyMap)
-                .find(([prefix]) => symbol.includes(prefix));
+                .find(([prefix]) => baseSymbol.includes(prefix));
 
             if (indexConfigEntry) {
                 const config = indexConfigEntry[1];
-
-                if (config.currency === 'USD') {
-                    marginInUSD = marginInBaseCurrency;
-                } else {
-                    let conversionRate;
-                    if (config.direct) {
-                        const usdPair = `${config.currency}USD`;
-                        const pairData = marketDataCache.get(usdPair);
-                        if (pairData && pairData.bid) {
-                            conversionRate = parseFloat(pairData.bid);
-                        }
-                    } else {
-                        const usdPair = `USD${config.currency}`;
-                        const pairData = marketDataCache.get(usdPair);
-                        if (pairData && pairData.bid) {
-                            conversionRate = 1 / parseFloat(pairData.bid);
-                        }
-                    }
-
-                    if (conversionRate) {
-                        marginInUSD = marginInBaseCurrency * conversionRate;
-                    }
+                const usdRate = getUSDConversionRate(config.currency);
+                if (usdRate) {
+                    marginInUSD = marginVal * usdRate;
                 }
             }
         } else if (type === "4" || type === "crypto") {
-            const marginValue = symbolData.margin !== undefined ? symbolData.margin : (symbolData.marginPct || 1);
-
-            if (symbol.endsWith('USD') || symbol.endsWith('USDT')) {
-                marginInUSD = (contractValue * buyPrice * marginValue) / leverage;
-            } else {
-                const cryptoCurrency = symbol.slice(-3);
-                const usdRate = getUSDConversionRate(cryptoCurrency);
-                if (usdRate) {
-                    marginInUSD = (contractValue * buyPrice * marginValue) / leverage;
-                } else {
-                    // Fallback to direct calculation if no conversion found
-                    marginInUSD = (contractValue * buyPrice * marginValue) / leverage;
-                }
-            }
+            const marginMultiplier = symbolData.margin !== undefined ? symbolData.margin : (symbolData.marginPct || 1);
+            marginInUSD = (contractValue * buyPrice * marginMultiplier) / leverage;
         }
 
-        return isNaN(marginInUSD) ? 0 : marginInUSD;
+        // Final safety check against negative or weird values
+        return Math.abs(isNaN(marginInUSD) ? 0 : marginInUSD);
     } catch (error) {
         console.error('Error calculating margin:', error);
         return 0;

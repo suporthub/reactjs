@@ -4,7 +4,7 @@ import MarketSidebar from './MarketSidebar';
 import ChartMain from './ChartMain';
 import OrdersPanel from './OrdersPanel';
 import MarginBar from './MarginBar';
-import { refreshTradingToken, getTradingAccessToken } from './tradingTokenManager';
+import { refreshTradingToken, getTradingAccessToken } from '../../utils/tradingTokenManager';
 import { tradingConfigManager } from '../../utils/tradingConfigCache';
 import './trading-terminal.css';
 

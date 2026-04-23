@@ -7,7 +7,7 @@ import {
     refreshTradingToken,
     isTokenExpiredWsEvent,
     isTokenExpiredWsMessage
-} from './tradingTokenManager';
+} from '../../utils/tradingTokenManager';
 import { tradingConfigManager } from '../../utils/tradingConfigCache';
 
 const MARKET_DATA = [];
