@@ -1,52 +1,62 @@
+import { tradingConfigManager } from '../../utils/tradingConfigCache';
+
 /**
  * LiveFXHub TradingView Datafeed — Production-Ready v2
  *
  * – History:  fetches OHLC from /candles REST API (protobuf)
- * – Live:     subscribes to tick updates via msgpack WebSocket
+ * – Live:     subscribes to tick updates via protobuf WebSocket
  * – Scroll:   infinite left-scroll triggers older history fetch
  * – Background: visibilitychange gap recovery on tab refocus
  * – Time:     all bar timestamps are UTC-aligned epoch seconds
- * – Auth:     auto-refresh trading token on 401 / token expiry
  */
-
-import { decode } from '@msgpack/msgpack';
-import {
-    getTradingAccessToken,
-    refreshTradingToken,
-    isTokenExpiredWsEvent,
-    tradingFetch
-} from '../../utils/tradingTokenManager';
 
 // ── Interval mappings ──────────────────────────────────────────
 const TV_TO_API = {
-    '1': '1m', '5': '5m', '15': '15m', '30': '30m', '60': '1h',
-    '120': '2h', '240': '4h', '480': '8h', '1D': '1d', '1W': '1w',
-    '1M': '1mo', '1S': '1s', '5S': '5s', '15S': '15s', '30S': '30s',
+    '1': '1m',
+    '5': '5m',
+    '15': '15m',
+    '30': '30m',
+    '60': '1h',
+    '120': '2h',
+    '240': '4h',
+    '480': '8h',
+    '1D': '1d',
+    '1W': '1w',
+    '1M': '1mo',
+    '1S': '1s',
+    '5S': '5s',
+    '15S': '15s',
+    '30S': '30s',
 };
 
+// TradingView resolution → seconds per bar
 const RES_TO_SEC = {
-    '1': 60, '5': 300, '15': 900, '30': 1800, '60': 3600, '120': 7200,
-    '240': 14400, '480': 28800, '1D': 86400, '1W': 604800, '1M': 2592000,
+    '1': 60, '5': 300, '15': 900, '30': 1800,
+    '60': 3600, '120': 7200, '240': 14400, '480': 28800,
+    '1D': 86400, '1W': 604800, '1M': 2592000,
     '1S': 1, '5S': 5, '15S': 15, '30S': 30,
 };
 
-// ── Supported symbols ──────────────────────────────────────────
-const SYMBOLS = ['XAUUSD', 'XAGUSD', 'BTCUSD', 'AUDCAD', 'AUDJPY', 'JPN225'];
-const SYMBOL_INFO = {
-    XAUUSD: { description: 'Gold vs US Dollar', type: 'forex', pricescale: 100, minmov: 1 },
-    XAGUSD: { description: 'Silver vs US Dollar', type: 'forex', pricescale: 1000, minmov: 1 },
-    BTCUSD: { description: 'Bitcoin vs US Dollar', type: 'crypto', pricescale: 100, minmov: 1 },
-    AUDCAD: { description: 'Australian Dollar/CAD', type: 'forex', pricescale: 100000, minmov: 1 },
-    AUDJPY: { description: 'Australian Dollar/JPY', type: 'forex', pricescale: 1000, minmov: 1 },
-    JPN225: { description: 'Nikkei 225', type: 'index', pricescale: 100, minmov: 1 },
-};
+// ── Helper: Derive PriceScale from Precision ──────────────────
+function getPriceScale(precision) {
+    if (precision === undefined || precision === null) return 100;
+    return Math.pow(10, precision);
+}
 
-// ── Load protobufjs (for REST candles) ────────────────────────
+// ── Load protobufjs (CDN) — self-contained ────────────────────
 let _protobufReady = null;
+
 function ensureProtobuf() {
     if (_protobufReady) return _protobufReady;
     _protobufReady = new Promise((resolve, reject) => {
         if (window.protobuf) { resolve(); return; }
+        const existing = document.getElementById('protobuf-js');
+        if (existing) {
+            if (window.protobuf) { resolve(); return; }
+            existing.addEventListener('load', () => resolve());
+            existing.addEventListener('error', () => reject(new Error('protobufjs load failed')));
+            return;
+        }
         const script = document.createElement('script');
         script.id = 'protobuf-js';
         script.src = 'https://cdn.jsdelivr.net/npm/protobufjs@7/dist/protobuf.min.js';
@@ -58,32 +68,23 @@ function ensureProtobuf() {
     return _protobufReady;
 }
 
+// ── Proto schema (fetched once, cached) ────────────────────────
 let _protoPromise = null;
-const CHART_PROTO = `
-syntax = "proto3";
-package chartfeed;
-message Candle {
-  int64 timeUnixMs = 1;
-  double open = 2;
-  double high = 3;
-  double low = 4;
-  double close = 5;
-  double volume = 6;
-}
-message ChartResponse {
-  repeated Candle candles = 1;
-}
-`;
 
 function loadChartProto() {
     if (_protoPromise) return _protoPromise;
-    _protoPromise = ensureProtobuf().then(() => {
-        const root = window.protobuf.parse(CHART_PROTO).root;
-        return root.lookupType('chartfeed.ChartResponse');
-    });
+    _protoPromise = ensureProtobuf()
+        .then(() => fetch('/chart.proto'))
+        .then(r => r.text())
+        .then(schema => {
+            const root = window.protobuf.parse(schema).root;
+            return root.lookupType('chartfeed.ChartResponse');
+        });
     return _protoPromise;
 }
 
+
+// ── Robust int64 → Number conversion ──────────────────────────
 function toNum(val) {
     if (val == null) return 0;
     if (typeof val === 'number') return val;
@@ -92,280 +93,349 @@ function toNum(val) {
     return Number(val);
 }
 
+// ── Align timestamp to bar boundary (UTC, in milliseconds) ────
 function alignToBarMs(epochMs, barDurationSec) {
     const barDurationMs = barDurationSec * 1000;
     return epochMs - (epochMs % barDurationMs);
 }
 
+// ── Fetch candles from chart API ──────────────────────────────
+const _inflightRequests = new Map();
+
 async function fetchCandles(symbol, resolution, fromMs, toMs) {
+    const cacheKey = `${symbol}|${resolution}|${fromMs}|${toMs}`;
+    if (_inflightRequests.has(cacheKey)) {
+        return _inflightRequests.get(cacheKey);
+    }
+    const promise = _fetchCandlesImpl(symbol, resolution, fromMs, toMs);
+    _inflightRequests.set(cacheKey, promise);
+    try {
+        return await promise;
+    } finally {
+        _inflightRequests.delete(cacheKey);
+    }
+}
+
+async function _fetchCandlesImpl(symbol, resolution, fromMs, toMs) {
     const ChartResponse = await loadChartProto();
     const apiInterval = TV_TO_API[resolution] || '1m';
     const from = new Date(fromMs).toISOString();
     const to = new Date(toMs).toISOString();
     const url = `/candles?symbol=${encodeURIComponent(symbol)}&interval=${apiInterval}&from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`;
 
-    const res = await tradingFetch(url, { headers: { 'Accept': 'application/x-protobuf' } });
+    console.log(`[Datafeed] fetch ${symbol} ${apiInterval} from=${from} to=${to}`);
+
+    const res = await fetch(url, { headers: { 'Accept': 'application/x-protobuf' } });
     if (!res.ok) throw new Error(`chart API ${res.status}`);
 
     const buf = await res.arrayBuffer();
     const decoded = ChartResponse.decode(new Uint8Array(buf));
     const data = ChartResponse.toObject(decoded, { longs: Number });
 
-    if (!data.candles) return [];
+    if (!data.candles || data.candles.length === 0) {
+        console.log(`[Datafeed] ${symbol} ${apiInterval}: 0 candles returned`);
+        return [];
+    }
     const barDuration = RES_TO_SEC[resolution] || 60;
-    return data.candles.map(c => ({
-        time: alignToBarMs(toNum(c.timeUnixMs), barDuration),
-        open: c.open,
-        high: Math.max(c.open, c.close, c.high),
-        low: Math.min(c.open, c.close, c.low),
-        close: c.close,
-        volume: toNum(c.volume) || 0,
-    }));
+    const bars = data.candles.map(c => {
+        const timeMs = toNum(c.timeUnixMs);
+
+        // Enforce strict OHLC rules: High must be maximum, Low must be minimum
+        const open = c.open;
+        const close = c.close;
+        const high = Math.max(open, close, c.high);
+        const low = Math.min(open, close, c.low);
+
+        return {
+            time: alignToBarMs(timeMs, barDuration),
+            open,
+            high,
+            low,
+            close,
+            volume: toNum(c.volume) || 0,
+        };
+    });
+
+    console.log(`[Datafeed] ${symbol} ${apiInterval}: ${bars.length} candles, first=${new Date(bars[0].time).toISOString()}, last=${new Date(bars[bars.length - 1].time).toISOString()}`);
+    return bars;
 }
 
-// ── Live WSS Manager (singleton) ──────────────────────────────
+/**
+ * WssManager — NOW A PASSIVE LISTENER
+ * Instead of opening its own WebSocket, it listens for 'marketPriceUpdate'
+ * events broadcasted by the MarketSidebar component.
+ */
 class WssManager {
-    constructor(url) {
-        this._url = url;
-        this._ws = null;
+    constructor() {
         this._subscribers = new Map();
-        this._reconnectTimer = null;
-        this._reconnectDelay = 1000;
         this._lastPrices = new Map();
-        this._lastMessageTime = 0;
         this._destroyed = false;
-        this._refreshAttempted = false;
 
-        this._connect();
-        this._setupWatchdog();
-        this._setupVisibilityHandler();
-        this._setupTokenRefreshListener();
+        this._setupEventListener();
     }
 
-    _refreshUrl() {
-        const token = getTradingAccessToken();
-        if (token) this._url = `wss://v3.livefxhub.com:8444/?token=${token}`;
-    }
+    _setupEventListener() {
+        this._priceUpdateHandler = (e) => {
+            if (this._destroyed || !e.detail) return;
+            const { symbol, vals } = e.detail;
+            if (!symbol || !Array.isArray(vals)) return;
 
-    _setupTokenRefreshListener() {
-        this._tokenRefreshHandler = () => {
-            this._refreshUrl();
-            if (!this._ws || this._ws.readyState !== WebSocket.OPEN) {
-                this._refreshAttempted = false;
-                this._connect();
+            // Use the Ask price (index 1) for candles as requested
+            const price = parseFloat(vals[1]);
+            if (!isNaN(price)) {
+                this._lastPrices.set(symbol, price);
+                this._dispatchTick(symbol, price);
             }
         };
-        window.addEventListener('tradingTokenRefreshed', this._tokenRefreshHandler);
+        window.addEventListener('marketPriceUpdate', this._priceUpdateHandler);
     }
 
-    _connect() {
-        if (this._destroyed || this._ws) return;
-        this._refreshUrl();
-        try {
-            this._ws = new WebSocket(this._url);
-            this._ws.binaryType = 'arraybuffer';
-        } catch (e) {
-            this._scheduleReconnect();
-            return;
-        }
-
-        this._ws.onopen = () => {
-            this._reconnectDelay = 1000;
-            this._refreshAttempted = false;
-            const symbols = [...new Set([...this._subscribers.values()].map(s => s.symbol))];
-            if (symbols.length > 0) this._send({ action: 'subscribe', symbols });
-        };
-
-        this._ws.onmessage = (event) => {
-            this._lastMessageTime = Date.now();
-            try {
-                // Server sends text for control messages, binary for prices
-                if (typeof event.data === 'string') {
-                    // Handle text ping/pong
-                    if (event.data === 'ping') {
-                        this._send({ action: 'pong' });
-                        return;
-                    }
-                    // Ignore JSON control messages (connected, error, etc.)
-                    return;
-                }
-
-                if (!(event.data instanceof ArrayBuffer) || event.data.byteLength === 0) return;
-
-                const data = decode(new Uint8Array(event.data));
-
-                // Handle batched updates from optimized backend
-                if (data.data && typeof data.data === 'object') {
-                    for (const [symbol, vals] of Object.entries(data.data)) {
-                        if (!Array.isArray(vals)) continue;
-                        const price = parseFloat(vals[0]);
-                        if (!isNaN(price)) {
-                            this._lastPrices.set(symbol, price);
-                            this._dispatchTick(symbol, price);
-                        }
-                    }
-                }
-                // Legacy single tick
-                if (data.s && data.p) {
-                    const price = parseFloat(data.p[0]);
-                    if (!isNaN(price)) {
-                        this._lastPrices.set(data.s, price);
-                        this._dispatchTick(data.s, price);
-                    }
-                }
-            } catch (e) {
-                // Only log actual decode errors, not expected text messages
-                if (event.data instanceof ArrayBuffer) {
-                    console.error('[WSS] Decode error:', e);
-                }
-            }
-        };
-
-        this._ws.onclose = (e) => {
-            this._ws = null;
-            if (this._destroyed) return;
-            if (isTokenExpiredWsEvent(e) && !this._refreshAttempted) {
-                this._handleTokenRefreshAndReconnect();
-            } else {
-                this._scheduleReconnect();
-            }
-        };
-        this._ws.onerror = () => this._ws?.close();
-    }
-
-    async _handleTokenRefreshAndReconnect() {
-        this._refreshAttempted = true;
-        const newToken = await refreshTradingToken();
-        if (newToken) {
-            this._refreshUrl();
-            window.dispatchEvent(new CustomEvent('tradingTokenRefreshed', { detail: { accessToken: newToken } }));
-            this._connect();
-        } else {
-            this._scheduleReconnect();
-        }
-    }
-
-    _scheduleReconnect() {
-        clearTimeout(this._reconnectTimer);
-        this._reconnectTimer = setTimeout(() => {
-            this._reconnectDelay = Math.min(this._reconnectDelay * 1.5, 15000);
-            this._connect();
-        }, this._reconnectDelay);
-    }
-
-    _send(obj) {
-        if (this._ws?.readyState === WebSocket.OPEN) this._ws.send(JSON.stringify(obj));
-    }
-
-    _setupWatchdog() {
-        this._watchdog = setInterval(() => {
-            if (this._destroyed) return;
-            if (this._lastMessageTime && Date.now() - this._lastMessageTime > 35000) {
-                console.warn('[Datafeed] Stale data — reconnecting');
-                if (this._ws) this._ws.close();
-                this._connect();
-            }
-        }, 5000);
-    }
-
-    _setupVisibilityHandler() {
-        document.addEventListener('visibilitychange', () => {
-            if (!document.hidden) {
-                if (!this._ws || this._ws.readyState !== WebSocket.OPEN || (this._lastMessageTime && Date.now() - this._lastMessageTime > 35000)) {
-                    if (this._ws) this._ws.close();
-                    this._connect();
-                }
-            }
-        });
-    }
-
+    // ── Core: dispatch a price tick into OHLC candle logic ─────
     _dispatchTick(symbol, price) {
         const nowMs = Date.now();
+
         for (const [, sub] of this._subscribers) {
             if (sub.symbol !== symbol) continue;
+
             const barDuration = RES_TO_SEC[sub.resolution] || 60;
             const currentBarTimeMs = alignToBarMs(nowMs, barDuration);
 
-            if (!sub.lastBar || currentBarTimeMs > sub.lastBar.time) {
-                sub.lastBar = { time: currentBarTimeMs, open: price, high: price, low: price, close: price, volume: 1 };
+            if (!sub.lastBar) {
+                // No history yet — create initial bar
+                sub.lastBar = {
+                    time: currentBarTimeMs,
+                    open: price, high: price, low: price, close: price,
+                    volume: 1,
+                };
+                sub.handler({ ...sub.lastBar });
+                continue;
+            }
+
+            if (currentBarTimeMs > sub.lastBar.time) {
+                // ── NEW BAR: timeframe boundary crossed ──
+                const newBar = {
+                    time: currentBarTimeMs,
+                    open: price,
+                    high: price, low: price, close: price,
+                    volume: 1,
+                };
+                sub.lastBar = newBar;
+                sub.handler({ ...sub.lastBar });
             } else {
-                sub.lastBar.high = Math.max(sub.lastBar.high, price);
-                sub.lastBar.low = Math.min(sub.lastBar.low, price);
+                // ── SAME BAR: update current candle ──
+                // Strictly enforce OHLC rules on every tick update
+                sub.lastBar.high = Math.max(sub.lastBar.open, sub.lastBar.high, price);
+                sub.lastBar.low = Math.min(sub.lastBar.open, sub.lastBar.low, price);
                 sub.lastBar.close = price;
                 sub.lastBar.volume++;
+                sub.handler({ ...sub.lastBar });
             }
-            sub.handler({ ...sub.lastBar });
         }
     }
 
-    subscribe(guid, symbol, resolution, lastBar, handler) {
-        this._subscribers.set(guid, { symbol, resolution, lastBar, handler });
-        this._send({ action: 'subscribe', symbols: [symbol] });
+    subscribe(listenerGuid, symbol, resolution, lastBar, handler, onResetCache) {
+        this._subscribers.set(listenerGuid, {
+            symbol, resolution,
+            lastBar: lastBar ? { ...lastBar } : null,
+            handler,
+            onResetCache: onResetCache || null,
+        });
+        console.log(`[Datafeed] Subscribed to ${symbol} (via MarketSidebar)`);
     }
 
-    unsubscribe(guid) {
-        const sub = this._subscribers.get(guid);
-        this._subscribers.delete(guid);
-        if (sub && ![...this._subscribers.values()].some(s => s.symbol === sub.symbol)) {
-            this._send({ action: 'unsubscribe', symbols: [sub.symbol] });
-        }
+    unsubscribe(listenerGuid) {
+        this._subscribers.delete(listenerGuid);
+    }
+
+    getLastPrice(symbol) {
+        return this._lastPrices.get(symbol);
     }
 
     destroy() {
         this._destroyed = true;
-        clearTimeout(this._reconnectTimer);
-        clearInterval(this._watchdog);
-        window.removeEventListener('tradingTokenRefreshed', this._tokenRefreshHandler);
-        if (this._ws) this._ws.close();
+        window.removeEventListener('marketPriceUpdate', this._priceUpdateHandler);
+        this._subscribers.clear();
     }
 }
 
+// Singleton WSS instance (Passive)
 let _wssManager = null;
 function getWssManager() {
-    if (!_wssManager) _wssManager = new WssManager('');
+    if (!_wssManager) _wssManager = new WssManager();
     return _wssManager;
 }
 
+// ── TradingView Datafeed Factory ──────────────────────────────
 export function createDatafeed() {
     const wss = getWssManager();
-    const _lastBarMap = new Map();
+
+    // Shared state: capture lastBar from getBars for each symbol+resolution
+    // so subscribeBars can use it directly (no separate fetch)
+    const _lastBarMap = new Map(); // "SYMBOL|resolution" → lastBar
 
     return {
-        onReady(cb) {
-            setTimeout(() => cb({
+        onReady(callback) {
+            setTimeout(() => callback({
                 supported_resolutions: ['1S', '5S', '15S', '30S', '1', '5', '15', '30', '60', '120', '240', '480', '1D', '1W', '1M'],
-                supports_search: true,
                 supports_group_request: false,
+                supports_marks: false,
+                supports_search: true,
+                supports_timescale_marks: false,
             }), 0);
         },
-        searchSymbols(input, ex, type, onResult) {
-            const q = input.toUpperCase();
-            onResult(SYMBOLS.filter(s => s.includes(q)).map(s => ({
-                symbol: s, full_name: s, description: SYMBOL_INFO[s]?.description || s,
-                type: SYMBOL_INFO[s]?.type || 'forex', exchange: 'LIVEFXHUB', ticker: s,
-            })));
+
+        async searchSymbols(userInput, exchange, symbolType, onResult) {
+            const config = await tradingConfigManager.getConfig();
+            const q = userInput.toUpperCase();
+            const symbols = config?.symbols || [];
+
+            const results = symbols
+                .filter(s => s.symbol.toUpperCase().includes(q))
+                .map(s => ({
+                    symbol: s.symbol,
+                    full_name: s.symbol,
+                    description: s.symbol,
+                    type: (s.instrumentType || 'forex').toLowerCase(),
+                    exchange: 'LIVEFXHUB',
+                    ticker: s.symbol,
+                }));
+            onResult(results);
         },
-        resolveSymbol(name, onResolved, onError) {
-            const info = SYMBOL_INFO[name.toUpperCase()];
-            if (!info) return onError('Unknown symbol');
-            setTimeout(() => onResolved({
-                name: name.toUpperCase(), ticker: name.toUpperCase(), description: info.description,
-                type: info.type, session: '24x7', timezone: 'Etc/UTC', exchange: 'LIVEFXHUB',
-                minmov: info.minmov, pricescale: info.pricescale, has_intraday: true, has_seconds: true,
+
+        async resolveSymbol(symbolName, onSymbolResolvedCallback, onResolveErrorCallback) {
+            const sym = symbolName.toUpperCase();
+            const config = await tradingConfigManager.getConfig();
+            const symbolData = config?.symbols?.find(s => s.symbol.toUpperCase() === sym);
+
+            if (!symbolData) {
+                // Fallback for symbols not yet in config cache to prevent UI breakage
+                console.warn(`[Datafeed] Symbol ${sym} not found in config, using generic info`);
+                onSymbolResolvedCallback({
+                    name: sym, ticker: sym, description: sym, type: 'forex',
+                    session: '24x7', timezone: 'Etc/UTC', exchange: 'LIVEFXHUB',
+                    minmov: 1, pricescale: 100000, has_intraday: true, has_seconds: true,
+                    seconds_multipliers: ['1', '5', '15', '30'], has_daily: true, has_weekly_and_monthly: true,
+                    supported_resolutions: ['1S', '5S', '15S', '30S', '1', '5', '15', '30', '60', '120', '240', '480', '1D', '1W', '1M'],
+                    data_status: 'streaming',
+                });
+                return;
+            }
+
+            const type = (symbolData.instrumentType || 'forex').toLowerCase();
+            const pricescale = getPriceScale(symbolData.showPoints);
+
+            setTimeout(() => onSymbolResolvedCallback({
+                name: sym,
+                ticker: sym,
+                description: sym,
+                type: type,
+                session: '24x7',
+                timezone: 'Etc/UTC',
+                exchange: 'LIVEFXHUB',
+                minmov: 1,
+                pricescale: pricescale,
+                has_intraday: true,
+                has_seconds: true,
+                seconds_multipliers: ['1', '5', '15', '30'],
+                has_daily: true,
+                has_weekly_and_monthly: true,
+                intraday_multipliers: ['1', '5', '15', '30', '60', '120', '240', '480'],
                 supported_resolutions: ['1S', '5S', '15S', '30S', '1', '5', '15', '30', '60', '120', '240', '480', '1D', '1W', '1M'],
+                volume_precision: 0,
+                data_status: 'streaming',
             }), 0);
         },
-        async getBars(symbolInfo, resolution, params, onHistory, onError) {
+
+        async getBars(symbolInfo, resolution, periodParams, onHistoryCallback, onErrorCallback) {
+            const { from, to, firstDataRequest, countBack } = periodParams;
+            const symbol = symbolInfo.name;
+
+            // TradingView passes from/to as UTC seconds
+            let fromMs = from * 1000;
+            let toMs = firstDataRequest ? Date.now() : to * 1000;
+
+            console.log(`[Datafeed] getBars ${symbol} res=${resolution} from=${new Date(fromMs).toISOString()} to=${new Date(toMs).toISOString()} first=${firstDataRequest} countBack=${countBack}`);
+
             try {
-                const bars = await fetchCandles(symbolInfo.name, resolution, params.from * 1000, params.firstDataRequest ? Date.now() : params.to * 1000);
-                if (bars.length > 0) _lastBarMap.set(`${symbolInfo.name}|${resolution}`, bars[bars.length - 1]);
-                onHistory(bars, { noData: bars.length === 0 });
-            } catch (err) { onError(err.message); }
+                let bars = await fetchCandles(symbol, resolution, fromMs, toMs);
+
+                // If firstDataRequest returned no data, try fetching a wider range
+                // to find the nearest available data
+                if (bars.length === 0 && firstDataRequest) {
+                    const barDuration = RES_TO_SEC[resolution] || 60;
+                    // Try up to 24 hours back
+                    const widerFrom = Date.now() - (86400 * 1000);
+                    console.log(`[Datafeed] No data in range, trying wider: from=${new Date(widerFrom).toISOString()}`);
+                    bars = await fetchCandles(symbol, resolution, widerFrom, Date.now());
+                }
+
+                if (bars.length === 0) {
+                    console.log(`[Datafeed] ${symbol}: noData=true`);
+                    onHistoryCallback([], { noData: true });
+                    return;
+                }
+
+                // Deduplicate by time
+                const seen = new Set();
+                const uniqueBars = [];
+                for (const bar of bars) {
+                    if (!seen.has(bar.time)) {
+                        seen.add(bar.time);
+                        uniqueBars.push(bar);
+                    }
+                }
+
+                // Sort ascending
+                uniqueBars.sort((a, b) => a.time - b.time);
+
+                // If countBack is provided, return only the last N bars
+                let result = uniqueBars;
+                if (countBack && countBack > 0 && uniqueBars.length > countBack) {
+                    result = uniqueBars.slice(uniqueBars.length - countBack);
+                }
+
+                // Store the last bar for subscribeBars to use
+                const lastBar = result[result.length - 1];
+                const key = `${symbol}|${resolution}`;
+
+                // ONLY update if it's the first data request (most recent data),
+                // OR if the new lastBar is newer than what we already have.
+                const existing = _lastBarMap.get(key);
+                if (firstDataRequest || !existing || lastBar.time > existing.time) {
+                    _lastBarMap.set(key, { ...lastBar });
+                }
+
+                console.log(`[Datafeed] ${symbol} res=${resolution}: returning ${result.length} bars, lastBar time=${new Date(lastBar.time).toISOString()} close=${lastBar.close}`);
+
+                onHistoryCallback(result, { noData: false });
+            } catch (err) {
+                console.error('[Datafeed] getBars error:', err);
+                onErrorCallback(err.message);
+            }
         },
-        subscribeBars(symbolInfo, resolution, onTick, guid) {
-            const lastBar = _lastBarMap.get(`${symbolInfo.name}|${resolution}`);
-            wss.subscribe(guid, symbolInfo.name, resolution, lastBar, onTick);
+
+        subscribeBars(symbolInfo, resolution, onRealtimeCallback, listenerGuid, onResetCacheNeededCallback) {
+            const symbol = symbolInfo.name;
+            const key = `${symbol}|${resolution}`;
+
+            // Use the lastBar captured from getBars — this is what TradingView has
+            // Using a different lastBar would cause TradingView to reject updates
+            const lastBar = _lastBarMap.get(key) || null;
+
+            console.log(`[Datafeed] subscribeBars ${symbol} res=${resolution} lastBar=${lastBar ? new Date(lastBar.time).toISOString() : 'null'}`);
+
+            wss.subscribe(
+                listenerGuid,
+                symbol,
+                resolution,
+                lastBar,
+                onRealtimeCallback,
+                onResetCacheNeededCallback
+            );
         },
-        unsubscribeBars(guid) { wss.unsubscribe(guid); }
+
+        unsubscribeBars(listenerGuid) {
+            wss.unsubscribe(listenerGuid);
+        },
     };
 }

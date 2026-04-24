@@ -2,9 +2,6 @@ import React, { useEffect, useRef, useCallback, useState, useMemo } from 'react'
 import { Clock } from 'lucide-react';
 import { createDatafeed } from './datafeed';
 
-// ── Symbols and timeframes ────────────────────────────────────
-export const CHART_SYMBOLS = ['XAUUSD', 'XAGUSD', 'BTCUSD', 'AUDCAD', 'AUDJPY', 'JPN225'];
-
 const TIMEFRAMES = [
     { label: '1s', tv: '1S' },
     { label: '5s', tv: '5S' },
@@ -47,164 +44,210 @@ function loadTradingViewScript() {
 export default function ChartMain({ selectedSymbol, selectedTimeframe, setSelectedTimeframe, onSelectSymbol }) {
     const containerRef = useRef(null);
     const widgetRef = useRef(null);
-    const [utcTime, setUtcTime] = useState('');
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+    const [tradingMode, setTradingMode] = useState('Normal');
+    const [theme, setTheme] = useState(() => document.documentElement.getAttribute('data-theme') || 'dark');
 
-    // Singleton datafeed — preserves WSS connection across widget rebuilds
-    const datafeed = useMemo(() => createDatafeed(), []);
-
-    // Active TradingView resolution (maps from label → TV format)
-    const activeTf = TIMEFRAMES.find(t => t.label === selectedTimeframe)?.tv || '30';
-
-    // ── Clock ──────────────────────────────────────────────────
+    // ── Mode & Theme Listeners ──────────────────────────────────
     useEffect(() => {
-        const tick = () => {
-            setUtcTime(new Date().toLocaleTimeString('en-US', { hour12: false, timeZone: 'UTC' }));
+        const handleModeChange = (e) => setTradingMode(e.detail.mode);
+        const handleThemeChange = (e) => setTheme(e.detail.theme);
+        
+        window.addEventListener('tradingModeChanged', handleModeChange);
+        window.addEventListener('themeChanged', handleThemeChange);
+
+        // Observer for theme changes on documentElement (fallback)
+        const observer = new MutationObserver(() => {
+            const currentTheme = document.documentElement.getAttribute('data-theme') || 'dark';
+            setTheme(currentTheme);
+        });
+        observer.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+
+        return () => {
+            window.removeEventListener('tradingModeChanged', handleModeChange);
+            window.removeEventListener('themeChanged', handleThemeChange);
+            observer.disconnect();
         };
-        tick();
-        const id = setInterval(tick, 1000);
-        return () => clearInterval(id);
     }, []);
 
-    // ── Build / rebuild widget when symbol or timeframe changes ─
-    const buildWidget = useCallback(async () => {
-        if (!containerRef.current) return;
-        setLoading(true);
-        setError(null);
-
-        try {
-            await loadTradingViewScript();
-
-            // Destroy previous widget
-            if (widgetRef.current) {
-                try { widgetRef.current.remove(); } catch (_) { }
-                widgetRef.current = null;
-            }
-
-            widgetRef.current = new window.TradingView.widget({
-                // Container
-                container: containerRef.current,
-                library_path: '/trading-view/charting_library/',
-                locale: 'en',
-
-                // Symbol & interval
-                symbol: selectedSymbol || 'XAUUSD',
-                interval: activeTf,
-
-                // Datafeed
-                datafeed: datafeed,
-
-                // Style
-                theme: 'Dark',
-                style: '1',   // candlestick
-                toolbar_bg: '#0d1117',
-                overrides: {
-                    'mainSeriesProperties.candleStyle.upColor': '#3687ED',
-                    'mainSeriesProperties.candleStyle.downColor': '#DA5244',
-                    'mainSeriesProperties.candleStyle.wickUpColor': '#3687ED',
-                    'mainSeriesProperties.candleStyle.wickDownColor': '#DA5244',
-                    'mainSeriesProperties.candleStyle.borderUpColor': '#3687ED',
-                    'mainSeriesProperties.candleStyle.borderDownColor': '#DA5244',
-                    'paneProperties.background': '#0d1117',
-                    'paneProperties.backgroundType': 'solid',
-                    'scalesProperties.textColor': '#8b949e',
-                    'scalesProperties.lineColor': '#21262d',
-                    'paneProperties.vertGridProperties.color': '#21262d',
-                    'paneProperties.horzGridProperties.color': '#21262d',
-                },
-
-                // UI features
-                fullscreen: false,
-                autosize: true,
-                disabled_features: [
-                    'header_symbol_search',   // we handle symbol from sidebar
-                    'header_compare',
-                    'display_market_status',
-                    'header_screenshot',
-                    'go_to_date',
-                ],
-                enabled_features: [
-                    'side_toolbar_in_fullscreen_mode',
-                    'header_fullscreen_button',
-                    'hide_last_na_study_output',
-                    'move_logo_to_main_pane',
-                    'seconds_resolution',              // Enable native seconds dropdown support
-                    'use_localstorage_for_settings',   // persist user layout per device
-                    'save_chart_properties_to_local_storage',
-                ],
-
-                // Defines the intervals in the top resolution dropdown
-                custom_resolutions: true,
-                favorites: {
-                    intervals: ['1S', '5S', '15S', '30S', '1', '5', '15', '30', '60', '120', '240', '480', '1D', '1W', '1M'],
-                },
-
-                // Saved layouts per user session (localStorage key includes symbol)
-                charts_storage_url: undefined,
-                client_id: 'livefxhub',
-                user_id: 'public',
-                load_last_chart: true,
-            });
-
-            widgetRef.current.onChartReady(() => {
-                setLoading(false);
-            });
-
-        } catch (err) {
-            console.error('[ChartMain] widget error:', err);
-            setError(err.message);
-            setLoading(false);
-        }
-    }, [selectedSymbol, activeTf]);
+    // Dynamic Recent Symbols list
+    const [recentSymbols, setRecentSymbols] = useState(() => {
+        const stored = localStorage.getItem('recent_symbols_list');
+        if (stored) return JSON.parse(stored);
+        return ['AUDCAD', 'XAUUSD', 'BTCUSD'];
+    });
 
     useEffect(() => {
-        buildWidget();
-        return () => {
-            if (widgetRef.current) {
-                try { widgetRef.current.remove(); } catch (_) { }
-                widgetRef.current = null;
+        if (!selectedSymbol) return;
+        setRecentSymbols(prev => {
+            const next = [selectedSymbol, ...prev.filter(s => s !== selectedSymbol)].slice(0, 8);
+            localStorage.setItem('recent_symbols_list', JSON.stringify(next));
+            return next;
+        });
+    }, [selectedSymbol]);
+
+    // Singleton datafeed
+    const datafeed = useMemo(() => createDatafeed(), []);
+
+    // Active TradingView resolution
+    const activeTf = useMemo(() => {
+        return TIMEFRAMES.find(t => t.label === selectedTimeframe)?.tv || '30';
+    }, [selectedTimeframe]);
+
+    // ── Widget Initialization & Full Rebuild on Theme/Mode change ──
+    useEffect(() => {
+        let isMounted = true;
+        const init = async () => {
+            if (!containerRef.current) return;
+            setLoading(true);
+            try {
+                await loadTradingViewScript();
+                if (!isMounted) return;
+
+                if (widgetRef.current) {
+                    try { widgetRef.current.remove(); } catch (_) { }
+                }
+
+                const isDark = theme === 'dark';
+                const bgColor = isDark ? '#0d1117' : '#ffffff';
+                const textColor = isDark ? '#8b949e' : '#24292f';
+                const gridColor = isDark ? '#21262d' : '#f0f3fa';
+                
+                // Sidebar exact colors
+                const primaryBlue = '#3687ED'; 
+                const primaryRed = '#DA5244';
+
+                console.log('[ChartMain] Initializing with theme:', theme, 'isDark:', isDark, 'bgColor:', bgColor);
+
+                // Intervals based on mode
+                const intervals = tradingMode === 'Normal'
+                    ? ['1', '5', '15', '30', '60', '240', '480', '1D', '1W']
+                    : ['1S', '5S', '15S', '30S', '1', '5', '15', '30', '60', '120', '240', '480', '1D', '1W', '1M'];
+
+                // Explicitly clear container to prevent theme bleeding
+                if (containerRef.current) {
+                    containerRef.current.innerHTML = '';
+                    containerRef.current.style.backgroundColor = bgColor;
+                }
+
+                const overrides = {
+                    'mainSeriesProperties.candleStyle.upColor': primaryBlue,
+                    'mainSeriesProperties.candleStyle.downColor': primaryRed,
+                    'mainSeriesProperties.candleStyle.wickUpColor': primaryBlue,
+                    'mainSeriesProperties.candleStyle.wickDownColor': primaryRed,
+                    'mainSeriesProperties.candleStyle.borderUpColor': primaryBlue,
+                    'mainSeriesProperties.candleStyle.borderDownColor': primaryRed,
+                    
+                    // Force background
+                    'paneProperties.background': bgColor,
+                    'paneProperties.backgroundType': 'solid',
+                    'paneProperties.background_color': bgColor,
+                    'paneProperties.background_color_type': 'solid',
+
+                    'scalesProperties.textColor': textColor,
+                    'scalesProperties.lineColor': gridColor,
+                    'paneProperties.vertGridProperties.color': gridColor,
+                    'paneProperties.horzGridProperties.color': gridColor,
+                    
+                    // Scale sizes (requested 8px)
+                    'scalesProperties.fontSize': 8,
+                    'paneProperties.legendProperties.fontSize': 8,
+                    'scalesProperties.font_size': 8,
+                };
+
+                const studiesOverrides = {
+                    'volume.volume.color.0': primaryRed,   // Down
+                    'volume.volume.color.1': primaryBlue,  // Up
+                    'volume.color.0': primaryRed,
+                    'volume.color.1': primaryBlue,
+                    'volume.volume.transparency': 100,      // Opaque to match sidebar vibrancy
+                    'volume.volume.upColor': primaryBlue,
+                    'volume.volume.downColor': primaryRed,
+                };
+
+                widgetRef.current = new window.TradingView.widget({
+                    container: containerRef.current,
+                    library_path: '/trading-view/charting_library/',
+                    locale: 'en',
+                    symbol: selectedSymbol || 'AUDCAD',
+                    interval: activeTf,
+                    datafeed: datafeed,
+                    theme: isDark ? 'Dark' : 'Light',
+                    style: '1',
+                    toolbar_bg: bgColor,
+                    overrides: overrides,
+                    studies_overrides: studiesOverrides,
+                    fullscreen: false,
+                    autosize: true,
+                    disabled_features: [
+                        'header_symbol_search',
+                        'header_compare',
+                        'display_market_status',
+                        'header_screenshot',
+                        'go_to_date',
+                        'bottom_toolbar',
+                        'timeframes_toolbar',
+                    ],
+                    enabled_features: [
+                        'side_toolbar_in_fullscreen_mode',
+                        'header_fullscreen_button',
+                        'hide_last_na_study_output',
+                        'move_logo_to_main_pane',
+                        'seconds_resolution',
+                        'use_localstorage_for_settings',
+                        'save_chart_properties_to_local_storage',
+                    ],
+                    custom_resolutions: true,
+                    favorites: {
+                        intervals: intervals,
+                    },
+                    load_last_chart: true,
+                    client_id: 'livefxhub',
+                    user_id: 'public',
+                });
+
+                widgetRef.current.onChartReady(() => {
+                    if (isMounted) {
+                        widgetRef.current.applyOverrides(overrides);
+                        widgetRef.current.applyStudiesOverrides(studiesOverrides);
+                        setLoading(false);
+                    }
+                });
+            } catch (err) {
+                console.error('[ChartMain] init error:', err);
+                if (isMounted) setError(err.message);
             }
         };
-    }, [buildWidget]);
 
-    // ── Timeframe change — update chart without full rebuild ───
-    const handleTimeframeChange = useCallback((tf) => {
-        setSelectedTimeframe(tf.label);
-        if (widgetRef.current && widgetRef.current.chart) {
-            try {
-                widgetRef.current.chart().setResolution(tf.tv, () => { });
-            } catch (_) {
-                // If chart not ready yet, the buildWidget effect will handle it
+        init();
+        return () => {
+            isMounted = false;
+        };
+    }, [containerRef, theme, tradingMode]);
+
+    // ── Symbol/Timeframe Updates (In-place) ──────────────────────
+    useEffect(() => {
+        if (!widgetRef.current) return;
+        widgetRef.current.onChartReady(() => {
+            const chart = widgetRef.current.chart();
+            if (chart.symbol() !== selectedSymbol) {
+                chart.setSymbol(selectedSymbol, () => { });
             }
-        }
-    }, [setSelectedTimeframe]);
+            if (chart.resolution() !== activeTf) {
+                chart.setResolution(activeTf, () => { });
+            }
+        });
+    }, [selectedSymbol, activeTf]);
 
     return (
         <div className="chart-main">
-            {/* Removed custom Timeframe Toolbar — relying on native TradingView header dropdown */}            {/* Symbol Tab Strip */}
-            <div className="chart-symbol-tabs">
-                {CHART_SYMBOLS.map(sym => (
-                    <button
-                        key={sym}
-                        className={`chart-symbol-tab ${selectedSymbol === sym ? 'active' : ''}`}
-                        onClick={() => {
-                            // Propagate to parent state + update chart in-place
-                            if (onSelectSymbol) onSelectSymbol(sym);
-                            if (widgetRef.current?.chart) {
-                                try {
-                                    widgetRef.current.chart().setSymbol(sym, () => { });
-                                } catch (_) { }
-                            }
-                        }}
-                    >
-                        {sym}
-                    </button>
-                ))}
-            </div>
-
             {/* TradingView Chart Container */}
-            <div className="chart-canvas-container" style={{ position: 'relative', flex: 1, minHeight: 0 }}>
+            <div 
+                key={`${theme}-${tradingMode}`} 
+                className="chart-canvas-container" 
+                style={{ position: 'relative', flex: 1, minHeight: 0 }}
+            >
                 {loading && (
                     <div className="chart-loading-overlay">
                         <div className="chart-loading-spinner" />
@@ -214,7 +257,7 @@ export default function ChartMain({ selectedSymbol, selectedTimeframe, setSelect
                 {error && (
                     <div className="chart-error-overlay">
                         <span>⚠ {error}</span>
-                        <button onClick={buildWidget}>Retry</button>
+                        <button onClick={() => window.location.reload()}>Retry</button>
                     </div>
                 )}
                 {/* TradingView mounts into this div */}
