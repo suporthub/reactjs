@@ -110,10 +110,33 @@ export default function MarketSidebar({ selectedSymbol, setSelectedSymbol, onTog
                 configRef.current = data;
                 const map = new Map();
                 data.symbols.forEach(s => {
-                    map.set(s.symbol, {
+                    const item = {
                         symbol: s.symbol, bid: '-', ask: '-',
                         instrumentType: s.instrumentType, starred: false
-                    });
+                    };
+
+                    // Proactive Snapshot Injection:
+                    // If the config response contains a price snapshot, apply it immediately
+                    // so the user sees data without waiting for the WebSocket handshake.
+                    const snapshot = (data.snapshot && data.snapshot[s.symbol]) || (data.prices && data.prices[s.symbol]);
+                    if (snapshot && Array.isArray(snapshot)) {
+                        const precision = s.showPoints;
+                        if (snapshot[0] !== undefined) {
+                            item.bid = formatPrice(snapshot[0], precision);
+                            prevPricesRef.current[s.symbol] = parseFloat(snapshot[0]);
+                        }
+                        if (snapshot[1] !== undefined) item.ask = formatPrice(snapshot[1], precision);
+                        if (snapshot[2] !== undefined) item.bidHigh = formatPrice(snapshot[2], precision);
+                        if (snapshot[3] !== undefined) item.bidLow = formatPrice(snapshot[3], precision);
+                        if (snapshot[4] !== undefined) {
+                            const v = parseFloat(snapshot[4]);
+                            item.change = (v > 0 ? '+' : '') + v.toFixed(2) + '%';
+                        }
+                        // Default tick direction for snapshot
+                        item.tickDirection = 'up'; 
+                    }
+
+                    map.set(s.symbol, item);
                 });
                 masterMapRef.current = map;
                 setMarketData(Array.from(map.values()));

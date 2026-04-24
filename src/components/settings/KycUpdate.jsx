@@ -25,6 +25,7 @@ export default function KycUpdate() {
   // Step 1 Data
   const [addressLine1, setAddressLine1] = useState('');
   const [city, setCity] = useState('');
+  const [pincode, setPincode] = useState('');
   const [country, setCountry] = useState('');
   
   // Step 2 Data
@@ -34,7 +35,7 @@ export default function KycUpdate() {
   const [addressProofFile, setAddressProofFile] = useState(null);
 
   const handleNextStep = () => {
-    if (!addressLine1 || !city || !country) {
+    if (!addressLine1 || !city || !pincode || !country) {
       setStatus({ type: 'error', message: 'All address fields are required.' });
       return;
     }
@@ -56,6 +57,7 @@ export default function KycUpdate() {
     const formData = new FormData();
     formData.append('addressLine1', addressLine1);
     formData.append('city', city);
+    formData.append('pincode', pincode);
     formData.append('country', country);
     formData.append('idProofType', idProofType);
     formData.append('addressProofType', addressProofType);
@@ -155,6 +157,15 @@ export default function KycUpdate() {
                     placeholder="Your city" 
                     value={city}
                     onChange={(e) => setCity(e.target.value)}
+                  />
+                </div>
+                <div className="kyc-form-group">
+                  <label>Pincode / Zip</label>
+                  <input 
+                    type="text" 
+                    placeholder="e.g. 110001" 
+                    value={pincode}
+                    onChange={(e) => setPincode(e.target.value)}
                   />
                 </div>
                 <div className="kyc-form-group">

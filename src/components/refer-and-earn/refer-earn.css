@@ -351,13 +351,13 @@
 }
 
 .share-modal-content {
-    background: var(--surface);
+    background: #1a1d21;
     width: 90%;
     max-width: 440px;
-    border-radius: 20px;
-    padding: 30px;
-    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
-    border: 1px solid var(--border-color);
+    border-radius: 24px;
+    padding: 35px;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+    border: 1px solid rgba(255, 255, 255, 0.05);
     animation: slideUp 0.3s cubic-bezier(0.18, 0.89, 0.32, 1.28);
 }
 
@@ -371,17 +371,17 @@
 .share-modal-header h3 {
     font-size: 1.25rem;
     font-weight: 700;
-    color: var(--text-main);
+    color: #ffffff;
     margin: 0;
 }
 
 .close-share-modal {
-    background: var(--bg-color);
+    background: #111418;
     border: none;
-    color: var(--text-muted);
+    color: #ffffff;
     cursor: pointer;
-    width: 32px;
-    height: 32px;
+    width: 36px;
+    height: 36px;
     border-radius: 50%;
     display: flex;
     align-items: center;
@@ -390,13 +390,13 @@
 }
 
 .close-share-modal:hover {
-    background: #ff5252;
-    color: white;
+    background: #000000;
+    transform: scale(1.1);
 }
 
 .share-modal-body p {
     font-size: 0.9rem;
-    color: var(--text-muted);
+    color: #9ca3af;
     margin-bottom: 24px;
     line-height: 1.5;
 }
@@ -421,29 +421,29 @@
     transform: translateY(-5px);
 }
 
-.platform-icon-circle {
-    width: 60px;
-    height: 60px;
-    border-radius: 18px;
+.platform-icon-box {
+    width: 64px;
+    height: 64px;
+    border-radius: 20px;
     display: flex;
     align-items: center;
     justify-content: center;
     color: white;
-    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.2);
 }
 
 .share-platform-item span {
     font-size: 0.8rem;
     font-weight: 600;
-    color: var(--text-main);
+    color: #ffffff;
 }
 
 .share-modal-link-copy {
     display: flex;
-    background: var(--bg-color);
-    border: 1px solid var(--border-color);
+    background: #0d1117;
+    border: 1px solid rgba(255, 255, 255, 0.1);
     padding: 6px;
-    border-radius: 12px;
+    border-radius: 14px;
     align-items: center;
     gap: 8px;
 }
@@ -452,26 +452,29 @@
     flex: 1;
     background: transparent;
     border: none;
-    padding: 8px 10px;
+    padding: 10px 12px;
     font-size: 0.85rem;
-    color: var(--text-main);
+    color: #ffffff;
     outline: none;
+    opacity: 0.8;
 }
 
 .share-modal-link-copy button {
-    background: var(--primary);
+    background: #58a6ff;
     color: white;
     border: none;
-    padding: 8px 16px;
-    border-radius: 8px;
-    font-size: 0.8rem;
+    padding: 10px 20px;
+    border-radius: 10px;
+    font-size: 0.85rem;
     font-weight: 700;
     cursor: pointer;
-    transition: opacity 0.2s;
+    transition: all 0.2s;
+    white-space: nowrap;
 }
 
 .share-modal-link-copy button:hover {
-    opacity: 0.9;
+    background: #4a90e2;
+    transform: translateY(-1px);
 }
 
 @keyframes fadeIn {
