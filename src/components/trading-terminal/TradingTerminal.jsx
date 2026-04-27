@@ -24,12 +24,14 @@ export default function TradingTerminal() {
     // Persist selected symbol and timeframe to localStorage for session recovery
     useEffect(() => {
         if (selectedSymbol) {
+            console.log('[TradingTerminal] Saving symbol to storage:', selectedSymbol);
             localStorage.setItem('recent_symbol', selectedSymbol);
         }
     }, [selectedSymbol]);
 
     useEffect(() => {
         if (selectedTimeframe) {
+            console.log('[TradingTerminal] Saving timeframe to storage:', selectedTimeframe);
             localStorage.setItem('recent_tf', selectedTimeframe);
         }
     }, [selectedTimeframe]);

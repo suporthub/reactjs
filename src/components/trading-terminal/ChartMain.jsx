@@ -150,10 +150,10 @@ export default function ChartMain({ selectedSymbol, selectedTimeframe, setSelect
                     
                     // Price Lines
                     'mainSeriesProperties.showPriceLine': true,
-                    'mainSeriesProperties.showBidPriceLine': true,
-                    'mainSeriesProperties.showAskPriceLine': true,
-                    'mainSeriesProperties.bidPriceLineColor': primaryRed,
-                    'mainSeriesProperties.askPriceLineColor': primaryBlue,
+                    'mainSeriesProperties.showBidLine': true,
+                    'mainSeriesProperties.showAskLine': true,
+                    'mainSeriesProperties.bidLineColor': primaryRed,
+                    'mainSeriesProperties.askLineColor': primaryBlue,
 
                     // Scale sizes (requested 10px)
                     'scalesProperties.fontSize': 10,
