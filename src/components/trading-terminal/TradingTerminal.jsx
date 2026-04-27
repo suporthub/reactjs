@@ -15,10 +15,14 @@ const TOKEN_REFRESH_INTERVAL_MS = 13 * 60 * 1000;
 
 export default function TradingTerminal() {
     const [selectedSymbol, setSelectedSymbol] = useState(() => {
-        return localStorage.getItem('recent_symbol') || 'AUDCAD';
+        const saved = localStorage.getItem('recent_symbol');
+        console.log('[TradingTerminal] Initializing symbol from storage:', saved || 'AUDCAD (default)');
+        return saved || 'AUDCAD';
     });
     const [selectedTimeframe, setSelectedTimeframe] = useState(() => {
-        return localStorage.getItem('recent_tf') || '30m';
+        const saved = localStorage.getItem('recent_tf');
+        console.log('[TradingTerminal] Initializing timeframe from storage:', saved || '30m (default)');
+        return saved || '30m';
     });
 
     // Persist selected symbol and timeframe to localStorage for session recovery

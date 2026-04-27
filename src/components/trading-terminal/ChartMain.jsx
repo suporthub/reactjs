@@ -150,10 +150,6 @@ export default function ChartMain({ selectedSymbol, selectedTimeframe, setSelect
                     
                     // Price Lines
                     'mainSeriesProperties.showPriceLine': true,
-                    'mainSeriesProperties.showBidLine': true,
-                    'mainSeriesProperties.showAskLine': true,
-                    'mainSeriesProperties.bidLineColor': primaryRed,
-                    'mainSeriesProperties.askLineColor': primaryBlue,
 
                     // Scale sizes (requested 10px)
                     'scalesProperties.fontSize': 10,
@@ -210,6 +206,13 @@ export default function ChartMain({ selectedSymbol, selectedTimeframe, setSelect
                     if (isMounted) {
                         widgetRef.current.applyOverrides(overrides);
                         widgetRef.current.applyStudiesOverrides(studiesOverrides);
+                        
+                        // Sync timeframe back to parent on change
+                        widgetRef.current.subscribe('onIntervalChanged', (interval) => {
+                            console.log('[ChartMain] Interval changed to:', interval);
+                            setSelectedTimeframe(interval);
+                        });
+
                         setLoading(false);
                     }
                 });
