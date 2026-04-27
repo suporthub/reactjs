@@ -307,12 +307,25 @@ export function createDatafeed() {
             const config = await tradingConfigManager.getConfig();
             const symbolData = config?.symbols?.find(s => s.symbol.toUpperCase() === sym);
 
+            // Robust Session Logic:
+            // Forex/Commodities usually close Fri 22:00 - Sun 22:00 UTC.
+            // TradingView session format: "2200-2200:23456" (Sun-Fri) or specific "1700-1600:234567"
+            // For XAUUSD specifically: Sun 22:00 to Fri 24:00 (which is Sat 00:00)
+            let session = '24x7';
+            const type = (symbolData?.instrumentType || 'forex').toLowerCase();
+            
+            if (type === 'forex' || type === 'commodity' || sym.includes('XAU') || sym.includes('XAG')) {
+                // "2200-2400:1,0000-2400:2345,0000-2200:6" is more precise, 
+                // but "24x5" is a standard TV alias that works well for FX.
+                // However, let's use the explicit session for robustness:
+                session = '2200-2400:1,0000-2400:23456';
+            }
+
             if (!symbolData) {
-                // Fallback for symbols not yet in config cache to prevent UI breakage
                 console.warn(`[Datafeed] Symbol ${sym} not found in config, using generic info`);
                 onSymbolResolvedCallback({
                     name: sym, ticker: sym, description: sym, type: 'forex',
-                    session: '24x7', timezone: 'Etc/UTC', exchange: 'LIVEFXHUB',
+                    session: session, timezone: 'Etc/UTC', exchange: 'LIVEFXHUB',
                     minmov: 1, pricescale: 100000, has_intraday: true, has_seconds: true,
                     seconds_multipliers: ['1', '5', '15', '30'], has_daily: true, has_weekly_and_monthly: true,
                     supported_resolutions: ['1S', '5S', '15S', '30S', '1', '5', '15', '30', '60', '120', '240', '480', '1D', '1W', '1M'],
@@ -321,7 +334,6 @@ export function createDatafeed() {
                 return;
             }
 
-            const type = (symbolData.instrumentType || 'forex').toLowerCase();
             const pricescale = getPriceScale(symbolData.showPoints);
 
             setTimeout(() => onSymbolResolvedCallback({
@@ -329,7 +341,7 @@ export function createDatafeed() {
                 ticker: sym,
                 description: sym,
                 type: type,
-                session: '24x7',
+                session: session,
                 timezone: 'Etc/UTC',
                 exchange: 'LIVEFXHUB',
                 minmov: 1,
@@ -350,62 +362,70 @@ export function createDatafeed() {
             const { from, to, firstDataRequest, countBack } = periodParams;
             const symbol = symbolInfo.name;
 
-            // TradingView passes from/to as UTC seconds
             let fromMs = from * 1000;
-            let toMs = firstDataRequest ? Date.now() : to * 1000;
+            let toMs = to * 1000;
+            if (firstDataRequest) toMs = Math.max(toMs, Date.now());
 
-            console.log(`[Datafeed] getBars ${symbol} res=${resolution} from=${new Date(fromMs).toISOString()} to=${new Date(toMs).toISOString()} first=${firstDataRequest} countBack=${countBack}`);
+            console.log(`[Datafeed] getBars ${symbol} res=${resolution} from=${new Date(fromMs).toISOString()} to=${new Date(toMs).toISOString()} cb=${countBack}`);
 
             try {
-                let bars = await fetchCandles(symbol, resolution, fromMs, toMs);
+                let allBars = [];
+                let currentTo = toMs;
+                let currentFrom = fromMs;
+                let attempts = 0;
+                const maxAttempts = 5;
+                const targetCount = countBack || 300;
 
-                // If firstDataRequest returned no data, try fetching a wider range
-                // to find the nearest available data
-                if (bars.length === 0 && firstDataRequest) {
+                // --- AGGRESSIVE MULTI-CHUNK FETCHING ---
+                // We keep fetching older chunks until we have enough bars or hit the limit.
+                // This "leaps" over weekends and holidays automatically.
+                while (allBars.length < targetCount && attempts < maxAttempts) {
+                    const bars = await fetchCandles(symbol, resolution, currentFrom, currentTo);
+                    
+                    if (bars.length > 0) {
+                        // Merge and deduplicate
+                        for (const b of bars) {
+                            allBars.push(b);
+                        }
+                        const map = new Map();
+                        allBars.forEach(b => map.set(b.time, b));
+                        allBars = Array.from(map.values()).sort((a, b) => a.time - b.time);
+                    }
+
+                    if (allBars.length >= targetCount) break;
+
+                    // If we found nothing or not enough, look back one "view" further
+                    // Step size is based on resolution and target count to be efficient
                     const barDuration = RES_TO_SEC[resolution] || 60;
-                    // Try up to 24 hours back
-                    const widerFrom = Date.now() - (86400 * 1000);
-                    console.log(`[Datafeed] No data in range, trying wider: from=${new Date(widerFrom).toISOString()}`);
-                    bars = await fetchCandles(symbol, resolution, widerFrom, Date.now());
+                    const stepSizeMs = Math.max(86400 * 1000, barDuration * targetCount * 1000);
+                    
+                    currentTo = currentFrom;
+                    currentFrom -= stepSizeMs;
+                    attempts++;
+                    
+                    console.log(`[Datafeed] ${symbol} chunk empty/short, searching older... attempt ${attempts}/${maxAttempts}`);
                 }
 
-                if (bars.length === 0) {
-                    console.log(`[Datafeed] ${symbol}: noData=true`);
+                if (allBars.length === 0) {
+                    console.log(`[Datafeed] ${symbol}: No data found after ${attempts} chunks.`);
                     onHistoryCallback([], { noData: true });
                     return;
                 }
 
-                // Deduplicate by time
-                const seen = new Set();
-                const uniqueBars = [];
-                for (const bar of bars) {
-                    if (!seen.has(bar.time)) {
-                        seen.add(bar.time);
-                        uniqueBars.push(bar);
-                    }
+                // Final sort and slice
+                allBars.sort((a, b) => a.time - b.time);
+                let result = allBars;
+                if (countBack && countBack > 0 && allBars.length > countBack) {
+                    result = allBars.slice(allBars.length - countBack);
                 }
 
-                // Sort ascending
-                uniqueBars.sort((a, b) => a.time - b.time);
-
-                // If countBack is provided, return only the last N bars
-                let result = uniqueBars;
-                if (countBack && countBack > 0 && uniqueBars.length > countBack) {
-                    result = uniqueBars.slice(uniqueBars.length - countBack);
-                }
-
-                // Store the last bar for subscribeBars to use
+                // Sync lastBar for realtime
                 const lastBar = result[result.length - 1];
                 const key = `${symbol}|${resolution}`;
-
-                // ONLY update if it's the first data request (most recent data),
-                // OR if the new lastBar is newer than what we already have.
                 const existing = _lastBarMap.get(key);
                 if (firstDataRequest || !existing || lastBar.time > existing.time) {
                     _lastBarMap.set(key, { ...lastBar });
                 }
-
-                console.log(`[Datafeed] ${symbol} res=${resolution}: returning ${result.length} bars, lastBar time=${new Date(lastBar.time).toISOString()} close=${lastBar.close}`);
 
                 onHistoryCallback(result, { noData: false });
             } catch (err) {
