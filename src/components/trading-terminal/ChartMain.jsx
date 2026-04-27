@@ -142,28 +142,26 @@ export default function ChartMain({ selectedSymbol, selectedTimeframe, setSelect
                     // Force background
                     'paneProperties.background': bgColor,
                     'paneProperties.backgroundType': 'solid',
-                    'paneProperties.background_color': bgColor,
-                    'paneProperties.background_color_type': 'solid',
 
                     'scalesProperties.textColor': textColor,
                     'scalesProperties.lineColor': gridColor,
                     'paneProperties.vertGridProperties.color': gridColor,
                     'paneProperties.horzGridProperties.color': gridColor,
                     
+                    // Price Lines
+                    'mainSeriesProperties.showPriceLine': true,
+                    'mainSeriesProperties.showBidPriceLine': true,
+                    'mainSeriesProperties.showAskPriceLine': true,
+                    'mainSeriesProperties.bidPriceLineColor': primaryRed,
+                    'mainSeriesProperties.askPriceLineColor': primaryBlue,
+
                     // Scale sizes (requested 10px)
                     'scalesProperties.fontSize': 10,
-                    'paneProperties.legendProperties.fontSize': 10,
-                    'scalesProperties.font_size': 10,
                 };
 
                 const studiesOverrides = {
-                    'volume.volume.color.0': primaryRed,   // Down
-                    'volume.volume.color.1': primaryBlue,  // Up
-                    'volume.color.0': primaryRed,
-                    'volume.color.1': primaryBlue,
-                    'volume.volume.transparency': 100,      // Opaque to match sidebar vibrancy
-                    'volume.volume.upColor': primaryBlue,
-                    'volume.volume.downColor': primaryRed,
+                    'volume.volume.color.0': primaryRed,
+                    'volume.volume.color.1': primaryBlue,
                 };
 
                 widgetRef.current = new window.TradingView.widget({

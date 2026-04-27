@@ -28,3 +28,14 @@
     width: 14px !important;
     height: 14px !important;
 }
+
+/* Legend Scaling (Symbol info, OHLC values) */
+[class*="legend"] {
+    font-size: 10px !important;
+}
+
+/* Specific value rows in legend */
+[class*="legend"] [class*="value"],
+[class*="legend"] [class*="title"] {
+    font-size: 10px !important;
+}

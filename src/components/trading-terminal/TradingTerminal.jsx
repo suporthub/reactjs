@@ -17,14 +17,22 @@ export default function TradingTerminal() {
     const [selectedSymbol, setSelectedSymbol] = useState(() => {
         return localStorage.getItem('recent_symbol') || 'AUDCAD';
     });
-    const [selectedTimeframe, setSelectedTimeframe] = useState('30m');
+    const [selectedTimeframe, setSelectedTimeframe] = useState(() => {
+        return localStorage.getItem('recent_tf') || '30m';
+    });
 
-    // Persist selected symbol to localStorage for session recovery
+    // Persist selected symbol and timeframe to localStorage for session recovery
     useEffect(() => {
         if (selectedSymbol) {
             localStorage.setItem('recent_symbol', selectedSymbol);
         }
     }, [selectedSymbol]);
+
+    useEffect(() => {
+        if (selectedTimeframe) {
+            localStorage.setItem('recent_tf', selectedTimeframe);
+        }
+    }, [selectedTimeframe]);
 
     // Ensure we have a valid symbol from config if current is somehow empty
     useEffect(() => {
