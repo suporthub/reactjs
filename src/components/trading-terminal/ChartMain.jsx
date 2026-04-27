@@ -148,9 +148,6 @@ export default function ChartMain({ selectedSymbol, selectedTimeframe, setSelect
                     'paneProperties.vertGridProperties.color': gridColor,
                     'paneProperties.horzGridProperties.color': gridColor,
                     
-                    // Price Lines
-                    'mainSeriesProperties.showPriceLine': true,
-
                     // Scale sizes (requested 10px)
                     'scalesProperties.fontSize': 10,
                 };
@@ -206,13 +203,6 @@ export default function ChartMain({ selectedSymbol, selectedTimeframe, setSelect
                     if (isMounted) {
                         widgetRef.current.applyOverrides(overrides);
                         widgetRef.current.applyStudiesOverrides(studiesOverrides);
-                        
-                        // Sync timeframe back to parent on change
-                        widgetRef.current.subscribe('onIntervalChanged', (interval) => {
-                            console.log('[ChartMain] Interval changed to:', interval);
-                            setSelectedTimeframe(interval);
-                        });
-
                         setLoading(false);
                     }
                 });

@@ -15,30 +15,16 @@ const TOKEN_REFRESH_INTERVAL_MS = 13 * 60 * 1000;
 
 export default function TradingTerminal() {
     const [selectedSymbol, setSelectedSymbol] = useState(() => {
-        const saved = localStorage.getItem('recent_symbol');
-        console.log('[TradingTerminal] Initializing symbol from storage:', saved || 'AUDCAD (default)');
-        return saved || 'AUDCAD';
+        return localStorage.getItem('recent_symbol') || 'AUDCAD';
     });
-    const [selectedTimeframe, setSelectedTimeframe] = useState(() => {
-        const saved = localStorage.getItem('recent_tf');
-        console.log('[TradingTerminal] Initializing timeframe from storage:', saved || '30m (default)');
-        return saved || '30m';
-    });
+    const [selectedTimeframe, setSelectedTimeframe] = useState('30m');
 
-    // Persist selected symbol and timeframe to localStorage for session recovery
+    // Persist selected symbol to localStorage for session recovery
     useEffect(() => {
         if (selectedSymbol) {
-            console.log('[TradingTerminal] Saving symbol to storage:', selectedSymbol);
             localStorage.setItem('recent_symbol', selectedSymbol);
         }
     }, [selectedSymbol]);
-
-    useEffect(() => {
-        if (selectedTimeframe) {
-            console.log('[TradingTerminal] Saving timeframe to storage:', selectedTimeframe);
-            localStorage.setItem('recent_tf', selectedTimeframe);
-        }
-    }, [selectedTimeframe]);
 
     // Ensure we have a valid symbol from config if current is somehow empty
     useEffect(() => {
