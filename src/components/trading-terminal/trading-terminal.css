@@ -1527,11 +1527,11 @@ td.negative {
     background: var(--surface);
     width: 100%;
     height: 100%;
-    padding: 12px;
+    padding: 8px 12px;
     color: var(--text-main);
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: 6px;
     font-family: Arial, sans-serif;
     overflow-y: auto;
     position: relative;
@@ -1621,7 +1621,7 @@ td.negative {
 
 .order-modal-tab {
     flex: 1;
-    padding: 6px;
+    padding: 4px;
     font-size: 10px;
     font-family: Arial, sans-serif;
     font-weight: 600;
@@ -1694,7 +1694,7 @@ td.negative {
 
 .order-modal-full-input {
     width: 100%;
-    height: 28px;
+    height: 24px;
     padding: 0 12px;
     border: 1px solid var(--border-color);
     border-radius: 4px;
@@ -1716,7 +1716,7 @@ td.negative {
     align-items: flex-end;
     justify-content: center;
     flex-shrink: 0;
-    margin-bottom: 12px;
+    margin-bottom: 8px;
 }
 
 .order-modal-input-group {
@@ -1735,7 +1735,7 @@ td.negative {
 
 .order-modal-basic-input {
     width: 100%;
-    height: 28px;
+    height: 24px;
     border: 1px solid var(--border-color);
     border-radius: 4px;
     background: var(--bg-color);
@@ -1747,7 +1747,7 @@ td.negative {
 
 .order-modal-number-input {
     display: flex;
-    height: 28px;
+    height: 24px;
     border: 1px solid var(--border-color);
     border-radius: 4px;
     overflow: hidden;
@@ -1789,7 +1789,8 @@ td.negative {
     display: flex;
     flex-direction: column;
     background: #DA5244;
-    width: 20px;
+    width: 18px;
+    height: 100%;
 }
 
 [data-theme='light'] .order-modal-spinners {
@@ -1821,12 +1822,10 @@ td.negative {
 
 .order-btn-spin.up {
     background: #DA5244;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.2);
 }
 
 [data-theme='light'] .order-btn-spin.up {
     background: #DA5244;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.2);
 }
 
 .order-btn-spin.down {
@@ -1878,7 +1877,7 @@ td.negative {
 
 .order-action-btn {
     flex: 1;
-    padding: 10px;
+    padding: 8px;
     font-size: 10px;
     font-family: Arial, sans-serif;
     font-weight: 600;
@@ -1911,4 +1910,104 @@ td.negative {
     border-radius: 8px;
     margin: 10px;
     border: 1px dashed var(--border-color);
+}
+
+/* Toggle Rows (SL/TP, GTD/TC) */
+.order-modal-toggle-row {
+    width: 100%;
+    flex-shrink: 0;
+}
+
+.order-modal-toggle-group {
+    display: flex;
+    gap: 8px;
+    width: 100%;
+}
+
+.order-modal-toggle-group.full-width .order-modal-toggle-buttons {
+    width: 100%;
+}
+
+.order-modal-toggle-buttons {
+    display: flex;
+    background: #1a1c24;
+    border: 1px solid var(--border-color);
+    border-radius: 20px;
+    overflow: hidden;
+    height: 24px;
+    width: 80px;
+    flex-shrink: 0;
+    padding: 2px;
+    position: relative;
+}
+
+[data-theme='light'] .order-modal-toggle-buttons {
+    background: #f1f5f9;
+}
+
+.toggle-btn {
+    flex: 1;
+    background: transparent;
+    border: none;
+    color: var(--text-muted);
+    font-size: 9px;
+    font-weight: 800;
+    cursor: pointer;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    border-radius: 16px;
+    z-index: 2;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    letter-spacing: 0.5px;
+}
+
+.toggle-btn.active {
+    color: #fff;
+}
+
+/* SL Active - Reddish Pattern */
+.order-modal-toggle-group:first-of-type .toggle-btn:first-child.active {
+    background: linear-gradient(135deg, #e11d48 0%, #be123c 100%);
+    box-shadow: 0 2px 4px rgba(225, 29, 72, 0.3);
+}
+
+/* TP Active - Greenish Pattern */
+.order-modal-toggle-group:first-of-type .toggle-btn:last-child.active {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    box-shadow: 0 2px 4px rgba(16, 185, 129, 0.3);
+}
+
+/* GTC/FOK Active - Deep Purple Pattern (Distinct from Red/Green) */
+.order-modal-toggle-group.full-width .toggle-btn.active {
+    background: linear-gradient(135deg, #6366f1 0%, #4338ca 100%);
+    box-shadow: 0 2px 4px rgba(99, 102, 241, 0.3);
+}
+
+.order-modal-toggle-input {
+    flex: 1;
+    height: 24px;
+    background: #1a1c24;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    padding: 0 10px;
+    color: var(--text-main);
+    font-size: 11px;
+    text-align: right;
+    font-weight: 500;
+}
+
+[data-theme='light'] .order-modal-toggle-input {
+    background: #ffffff;
+    border-color: #cbd5e1;
+}
+
+.order-modal-toggle-input:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 1px rgba(54, 135, 237, 0.2);
+}
+
+.order-modal-toggle-input::placeholder {
+    color: rgba(255, 255, 255, 0.15);
 }

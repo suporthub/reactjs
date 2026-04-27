@@ -51,6 +51,12 @@ export default function Accounts({ setWalletTab }) {
     const [showInfoModal, setShowInfoModal] = useState(false);
     const [selectedAccountForInfo, setSelectedAccountForInfo] = useState(null);
     const [copied, setCopied] = useState(false);
+    const [notification, setNotification] = useState(null); // { message: '', type: 'error' | 'success' }
+
+    const showNotification = (message, type = 'error') => {
+        setNotification({ message, type });
+        setTimeout(() => setNotification(null), 5000);
+    };
 
     const hasFetched = React.useRef(false);
     
@@ -96,11 +102,13 @@ export default function Accounts({ setWalletTab }) {
                 window.open('/trading-terminal', '_blank');
             } else {
                 // Stay here and show error
-                alert(result.message || t('Failed to initialize trading account.'));
+                if (result.code !== 'SESSION_EXPIRED' && result.status !== 401) {
+                    showNotification(result.message || t('Failed to initialize trading account.'));
+                }
             }
         } catch (error) {
             console.error("Trade redirection failed:", error);
-            alert(t('A connection error occurred. Please try again.'));
+            showNotification(t('A connection error occurred. Please try again.'));
         }
     };
 
@@ -423,6 +431,19 @@ export default function Accounts({ setWalletTab }) {
     return (
         <main className="main-content">
             <div className="content-area">
+                {/* Global Notifications */}
+                {notification && (
+                    <div className={`notification-top-bar ${notification.type}`}>
+                        <div className="notification-content">
+                            {notification.type === 'error' ? <Info size={16} /> : <Check size={16} />}
+                            <span>{notification.message}</span>
+                        </div>
+                        <button className="notification-close" onClick={() => setNotification(null)}>
+                            <X size={14} />
+                        </button>
+                    </div>
+                )}
+
                 {/* Premium Banner (Dynamic for IB Status) */}
                 <div className="partner-card-premium clickable" onClick={() => navigate('/ib')}>
                     <div className="partner-text">

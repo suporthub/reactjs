@@ -11,6 +11,10 @@ export default function OrderPlacementModal({ symbol, bid, ask, tickDirection, a
     const [symbolConfig, setSymbolConfig] = useState(null);
     const [leverage, setLeverage] = useState(100);
     const [lotsError, setLotsError] = useState('');
+    const [slTpMode, setSlTpMode] = useState('SL');
+    const [slTpVal, setSlTpVal] = useState('');
+    const [timeMode, setTimeMode] = useState('GTC');
+    const [timeVal, setTimeVal] = useState('');
 
     useEffect(() => {
         const loadConfig = async () => {
@@ -137,8 +141,8 @@ export default function OrderPlacementModal({ symbol, bid, ask, tickDirection, a
                                 }} 
                             />
                             <div className="order-modal-spinners">
-                                <button className="order-btn-spin up" onClick={() => handleLotChange(0.01)}><ChevronUp size={12} /></button>
-                                <button className="order-btn-spin down" onClick={() => handleLotChange(-0.01)}><ChevronDown size={12} /></button>
+                                <button className="order-btn-spin up" onClick={() => handleLotChange(0.01)}><ChevronUp size={10} /></button>
+                                <button className="order-btn-spin down" onClick={() => handleLotChange(-0.01)}><ChevronDown size={10} /></button>
                             </div>
                         </div>
                         {lotsError && <div className="lots-error-tooltip">{lotsError}</div>}
@@ -166,6 +170,53 @@ export default function OrderPlacementModal({ symbol, bid, ask, tickDirection, a
                         })()} 
                         readOnly 
                     />
+                </div>
+            </div>
+
+            {/* SL/TP Row */}
+            <div className="order-modal-toggle-row">
+                <div className="order-modal-toggle-group">
+                    <div className="order-modal-toggle-buttons">
+                        <button 
+                            className={`toggle-btn ${slTpMode === 'SL' ? 'active' : ''}`}
+                            onClick={() => setSlTpMode('SL')}
+                        >
+                            SL
+                        </button>
+                        <button 
+                            className={`toggle-btn ${slTpMode === 'TP' ? 'active' : ''}`}
+                            onClick={() => setSlTpMode('TP')}
+                        >
+                            TP
+                        </button>
+                    </div>
+                    <input 
+                        type="text" 
+                        className="order-modal-toggle-input" 
+                        placeholder="0.00000"
+                        value={slTpVal}
+                        onChange={(e) => setSlTpVal(validateNumberInput(e.target.value))}
+                    />
+                </div>
+            </div>
+
+            {/* GTC/FOK Row */}
+            <div className="order-modal-toggle-row">
+                <div className="order-modal-toggle-group full-width">
+                    <div className="order-modal-toggle-buttons">
+                        <button 
+                            className={`toggle-btn ${timeMode === 'GTC' ? 'active' : ''}`}
+                            onClick={() => setTimeMode('GTC')}
+                        >
+                            GTC
+                        </button>
+                        <button 
+                            className={`toggle-btn ${timeMode === 'FOK' ? 'active' : ''}`}
+                            onClick={() => setTimeMode('FOK')}
+                        >
+                            FOK
+                        </button>
+                    </div>
                 </div>
             </div>
 
