@@ -139,12 +139,6 @@ export default function ChartMain({ selectedSymbol, selectedTimeframe, setSelect
                     'mainSeriesProperties.candleStyle.borderUpColor': primaryBlue,
                     'mainSeriesProperties.candleStyle.borderDownColor': primaryRed,
                     
-                    // Show both Bid and Ask lines
-                    'mainSeriesProperties.showBidPriceLine': true,
-                    'mainSeriesProperties.showAskPriceLine': true,
-                    'mainSeriesProperties.bidLineColor': primaryBlue,
-                    'mainSeriesProperties.askLineColor': primaryRed,
-
                     // Force background
                     'paneProperties.background': bgColor,
                     'paneProperties.backgroundType': 'solid',
@@ -160,10 +154,6 @@ export default function ChartMain({ selectedSymbol, selectedTimeframe, setSelect
                     'scalesProperties.fontSize': 10,
                     'paneProperties.legendProperties.fontSize': 10,
                     'scalesProperties.font_size': 10,
-
-                    // Branding Watermark
-                    'symbolWatermarkProperties.color': isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)',
-                    'symbolWatermarkProperties.transparency': 90,
                 };
 
                 const studiesOverrides = {
@@ -180,8 +170,8 @@ export default function ChartMain({ selectedSymbol, selectedTimeframe, setSelect
                     container: containerRef.current,
                     library_path: '/trading-view/charting_library/',
                     locale: 'en',
-                    symbol: selectedSymbol || localStorage.getItem('recent_symbol') || 'AUDCAD',
-                    interval: activeTf || localStorage.getItem('recent_tf') || '30',
+                    symbol: selectedSymbol || 'AUDCAD',
+                    interval: activeTf,
                     datafeed: datafeed,
                     theme: isDark ? 'Dark' : 'Light',
                     style: '1',
@@ -198,7 +188,6 @@ export default function ChartMain({ selectedSymbol, selectedTimeframe, setSelect
                         'go_to_date',
                         'bottom_toolbar',
                         'timeframes_toolbar',
-                        'show_as_legend_branding', // Remove TV logo from legend
                     ],
                     enabled_features: [
                         'side_toolbar_in_fullscreen_mode',
@@ -226,31 +215,17 @@ export default function ChartMain({ selectedSymbol, selectedTimeframe, setSelect
                         setLoading(false);
                     }
                 });
-            } catch (error) {
-                console.error('[ChartMain] Init error:', error);
+            } catch (err) {
+                console.error('[ChartMain] init error:', err);
+                if (isMounted) setError(err.message);
             }
         };
 
         init();
-
         return () => {
             isMounted = false;
-            if (widgetRef.current) {
-                widgetRef.current.remove();
-                widgetRef.current = null;
-            }
         };
-    }, [selectedSymbol, theme, tradingMode]);
-
-    // Save recent symbol and TF to localStorage
-    useEffect(() => {
-        if (selectedSymbol) {
-            localStorage.setItem('recent_symbol', selectedSymbol);
-        }
-        if (activeTf) {
-            localStorage.setItem('recent_tf', activeTf);
-        }
-    }, [selectedSymbol, activeTf]);
+    }, [containerRef, theme, tradingMode]);
 
     // ── Symbol/Timeframe Updates (In-place) ──────────────────────
     useEffect(() => {
