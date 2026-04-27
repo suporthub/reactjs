@@ -901,6 +901,13 @@ body.resizing-active {
     gap: 0;
 }
 
+.orders-tabs-right {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    height: 100%;
+}
+
 .orders-panel-toggle-btn {
     width: 24px;
     height: 24px;

@@ -14,15 +14,25 @@ import { PanelLeftOpen } from 'lucide-react';
 const TOKEN_REFRESH_INTERVAL_MS = 13 * 60 * 1000;
 
 export default function TradingTerminal() {
-    const [selectedSymbol, setSelectedSymbol] = useState('');
+    const [selectedSymbol, setSelectedSymbol] = useState(() => {
+        return localStorage.getItem('recent_symbol') || 'AUDCAD';
+    });
     const [selectedTimeframe, setSelectedTimeframe] = useState('30m');
 
-    // Initialize default symbol from configuration
+    // Persist selected symbol to localStorage for session recovery
+    useEffect(() => {
+        if (selectedSymbol) {
+            localStorage.setItem('recent_symbol', selectedSymbol);
+        }
+    }, [selectedSymbol]);
+
+    // Ensure we have a valid symbol from config if current is somehow empty
     useEffect(() => {
         const initDefaultSymbol = async () => {
             const config = await tradingConfigManager.getConfig();
             if (config?.symbols?.length > 0 && !selectedSymbol) {
-                setSelectedSymbol(config.symbols[0].symbol);
+                const fallback = localStorage.getItem('recent_symbol') || config.symbols[0].symbol || 'AUDCAD';
+                setSelectedSymbol(fallback);
             }
         };
         initDefaultSymbol();

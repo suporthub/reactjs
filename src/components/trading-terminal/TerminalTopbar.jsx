@@ -23,6 +23,8 @@ export default function TerminalTopbar() {
         setIsDark(newIsDark);
         document.documentElement.setAttribute('data-theme', newTheme);
         localStorage.setItem('theme', newTheme);
+        // Explicitly notify other components of theme change
+        window.dispatchEvent(new CustomEvent('themeChanged', { detail: { theme: newTheme } }));
     };
 
     const [tradingMode, setTradingMode] = useState('Normal');

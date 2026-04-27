@@ -86,6 +86,19 @@ const HISTORY_DATA = [
 
 export default React.memo(function OrdersPanel({ isMinimized, onToggleMinimize }) {
     const [activeTab, setActiveTab] = useState('Open Positions');
+    const [utcTime, setUtcTime] = useState('');
+
+    // ── Clock ──────────────────────────────────────────────────
+    React.useEffect(() => {
+        const tick = () => {
+            const now = new Date();
+            const timeStr = now.toLocaleTimeString('en-US', { hour12: false, timeZone: 'UTC' });
+            setUtcTime(timeStr + ' UTC');
+        };
+        tick();
+        const id = setInterval(tick, 1000);
+        return () => clearInterval(id);
+    }, []);
 
     const renderHeader = () => {
         switch (activeTab) {
@@ -256,13 +269,27 @@ export default React.memo(function OrdersPanel({ isMinimized, onToggleMinimize }
                         </button>
                     ))}
                 </div>
-                <button
-                    className="orders-panel-toggle-btn"
-                    onClick={onToggleMinimize}
-                    title={isMinimized ? "Expand Panel" : "Minimize Panel"}
-                >
-                    {isMinimized ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-                </button>
+                <div className="orders-tabs-right">
+                    <div className="orders-panel-clock" style={{ 
+                        padding: '0 12px', 
+                        color: 'var(--text-muted)', 
+                        fontSize: '11px',
+                        fontWeight: '600',
+                        borderLeft: '1px solid var(--border-color)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        height: '100%'
+                    }}>
+                        {utcTime}
+                    </div>
+                    <button
+                        className="orders-panel-toggle-btn"
+                        onClick={onToggleMinimize}
+                        title={isMinimized ? "Expand Panel" : "Minimize Panel"}
+                    >
+                        {isMinimized ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                    </button>
+                </div>
             </div>
 
             {/* Orders Table - hidden when minimized */}

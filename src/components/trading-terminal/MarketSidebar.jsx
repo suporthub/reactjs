@@ -207,6 +207,11 @@ export default function MarketSidebar({ selectedSymbol, setSelectedSymbol, onTog
 
             pendingCountRef.current++;
             scheduleFlush();
+
+            // Broadcast price update for other components (e.g. TradingView Datafeed)
+            window.dispatchEvent(new CustomEvent('marketPriceUpdate', {
+                detail: { symbol, vals }
+            }));
         }
 
         function cleanupWs() {
