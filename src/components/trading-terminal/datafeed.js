@@ -315,10 +315,7 @@ export function createDatafeed() {
             const type = (symbolData?.instrumentType || 'forex').toLowerCase();
             
             if (type === 'forex' || type === 'commodity' || sym.includes('XAU') || sym.includes('XAG')) {
-                // "2200-2400:1,0000-2400:2345,0000-2200:6" is more precise, 
-                // but "24x5" is a standard TV alias that works well for FX.
-                // However, let's use the explicit session for robustness:
-                session = '2200-2400:1,0000-2400:23456';
+                session = '24x5';
             }
 
             if (!symbolData) {
