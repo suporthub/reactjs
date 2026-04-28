@@ -30,22 +30,56 @@ export default function LiveChat({ onBack }) {
     const [filePreview, setFilePreview] = useState(null);
     const ws = useRef(null); 
 
-    // Helper: Extract user data from local storage
+    // Helper: Extract user data from localStorage — tries every key the app might use
     const getUserData = () => {
-        const userString = localStorage.getItem('user');
-        let email = "srinivas@livefxhub.com"; 
-        let phone = "+919908168745";
+        // All keys your app might store user data under — checked in priority order
+        const candidateKeys = ['user', 'userData', 'userInfo', 'currentUser', 'auth_user', 'authUser', 'profile', 'userProfile', 'loginUser'];
 
-        if (userString) {
+        for (const key of candidateKeys) {
+            const raw = localStorage.getItem(key);
+            if (!raw) continue;
             try {
-                const data = JSON.parse(userString);
-                if (data.email) email = data.email;
-                if (data.phone) phone = data.phone;
+                const data = JSON.parse(raw);
+                // Support both flat objects and nested { user: {...} } shapes
+                const obj = data?.user || data;
+                const email = obj?.email || obj?.Email || obj?.user_email || obj?.userEmail || '';
+                const phone = obj?.phone || obj?.Phone || obj?.mobile || obj?.phone_number || obj?.phoneNumber || '';
+                const name  = obj?.name  || obj?.Name  || obj?.username || obj?.full_name || obj?.fullName || (email ? email.split('@')[0] : '');
+                if (email || phone || name) {
+                    return { email, phone, name };
+                }
             } catch (e) {
-                console.error("Error parsing user data");
+                // Not valid JSON — try treating it as a plain string email
+                const raw_str = raw.trim();
+                if (raw_str.includes('@')) {
+                    return { email: raw_str, phone: '', name: raw_str.split('@')[0] };
+                }
             }
         }
-        return { email, phone };
+
+        // Last resort: scan ALL localStorage keys for any object that looks like user data
+        for (let i = 0; i < localStorage.length; i++) {
+            const key = localStorage.key(i);
+            const raw = localStorage.getItem(key);
+            if (!raw) continue;
+            try {
+                const data = JSON.parse(raw);
+                const obj = data?.user || data;
+                if (obj && typeof obj === 'object') {
+                    const email = obj?.email || obj?.Email || obj?.user_email || '';
+                    const phone = obj?.phone || obj?.Phone || obj?.mobile || '';
+                    const name  = obj?.name  || obj?.Name  || obj?.username  || (email ? email.split('@')[0] : '');
+                    if (email) {
+                        console.info(`[LiveChat] Found user data under localStorage key: "${key}"`);
+                        return { email, phone, name };
+                    }
+                }
+            } catch (e) { /* skip non-JSON */ }
+        }
+
+        // No user data found anywhere — return empty strings (never hardcode)
+        console.warn('[LiveChat] No user data found in localStorage. User may not be logged in.');
+        return { email: '', phone: '', name: '' };
     };
 
     // Helper: Handle file selection
@@ -128,14 +162,14 @@ export default function LiveChat({ onBack }) {
     };
     const handleStartNewChat = async () => {
         setIsLoading(true);
-        const { email, phone } = getUserData();
+        const { email, phone, name } = getUserData();
 
         try {
             const response = await fetch('https://support.livefxhub.com/api/start-chat/', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    name: email.split('@')[0],
+                    name: name || email.split('@')[0] || 'User',
                     email: email,
                     phone: phone,
                     subject: `${selectedIssueType} query for ${selectedAccountType}`,
@@ -342,8 +376,8 @@ export default function LiveChat({ onBack }) {
 
     // SEND MESSAGE — text via WS, file via REST upload
     const handleSendMessage = async () => {
-        const { email } = getUserData();
-        const senderName = email.split('@')[0];
+        const { email, name } = getUserData();
+        const senderName = name || email.split('@')[0] || 'User';
 
         // ── File upload via REST ──────────────────────────────────────────────
         if (selectedFile) {
@@ -412,8 +446,8 @@ export default function LiveChat({ onBack }) {
     const handleEndChat = () => {
         if (!window.confirm(t('Are you sure you want to end this chat?'))) return;
 
-        const { email } = getUserData();
-        const senderName = email.split('@')[0];
+        const { email, name } = getUserData();
+        const senderName = name || email.split('@')[0] || 'User';
 
         if (ws.current && ws.current.readyState === WebSocket.OPEN) {
             // Send end_chat action — consumers.py will save it, broadcast to agent, and close
