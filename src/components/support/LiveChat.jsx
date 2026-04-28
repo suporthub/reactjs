@@ -131,7 +131,7 @@ export default function LiveChat({ onBack }) {
         const { email, phone } = getUserData();
 
         try {
-            const response = await fetch('http://127.0.0.1:8000/api/start-chat/', {
+            const response = await fetch('https://support.livefxhub.com/api/start-chat/', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -166,7 +166,7 @@ export default function LiveChat({ onBack }) {
         const { email } = getUserData();
 
         try {
-            const response = await fetch('http://127.0.0.1:8000/api/get-user-chats/', {
+            const response = await fetch('https://support.livefxhub.com/api/get-user-chats/', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ email: email })
@@ -213,7 +213,7 @@ export default function LiveChat({ onBack }) {
     ]);
 
     try {
-        const response = await fetch(`http://127.0.0.1:8000/api/get-chat-history/${chat.id}/`);
+        const response = await fetch(`https://support.livefxhub.com/api/get-chat-history/${chat.id}/`);
         if (!response.ok) throw new Error(`Server returned ${response.status}`);
 
         const data = await response.json();
@@ -226,7 +226,7 @@ export default function LiveChat({ onBack }) {
 
                 // ✅ FIX: Add full URL (prevents 404)
                 const fullFileUrl = msg.file_url
-                    ? `http://127.0.0.1:8000${msg.file_url}`
+                    ? `https://support.livefxhub.com${msg.file_url}`
                     : null;
 
                 if (fullFileUrl) {
@@ -271,7 +271,7 @@ export default function LiveChat({ onBack }) {
         const isChatView = chatStep === 'new-chat-conversation' || chatStep === 'chat-interface';
         
         if (isChatView && activeChat && activeChatStatus !== 'closed') {
-            ws.current = new WebSocket(`ws://127.0.0.1:8000/ws/chat/${activeChat}/`);
+            ws.current = new WebSocket(`ws://support.livefxhub.com/ws/chat/${activeChat}/`);
 
             ws.current.onmessage = (event) => {
                 const data = JSON.parse(event.data);
@@ -367,7 +367,7 @@ export default function LiveChat({ onBack }) {
                 formData.append('sender_name', senderName);
                 formData.append('message_type', 'user');
 
-                const res = await fetch('http://127.0.0.1:8000/api/upload-chat-file/', {
+                const res = await fetch('https://support.livefxhub.com/api/upload-chat-file/', {
                     method: 'POST',
                     body: formData
                 });
