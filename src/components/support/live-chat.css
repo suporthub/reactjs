@@ -138,10 +138,12 @@
 .live-chat-interface-wrapper {
     display: flex;
     flex-direction: column;
-    height: 100%;
+    /* Concrete height anchors the flex chain — sidebar needs this to scroll */
+    height: calc(100vh - 60px);
     width: 100%;
     animation: fadeIn 0.3s ease;
     background: var(--bg-color);
+    overflow: hidden;
 }
 
 .live-chat-interface {
@@ -152,6 +154,7 @@
     border-radius: 0;
     overflow: hidden;
     box-shadow: none;
+    min-height: 0;
 }
 
 .live-chat-full-page {
@@ -166,10 +169,16 @@
 /* Sidebar */
 .chat-sidebar {
     width: 280px;
+    min-width: 280px;
     border-right: 1px solid var(--border-color);
     display: flex;
     flex-direction: column;
     background: var(--surface);
+    /* height: 100% works now because parent has a concrete px height */
+    height: 100%;
+    min-height: 0;
+    overflow: hidden;
+    flex-shrink: 0;
 }
 
 .sidebar-back-header {
@@ -251,13 +260,27 @@
 
 .chat-list {
     flex: 1;
-    overflow-y: auto;
-    -ms-overflow-style: none;
-    scrollbar-width: none;
+    overflow-y: scroll; /* scroll keeps the gutter reserved so layout doesn't jump */
+    min-height: 0;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(99, 116, 145, 0.5) transparent;
 }
 
 .chat-list::-webkit-scrollbar {
-    display: none;
+    width: 6px;
+}
+
+.chat-list::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.chat-list::-webkit-scrollbar-thumb {
+    background-color: rgba(99, 116, 145, 0.5);
+    border-radius: 10px;
+}
+
+.chat-list::-webkit-scrollbar-thumb:hover {
+    background-color: rgba(99, 116, 145, 0.85);
 }
 
 .chat-list-item {
@@ -267,6 +290,7 @@
     cursor: pointer;
     border-bottom: 1px solid var(--border-color);
     transition: background 0.2s;
+    flex-shrink: 0; /* prevent items from collapsing */
 }
 
 .chat-list-item:hover {
@@ -276,6 +300,11 @@
 .chat-list-item.active {
     background: rgba(37, 99, 235, 0.05);
     border-left: 3px solid var(--primary);
+}
+
+.chat-avatar {
+    position: relative;
+    flex-shrink: 0;
 }
 
 .chat-avatar .default-avatar {
@@ -805,4 +834,154 @@
     border-radius: 20px;
     font-weight: 500;
     text-transform: capitalize;
+}
+/* =========================================================================
+   UI FIXES: ALIGNMENT, COLORS, TIMESTAMPS, AND END CHAT
+   ========================================================================= */
+
+.chat-messages-area {
+    display: flex;
+    flex-direction: column;
+}
+
+.message {
+    display: flex;
+    flex-direction: column;
+    margin-bottom: 20px;
+    max-width: 80%;
+}
+
+/* ---------------------------------
+   USER MESSAGES (Align Right, Blue)
+   --------------------------------- */
+.message.user {
+    align-self: flex-end;
+    align-items: flex-end;
+}
+
+.message.user .message-bubble {
+    background: var(--primary, #2563eb); 
+    color: #ffffff;
+    border: none;
+    border-radius: 12px 12px 0 12px; /* Point to bottom right */
+}
+
+/* ---------------------------------
+   AGENT MESSAGES (Align Left, Grey)
+   --------------------------------- */
+.message.agent, 
+.message.system {
+    align-self: flex-start;
+    align-items: flex-start;
+}
+
+.message.agent .message-bubble,
+.message.system .message-bubble {
+    background: var(--surface, #f8f9fa);
+    color: var(--text-main, #111827);
+    border: 1px solid var(--border-color, #e5e7eb);
+    border-radius: 12px 12px 12px 0; /* Point to bottom left */
+}
+
+/* ---------------------------------
+   TIMESTAMP STYLING
+   --------------------------------- */
+.message-time {
+    font-size: 0.75rem;
+    color: var(--text-muted, #6b7280);
+    margin-top: 4px;
+    display: inline-block;
+}
+
+.message.user .message-time {
+    text-align: right;
+    padding-right: 4px;
+}
+
+.message.agent .message-time,
+.message.system .message-time {
+    text-align: left;
+    padding-left: 4px;
+}
+
+/* ---------------------------------
+   END CHAT BUTTON
+   --------------------------------- */
+.end-chat-btn {
+    background-color: #ef4444;
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    margin-right: 12px;
+}
+
+.end-chat-btn:hover {
+    background-color: #dc2626;
+}
+
+/* ---------------------------------
+   AGENT MESSAGES (Align Left, Grey)
+   --------------------------------- */
+.message.agent {
+    align-self: flex-start;
+    align-items: flex-start;
+}
+
+.message.agent .message-bubble {
+    background: var(--surface, #f8f9fa);
+    color: var(--text-main, #111827);
+    border: 1px solid var(--border-color, #e5e7eb);
+    border-radius: 12px 12px 12px 0;
+}
+
+/* ---------------------------------
+   SYSTEM MESSAGES (Centered Notification)
+   --------------------------------- */
+.message.system {
+    align-self: center;
+    align-items: center;
+    max-width: 90%;
+    margin: 12px 0;
+}
+
+.message.system .message-bubble {
+    background: rgba(0, 0, 0, 0.06); 
+    color: var(--text-muted, #6b7280);
+    border: none;
+    border-radius: 16px; 
+    padding: 6px 16px;
+    font-size: 0.8rem;
+    font-weight: 500;
+    text-align: center;
+    display: inline-block;
+}
+
+/* System message time — show subtly centered below the bubble */
+.message.system .message-time {
+    display: block;
+    text-align: center;
+    font-size: 0.68rem;
+    color: var(--text-muted, #9ca3af);
+    margin-top: 2px;
+    padding: 0;
+}
+.live-chat-interface,
+.live-chat-full-page,
+.chat-main {
+    min-height: 0;
+}
+
+.chat-messages-area {
+    flex: 1;
+    overflow-y: auto;
+    min-height: 0;
+}
+
+.chat-input-area {
+    flex-shrink: 0;
 }
