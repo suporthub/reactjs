@@ -271,7 +271,7 @@ export default function LiveChat({ onBack }) {
         const isChatView = chatStep === 'new-chat-conversation' || chatStep === 'chat-interface';
         
         if (isChatView && activeChat && activeChatStatus !== 'closed') {
-            ws.current = new WebSocket(`ws://support.livefxhub.com/ws/chat/${activeChat}/`);
+            ws.current = new WebSocket(`wss://support.livefxhub.com/ws/chat/${activeChat}/`);
 
             ws.current.onmessage = (event) => {
                 const data = JSON.parse(event.data);
