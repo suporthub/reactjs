@@ -27,11 +27,12 @@ export default function TerminalTopbar() {
         window.dispatchEvent(new CustomEvent('themeChanged', { detail: { theme: newTheme } }));
     };
 
-    const [tradingMode, setTradingMode] = useState('Normal');
+    const [tradingMode, setTradingMode] = useState(() => localStorage.getItem('tradingMode') || 'Normal');
 
     const toggleTradingMode = () => {
         const newMode = tradingMode === 'Normal' ? 'Advanced' : 'Normal';
         setTradingMode(newMode);
+        localStorage.setItem('tradingMode', newMode);
         // Dispatch event for other components to react to mode change
         window.dispatchEvent(new CustomEvent('tradingModeChanged', { detail: { mode: newMode } }));
     };
@@ -43,8 +44,11 @@ export default function TerminalTopbar() {
     }, [isDark]);
 
     const handleLogout = () => {
+        // Clear ONLY trading-related session data
         clearTradingSession();
-        navigate('/dashboard');
+        
+        // Return to the main accounts section of the portal
+        navigate('/accounts');
     };
 
     return (
@@ -67,16 +71,6 @@ export default function TerminalTopbar() {
                         <Trophy size={12} />
                         <span>Advanced</span>
                     </div>
-                </div>
-
-                <div className="terminal-account-selector" onClick={() => setAccountDropdown(!accountDropdown)}>
-                    <span>Main Account</span>
-                    <ChevronDown size={14} />
-                </div>
-
-                <div className="terminal-live-badge live" title="Live account">
-                    <Circle size={8} fill="#27ae60" color="#27ae60" />
-                    <span>Live</span>
                 </div>
 
                 <button

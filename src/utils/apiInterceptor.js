@@ -110,10 +110,12 @@ window.fetch = async (...args) => {
       // Kick off the refresh async WITHOUT pausing the interceptor
       (async () => {
         try {
+          const currentToken = localStorage.getItem('portalToken');
           const refreshResponse = await originalFetch('https://v3.livefxhub.com:8444/api/live/refresh-token', {
             method: 'POST',
             headers: {
-              'Content-Type': 'application/json'
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${currentToken}`
             },
             body: JSON.stringify({ refreshToken }),
             credentials: 'include'

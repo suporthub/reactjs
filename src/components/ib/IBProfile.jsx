@@ -16,12 +16,78 @@ export default function IBProfile({ ibData }) {
     const [inviteEmail, setInviteEmail] = useState('');
     const [inviteStatus, setInviteStatus] = useState({ type: '', message: '' });
     const [isInviting, setIsInviting] = useState(false);
+    const [adBanners, setAdBanners] = useState([]);
+    const [currentBannerIndex, setCurrentBannerIndex] = useState(0);
+    const [adsLoading, setAdsLoading] = useState(true);
 
     const userData = JSON.parse(localStorage.getItem('userData') || '{}');
     const token = localStorage.getItem('token');
+    const portalToken = localStorage.getItem('portalToken');
     const referralCode = ibData?.referal_code || '';
     const referralLink = `https://v3.livefxhub.com:8444/signup/${referralCode}`;
     const fullName = `${ibData?.first_name || ''} ${ibData?.last_name || ''}`;
+
+    const API_BASE = 'https://v3.livefxhub.com:8444';
+
+    // Fetch ad banners from API, then fetch each image as blob
+    useEffect(() => {
+        const fetchAds = async () => {
+            try {
+                const response = await fetch(`${API_BASE}/api/ib/ads`, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${portalToken}`
+                    }
+                });
+                const result = await response.json();
+                if (result.success && Array.isArray(result.data)) {
+                    const activeAds = result.data.filter(ad => ad.isActive);
+
+                    // Fetch each image with auth token and convert to blob URL
+                    const adsWithBlobs = await Promise.all(
+                        activeAds.map(async (ad) => {
+                            try {
+                                const imgResponse = await fetch(`${API_BASE}${ad.imageUrl}`, {
+                                    method: 'GET',
+                                    headers: {
+                                        'Authorization': `Bearer ${portalToken}`
+                                    }
+                                });
+                                const blob = await imgResponse.blob();
+                                const blobUrl = URL.createObjectURL(blob);
+                                return { ...ad, blobUrl };
+                            } catch (imgErr) {
+                                console.error('Failed to fetch ad image:', imgErr);
+                                return { ...ad, blobUrl: '' };
+                            }
+                        })
+                    );
+                    setAdBanners(adsWithBlobs);
+                }
+            } catch (err) {
+                console.error('Failed to fetch IB ads:', err);
+            } finally {
+                setAdsLoading(false);
+            }
+        };
+        if (portalToken) fetchAds();
+
+        // Cleanup blob URLs on unmount
+        return () => {
+            adBanners.forEach(ad => {
+                if (ad.blobUrl) URL.revokeObjectURL(ad.blobUrl);
+            });
+        };
+    }, [portalToken]);
+
+    // Auto-rotate banners every 20 seconds
+    useEffect(() => {
+        if (adBanners.length <= 1) return;
+        const interval = setInterval(() => {
+            setCurrentBannerIndex((prevIndex) => (prevIndex + 1) % adBanners.length);
+        }, 20000);
+        return () => clearInterval(interval);
+    }, [adBanners.length]);
 
     const handleCopy = () => {
         navigator.clipboard.writeText(referralLink);
@@ -39,7 +105,7 @@ export default function IBProfile({ ibData }) {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
+                    'Authorization': `Bearer ${portalToken}`
                 },
                 body: JSON.stringify({ email: inviteEmail })
             });
@@ -72,37 +138,48 @@ export default function IBProfile({ ibData }) {
         if (shareUrl) window.open(shareUrl, '_blank');
     };
 
-    const banners = [
-        '/ib_banner.png',
-        '/live_hero_v2.png',
-        '/demo_hero_v2.png'
-    ];
-    
-    const [currentBannerIndex, setCurrentBannerIndex] = useState(0);
-
-    useEffect(() => {
-        const interval = setInterval(() => {
-            setCurrentBannerIndex((prevIndex) => (prevIndex + 1) % banners.length);
-        }, 20000); // 20 seconds
-        return () => clearInterval(interval);
-    }, [banners.length]);
-
     return (
         <div className="ib-profile-dashboard">
             <div className="profile-hero-section">
                 <div className="hero-promo-banner-main">
-                    <img key={currentBannerIndex} src={banners[currentBannerIndex]} alt={`Partner Program Banner ${currentBannerIndex + 1}`} className="fade-in-banner" />
-                    
-                    <div className="promo-carousel-dots">
-                        {banners.map((_, index) => (
-                            <button
-                                key={index}
-                                className={`promo-car-dot ${index === currentBannerIndex ? 'active' : ''}`}
-                                onClick={() => setCurrentBannerIndex(index)}
-                                aria-label={`Go to slide ${index + 1}`}
-                            />
-                        ))}
-                    </div>
+                    {adsLoading ? (
+                        <div className="ad-banner-skeleton">
+                            <div className="skeleton-shimmer"></div>
+                        </div>
+                    ) : adBanners.length > 0 ? (
+                        <>
+                            {adBanners[currentBannerIndex]?.linkUrl ? (
+                                <a href={adBanners[currentBannerIndex].linkUrl} target="_blank" rel="noopener noreferrer">
+                                    <img
+                                        key={currentBannerIndex}
+                                        src={adBanners[currentBannerIndex].blobUrl}
+                                        alt={adBanners[currentBannerIndex].title || `Ad Banner ${currentBannerIndex + 1}`}
+                                        className="fade-in-banner"
+                                    />
+                                </a>
+                            ) : (
+                                <img
+                                    key={currentBannerIndex}
+                                    src={adBanners[currentBannerIndex].blobUrl}
+                                    alt={adBanners[currentBannerIndex].title || `Ad Banner ${currentBannerIndex + 1}`}
+                                    className="fade-in-banner"
+                                />
+                            )}
+
+                            {adBanners.length > 1 && (
+                                <div className="promo-carousel-dots">
+                                    {adBanners.map((_, index) => (
+                                        <button
+                                            key={index}
+                                            className={`promo-car-dot ${index === currentBannerIndex ? 'active' : ''}`}
+                                            onClick={() => setCurrentBannerIndex(index)}
+                                            aria-label={`Go to slide ${index + 1}`}
+                                        />
+                                    ))}
+                                </div>
+                            )}
+                        </>
+                    ) : null}
                 </div>
 
                 <div className="user-info-status-card centered-theme">

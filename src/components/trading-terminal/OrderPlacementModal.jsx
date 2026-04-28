@@ -11,8 +11,11 @@ export default function OrderPlacementModal({ symbol, bid, ask, tickDirection, a
     const [symbolConfig, setSymbolConfig] = useState(null);
     const [leverage, setLeverage] = useState(100);
     const [lotsError, setLotsError] = useState('');
-    const [slTpMode, setSlTpMode] = useState('SL');
-    const [slTpVal, setSlTpVal] = useState('');
+    const [slEnabled, setSlEnabled] = useState(false);
+    const [tpEnabled, setTpEnabled] = useState(false);
+    const [slVal, setSlVal] = useState('');
+    const [tpVal, setTpVal] = useState('');
+    const [isExitsOpen, setIsExitsOpen] = useState(false);
     const [timeMode, setTimeMode] = useState('GTC');
     const [timeVal, setTimeVal] = useState('');
 
@@ -99,6 +102,18 @@ export default function OrderPlacementModal({ symbol, bid, ask, tickDirection, a
                 ))}
             </div>
 
+            <div className="order-modal-tabs secondary">
+                {['GTC', 'FOK'].map(mode => (
+                    <button 
+                        key={mode} 
+                        className={`order-modal-tab ${timeMode === mode ? 'active' : ''}`}
+                        onClick={() => setTimeMode(mode)}
+                    >
+                        {mode}
+                    </button>
+                ))}
+            </div>
+
             <div className="order-modal-prices">
                 <div className="order-modal-price-box">
                     <span className="order-modal-price-label">Bid Price:</span>
@@ -173,52 +188,46 @@ export default function OrderPlacementModal({ symbol, bid, ask, tickDirection, a
                 </div>
             </div>
 
-            {/* SL/TP Row */}
-            <div className="order-modal-toggle-row">
-                <div className="order-modal-toggle-group">
-                    <div className="order-modal-toggle-buttons">
-                        <button 
-                            className={`toggle-btn ${slTpMode === 'SL' ? 'active' : ''}`}
-                            onClick={() => setSlTpMode('SL')}
-                        >
-                            SL
-                        </button>
-                        <button 
-                            className={`toggle-btn ${slTpMode === 'TP' ? 'active' : ''}`}
-                            onClick={() => setSlTpMode('TP')}
-                        >
-                            TP
-                        </button>
-                    </div>
-                    <input 
-                        type="text" 
-                        className="order-modal-toggle-input" 
-                        placeholder="0.00000"
-                        value={slTpVal}
-                        onChange={(e) => setSlTpVal(validateNumberInput(e.target.value))}
-                    />
+            {/* Exits Section */}
+            <div className="order-modal-exits-container">
+                <div 
+                    className="order-modal-exits-header" 
+                    onClick={() => setIsExitsOpen(!isExitsOpen)}
+                >
+                    <span className="exits-title">Exits</span>
+                    <ChevronDown size={14} className={`exits-chevron ${isExitsOpen ? 'open' : ''}`} />
                 </div>
+
+                {isExitsOpen && (
+                    <div className="order-modal-exits-content">
+                        {/* Take Profit Row */}
+                        <div className="exit-row-inline">
+                            <span className="exit-label">Take profit, price</span>
+                            <input 
+                                type="text" 
+                                className="order-modal-toggle-input" 
+                                placeholder="0.00000"
+                                value={tpVal}
+                                onChange={(e) => setTpVal(validateNumberInput(e.target.value))}
+                            />
+                        </div>
+
+                        {/* Stop Loss Row */}
+                        <div className="exit-row-inline">
+                            <span className="exit-label">Stop loss, price</span>
+                            <input 
+                                type="text" 
+                                className="order-modal-toggle-input" 
+                                placeholder="0.00000"
+                                value={slVal}
+                                onChange={(e) => setSlVal(validateNumberInput(e.target.value))}
+                            />
+                        </div>
+                    </div>
+                )}
             </div>
 
-            {/* GTC/FOK Row */}
-            <div className="order-modal-toggle-row">
-                <div className="order-modal-toggle-group full-width">
-                    <div className="order-modal-toggle-buttons">
-                        <button 
-                            className={`toggle-btn ${timeMode === 'GTC' ? 'active' : ''}`}
-                            onClick={() => setTimeMode('GTC')}
-                        >
-                            GTC
-                        </button>
-                        <button 
-                            className={`toggle-btn ${timeMode === 'FOK' ? 'active' : ''}`}
-                            onClick={() => setTimeMode('FOK')}
-                        >
-                            FOK
-                        </button>
-                    </div>
-                </div>
-            </div>
+
 
             <div className="order-modal-info-row">
                 <div className="order-info-item">

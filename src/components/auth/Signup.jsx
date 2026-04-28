@@ -459,6 +459,21 @@ export default function Signup() {
         return `${mins}:${secs.toString().padStart(2, '0')}`;
     };
 
+    const handlePaste = (e) => {
+        e.preventDefault();
+        const pastedData = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 6);
+        if (!pastedData) return;
+
+        const newOtp = [...otp];
+        pastedData.split('').forEach((char, idx) => {
+            if (idx < 6) newOtp[idx] = char;
+        });
+        setOtp(newOtp);
+
+        const focusIdx = Math.min(pastedData.length, 5);
+        if (otpInputs.current[focusIdx]) otpInputs.current[focusIdx].focus();
+    };
+
     const handleResendOtp = async () => {
         if (resendCooldown > 0) return;
 
@@ -911,6 +926,7 @@ export default function Signup() {
                                             otpInputs.current[idx + 1].focus();
                                         }
                                     }}
+                                    onPaste={handlePaste}
                                     onKeyDown={(e) => {
                                         if (e.key === 'Backspace' && !otp[idx] && idx > 0) {
                                             otpInputs.current[idx - 1].focus();

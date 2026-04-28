@@ -291,7 +291,37 @@ export default function Login() {
         }
     };
 
-    // Forgot Password Flow
+    const handlePasteReset = (e) => {
+        e.preventDefault();
+        const pastedData = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 6);
+        if (!pastedData) return;
+
+        const newOtp = [...resetOtp];
+        pastedData.split('').forEach((char, idx) => {
+            if (idx < 6) newOtp[idx] = char;
+        });
+        setResetOtp(newOtp);
+
+        const focusIdx = Math.min(pastedData.length, 5);
+        if (otpInputs.current[focusIdx]) otpInputs.current[focusIdx].focus();
+    };
+
+    const handlePasteMfa = (e) => {
+        e.preventDefault();
+        const pastedData = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 6);
+        if (!pastedData) return;
+
+        const newOtp = [...mfaOtp];
+        pastedData.split('').forEach((char, idx) => {
+            if (idx < 6) newOtp[idx] = char;
+        });
+        setMfaOtp(newOtp);
+
+        const focusIdx = Math.min(pastedData.length, 5);
+        const next = document.getElementById(`mfa-otp-${focusIdx}`);
+        if (next) next.focus();
+    };
+
     const handleForgotPassword = async () => {
         if (!resetEmail) {
             setResetMessage({ text: 'Please enter your email.', type: 'error' });
@@ -626,6 +656,7 @@ export default function Login() {
                                                     setResetOtp(newOtp);
                                                     if (val && idx < 5) otpInputs.current[idx + 1].focus();
                                                 }}
+                                                onPaste={handlePasteReset}
                                                 onKeyDown={(e) => {
                                                     if (e.key === 'Backspace' && !resetOtp[idx] && idx > 0) otpInputs.current[idx - 1].focus();
                                                 }}
@@ -736,6 +767,7 @@ export default function Login() {
                                                 if (prev) prev.focus();
                                             }
                                         }}
+                                        onPaste={handlePasteMfa}
                                         id={`mfa-otp-${idx}`}
                                     />
                                 ))}

@@ -63,7 +63,7 @@ const MarketItem = React.memo(({
                     {tickDirection === 'down' ? '▼' : '▲'}
                 </span>
                 {tradingMode === 'Advanced' && (
-                    <span className={`market-change ${tickDirection === 'down' ? 'negative' : 'positive'}`}>
+                    <span className={`market-change ${(change || '').startsWith('-') ? 'negative' : 'positive'}`}>
                         {change}
                     </span>
                 )}
@@ -90,7 +90,7 @@ export default function MarketSidebar({ selectedSymbol, setSelectedSymbol, onTog
     const [searchTerm, setSearchTerm] = useState('');
     const [activeCategory, setActiveCategory] = useState('Currencies');
     const [modalData, setModalData] = useState(null);
-    const [tradingMode, setTradingMode] = useState('Normal');
+    const [tradingMode, setTradingMode] = useState(() => localStorage.getItem('tradingMode') || 'Normal');
 
     // ── Refs (never trigger re-renders) ──
     const wsRef = useRef(null);
@@ -133,7 +133,7 @@ export default function MarketSidebar({ selectedSymbol, setSelectedSymbol, onTog
                             item.change = (v > 0 ? '+' : '') + v.toFixed(2) + '%';
                         }
                         // Default tick direction for snapshot
-                        item.tickDirection = 'up'; 
+                        item.tickDirection = 'up';
                     }
 
                     map.set(s.symbol, item);
@@ -301,7 +301,7 @@ export default function MarketSidebar({ selectedSymbol, setSelectedSymbol, onTog
                 }
             };
 
-            ws.onerror = () => {}; // onclose handles reconnection
+            ws.onerror = () => { }; // onclose handles reconnection
 
             ws.onclose = (e) => {
                 wsRef.current = null;

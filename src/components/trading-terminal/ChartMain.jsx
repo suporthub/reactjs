@@ -46,7 +46,7 @@ export default function ChartMain({ selectedSymbol, selectedTimeframe, setSelect
     const widgetRef = useRef(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
-    const [tradingMode, setTradingMode] = useState('Normal');
+    const [tradingMode, setTradingMode] = useState(() => localStorage.getItem('tradingMode') || 'Normal');
     const [theme, setTheme] = useState(() => document.documentElement.getAttribute('data-theme') || 'dark');
 
     // ── Mode & Theme Listeners ──────────────────────────────────
