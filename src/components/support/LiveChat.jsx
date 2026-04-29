@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Search, Paperclip, Send, ArrowLeft, Play, MessageSquare, X, ChevronUp, ChevronDown, User, Monitor, Smartphone, HelpCircle, ArrowRightLeft, Download, Upload, Info, Hash, Smile, Maximize, Minimize } from 'lucide-react';
+import { Search, Paperclip, Send, ArrowLeft, Play, MessageSquare, X, ChevronUp, ChevronDown, User, Monitor, Smartphone, HelpCircle, ArrowRightLeft, Download, Upload, Info, Hash, Smile, Maximize, Minimize, MoreVertical } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import './live-chat.css';
 
 export default function LiveChat({ onBack }) {
     const { t } = useTranslation();
-    
+
     // --- UI States ---
     const [chatStep, setChatStep] = useState('options');
     const [searchOpen, setSearchOpen] = useState(false);
@@ -15,6 +15,9 @@ export default function LiveChat({ onBack }) {
     const [showEndChatConfirm, setShowEndChatConfirm] = useState(false);
     const [isNewChatExpanded, setIsNewChatExpanded] = useState(false);
     const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+    const [showHeaderMenu, setShowHeaderMenu] = useState(false);
+    const [showRelatedQueriesModal, setShowRelatedQueriesModal] = useState(false);
+    const [typingIndicator, setTypingIndicator] = useState(''); // e.g. 'Agent is typing...'
     const messagesAreaRef = useRef(null);
 
     // --- New chat flow states ---
@@ -23,15 +26,15 @@ export default function LiveChat({ onBack }) {
     const [selectedIssueType, setSelectedIssueType] = useState('');
 
     // --- Dynamic API States ---
-    const [chatList, setChatList] = useState([]); 
-    const [messages, setMessages] = useState([]); 
-    const [activeChat, setActiveChat] = useState(null); 
+    const [chatList, setChatList] = useState([]);
+    const [messages, setMessages] = useState([]);
+    const [activeChat, setActiveChat] = useState(null);
     const [activeChatStatus, setActiveChatStatus] = useState('open');
     const [isLoading, setIsLoading] = useState(false);
-    const [messageInput, setMessageInput] = useState(''); 
+    const [messageInput, setMessageInput] = useState('');
     const [selectedFile, setSelectedFile] = useState(null);
     const [filePreview, setFilePreview] = useState(null);
-    const ws = useRef(null); 
+    const ws = useRef(null);
 
     // Helper: Extract user data from localStorage — tries every key the app might use
     const getUserData = () => {
@@ -47,7 +50,7 @@ export default function LiveChat({ onBack }) {
                 const obj = data?.user || data;
                 const email = obj?.email || obj?.Email || obj?.user_email || obj?.userEmail || '';
                 const phone = obj?.phone || obj?.Phone || obj?.mobile || obj?.phone_number || obj?.phoneNumber || '';
-                const name  = obj?.name  || obj?.Name  || obj?.username || obj?.full_name || obj?.fullName || (email ? email.split('@')[0] : '');
+                const name = obj?.name || obj?.Name || obj?.username || obj?.full_name || obj?.fullName || (email ? email.split('@')[0] : '');
                 if (email || phone || name) {
                     return { email, phone, name };
                 }
@@ -71,7 +74,7 @@ export default function LiveChat({ onBack }) {
                 if (obj && typeof obj === 'object') {
                     const email = obj?.email || obj?.Email || obj?.user_email || '';
                     const phone = obj?.phone || obj?.Phone || obj?.mobile || '';
-                    const name  = obj?.name  || obj?.Name  || obj?.username  || (email ? email.split('@')[0] : '');
+                    const name = obj?.name || obj?.Name || obj?.username || (email ? email.split('@')[0] : '');
                     if (email) {
                         console.info(`[LiveChat] Found user data under localStorage key: "${key}"`);
                         return { email, phone, name };
@@ -122,9 +125,9 @@ export default function LiveChat({ onBack }) {
         try {
             const date = new Date(timestamp);
             if (isNaN(date.getTime())) return timestamp;
-            const day   = date.getDate();
+            const day = date.getDate();
             const month = date.toLocaleString('en-GB', { month: 'short' });
-            const time  = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
+            const time = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
             return `${day} ${month}, ${time}`;
         } catch (e) {
             return timestamp;
@@ -179,7 +182,7 @@ export default function LiveChat({ onBack }) {
                     message: `Initial Request: ${selectedIssueType} on ${selectedAccountType} account.`,
                     account_type: selectedAccountType,
                     issue_type: selectedIssueType,
-                    company_id: 1 
+                    company_id: 1
                 })
             });
 
@@ -188,6 +191,26 @@ export default function LiveChat({ onBack }) {
                 setActiveChat(data.chat_id);
                 setActiveChatStatus('open');
                 setMessages([]);
+                // Also load existing chats so sidebar shows active/closed sections
+                const { email } = getUserData();
+                try {
+                    const existingRes = await fetch('https://support.livefxhub.com/api/get-user-chats/', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ email })
+                    });
+                    const existingData = await existingRes.json();
+                    if (existingData.success && existingData.chats) {
+                        const formatted = existingData.chats.map(chat => ({
+                            id: chat.chat_id,
+                            name: chat.subject || 'Support Chat',
+                            message: chat.last_message?.content?.substring(0, 60) || `Status: ${chat.status}`,
+                            time: formatDateTimeDisplay(chat.started_at || chat.created_at || ''),
+                            status: chat.status
+                        }));
+                        setChatList(formatted);
+                    }
+                } catch (_) { /* silently ignore */ }
                 setChatStep('new-chat-conversation');
             }
         } catch (error) {
@@ -228,7 +251,7 @@ export default function LiveChat({ onBack }) {
                 });
                 setChatList(formattedChats);
                 setChatStep('chat-interface');
-                
+
                 if (formattedChats.length > 0) handleSelectChat(formattedChats[0]);
             }
         } catch (error) {
@@ -240,73 +263,73 @@ export default function LiveChat({ onBack }) {
 
     // API 3: SELECT CHAT & FETCH HISTORY
     const handleSelectChat = async (chat) => {
-    setActiveChat(chat.id);
-    setActiveChatStatus(chat.status);
-    setSearchOpen(false);
+        setActiveChat(chat.id);
+        setActiveChatStatus(chat.status);
+        setSearchOpen(false);
 
-    // ✅ ALWAYS load history (important fix)
-    setMessages([
-        { type: 'system', text: 'Loading chat history…', time: formatTime24Hour(new Date()) }
-    ]);
+        // ✅ ALWAYS load history (important fix)
+        setMessages([
+            { type: 'system', text: 'Loading chat history…', time: formatTime24Hour(new Date()) }
+        ]);
 
-    try {
-        const response = await fetch(`https://support.livefxhub.com/api/get-chat-history/${chat.id}/`);
-        if (!response.ok) throw new Error(`Server returned ${response.status}`);
+        try {
+            const response = await fetch(`https://support.livefxhub.com/api/get-chat-history/${chat.id}/`);
+            if (!response.ok) throw new Error(`Server returned ${response.status}`);
 
-        const data = await response.json();
+            const data = await response.json();
 
-        if (data.success && data.messages) {
-            const formattedMsgs = data.messages.map(msg => {
-                let msgType = 'agent';
-                if (msg.sender_type === 'SYSTEM') msgType = 'system';
-                else if (msg.sender_type === 'USER') msgType = 'user';
+            if (data.success && data.messages) {
+                const formattedMsgs = data.messages.map(msg => {
+                    let msgType = 'agent';
+                    if (msg.sender_type === 'SYSTEM') msgType = 'system';
+                    else if (msg.sender_type === 'USER') msgType = 'user';
 
-                // ✅ FIX: Add full URL (prevents 404)
-                const fullFileUrl = msg.file_url
-                    ? `https://support.livefxhub.com${msg.file_url}`
-                    : null;
+                    // ✅ FIX: Add full URL (prevents 404)
+                    const fullFileUrl = msg.file_url
+                        ? `https://support.livefxhub.com${msg.file_url}`
+                        : null;
 
-                if (fullFileUrl) {
-                    const fname = fullFileUrl.split('/').pop();
-                    const isImage = /\.(jpg|jpeg|png|gif|webp)$/i.test(fname);
+                    if (fullFileUrl) {
+                        const fname = fullFileUrl.split('/').pop();
+                        const isImage = /\.(jpg|jpeg|png|gif|webp)$/i.test(fname);
 
-                    const fileHtml = isImage
-                        ? `<a href="${fullFileUrl}" target="_blank"><img src="${fullFileUrl}" style="max-width:200px;border-radius:8px;" /></a>`
-                        : `<a href="${fullFileUrl}" target="_blank">📎 ${fname}</a>`;
+                        const fileHtml = isImage
+                            ? `<a href="${fullFileUrl}" target="_blank"><img src="${fullFileUrl}" style="max-width:200px;border-radius:8px;" /></a>`
+                            : `<a href="${fullFileUrl}" target="_blank">📎 ${fname}</a>`;
+
+                        return {
+                            type: msgType,
+                            text: fileHtml,
+                            time: formatMessageDateTime(msg.timestamp)
+                        };
+                    }
 
                     return {
                         type: msgType,
-                        text: fileHtml,
+                        text: msg.content || '',
+                        senderName: msg.sender_name || '',
                         time: formatMessageDateTime(msg.timestamp)
                     };
-                }
+                });
 
-                return {
-                    type: msgType,
-                    text: msg.content || '',
-                    senderName: msg.sender_name || '',
-                    time: formatMessageDateTime(msg.timestamp)
-                };
-            });
-
-            setMessages(formattedMsgs);
-        } else {
+                setMessages(formattedMsgs);
+            } else {
+                setMessages([
+                    { type: 'system', text: 'No messages found.', time: formatTime24Hour(new Date()) }
+                ]);
+            }
+        } catch (error) {
+            console.error("Error fetching chat history:", error);
             setMessages([
-                { type: 'system', text: 'No messages found.', time: formatTime24Hour(new Date()) }
+                { type: 'system', text: 'Could not load chat history.', time: formatTime24Hour(new Date()) }
             ]);
         }
-    } catch (error) {
-        console.error("Error fetching chat history:", error);
-        setMessages([
-            { type: 'system', text: 'Could not load chat history.', time: formatTime24Hour(new Date()) }
-        ]);
-    }
-};
+    };
 
     // WEBSOCKET CONNECTION
     useEffect(() => {
         const isChatView = chatStep === 'new-chat-conversation' || chatStep === 'chat-interface';
-        
+
         if (isChatView && activeChat && activeChatStatus !== 'closed' && activeChatStatus !== 'ended') {
             ws.current = new WebSocket(`wss://support.livefxhub.com/ws/chat/${activeChat}/`);
 
@@ -361,8 +384,19 @@ export default function LiveChat({ onBack }) {
                     displayText = displayText ? `${displayText}<br/>${fileHtml}` : fileHtml;
                 }
 
+                // ── Typing indicator ────────────────────────────────────────
+                if (data.type === 'typing' || data.action === 'typing') {
+                    const who = String(data.sender_type || data.message_type || '').toLowerCase();
+                    if (who === 'agent' || data.from_api) {
+                        setTypingIndicator(t('Agent is typing...'));
+                        setTimeout(() => setTypingIndicator(''), 3000);
+                    }
+                    return;
+                }
+
                 if (!displayText) return; // skip empty frames
 
+                setTypingIndicator(''); // clear on real message
                 setMessages(prev => [...prev, {
                     type: msgType,
                     text: displayText,
@@ -394,7 +428,7 @@ export default function LiveChat({ onBack }) {
             const reader = new FileReader();
             reader.onloadend = () => {
                 const base64DataUrl = reader.result;
-                
+
                 let fileHtml = '';
                 if (isImage) {
                     fileHtml = `<img src="${base64DataUrl}" alt="${fname}" style="max-width:200px;border-radius:8px;" />`;
@@ -419,7 +453,7 @@ export default function LiveChat({ onBack }) {
                     }));
                 }
             };
-            
+
             reader.onerror = () => {
                 console.error('Failed to read file');
                 setMessages(prev => [...prev, { type: 'system', text: `❌ Failed to read file: ${fname}`, time: formatMessageDateTime(new Date()) }]);
@@ -432,9 +466,9 @@ export default function LiveChat({ onBack }) {
         if (textToSend.trim()) {
             if (ws.current && ws.current.readyState === WebSocket.OPEN) {
                 ws.current.send(JSON.stringify({
-                    message:      textToSend,
+                    message: textToSend,
                     message_type: 'user',
-                    sender_name:  senderName
+                    sender_name: senderName
                 }));
                 setMessages(prev => [...prev, {
                     type: 'user',
@@ -462,10 +496,10 @@ export default function LiveChat({ onBack }) {
         if (ws.current && ws.current.readyState === WebSocket.OPEN) {
             // Send end_chat action — consumers.py will save it, broadcast to agent, and close
             ws.current.send(JSON.stringify({
-                action:        'end_chat',
-                chat_id:       activeChat,
+                action: 'end_chat',
+                chat_id: activeChat,
                 ended_by_name: senderName,
-                sender_name:   senderName,
+                sender_name: senderName,
             }));
             // Close after 500ms so the server gets the message first
             setTimeout(() => { if (ws.current) ws.current.close(); }, 500);
@@ -639,47 +673,47 @@ export default function LiveChat({ onBack }) {
             );
         }
         return (
-            <div className="chat-input-area" style={{flexDirection:'column', gap:'6px', padding:'12px 20px'}}>
+            <div className="chat-input-area" style={{ flexDirection: 'column', gap: '6px', padding: '12px 20px' }}>
                 {selectedFile && (
-                    <div style={{display:'flex', alignItems:'center', gap:'8px', padding:'4px 8px', background:'#f0f4ff', borderRadius:'8px', fontSize:'13px', width:'100%'}}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '4px 8px', background: '#f0f4ff', borderRadius: '8px', fontSize: '13px', width: '100%' }}>
                         {filePreview
-                            ? <img src={filePreview} alt="preview" style={{width:'36px', height:'36px', objectFit:'cover', borderRadius:'4px'}} />
+                            ? <img src={filePreview} alt="preview" style={{ width: '36px', height: '36px', objectFit: 'cover', borderRadius: '4px' }} />
                             : <Paperclip size={16} />
                         }
-                        <span style={{flex:1, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap'}}>{selectedFile.name}</span>
-                        <button onClick={handleClearFile} style={{background:'none', border:'none', cursor:'pointer', padding:'0 4px'}}><X size={14} /></button>
+                        <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{selectedFile.name}</span>
+                        <button onClick={handleClearFile} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0 4px' }}><X size={14} /></button>
                     </div>
                 )}
-                <div style={{display:'flex', alignItems:'center', gap:'12px', width:'100%'}}>
-                    <div style={{display:'flex', alignItems:'center', gap:'12px', position:'relative'}}>
-                        <button className="icon-btn" style={{color:'#3b82f6', padding:0}}><Hash size={20} /></button>
-                        <button className="icon-btn" onClick={() => setShowEmojiPicker(!showEmojiPicker)} style={{color: showEmojiPicker ? '#3b82f6' : '#9ca3af', padding:0}}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', width: '100%' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', position: 'relative' }}>
+                        <button className="icon-btn" style={{ color: '#3b82f6', padding: 0 }}><Hash size={20} /></button>
+                        <button className="icon-btn" onClick={() => setShowEmojiPicker(!showEmojiPicker)} style={{ color: showEmojiPicker ? '#3b82f6' : '#9ca3af', padding: 0 }}>
                             <Smile size={20} />
                         </button>
-                        
+
                         {showEmojiPicker && (
                             <div className="emoji-picker" style={{
-                                position: 'absolute', 
-                                bottom: '100%', 
-                                left: '32px', 
-                                marginBottom: '12px', 
-                                background: 'var(--surface)', 
-                                border: '1px solid var(--border-color)', 
-                                borderRadius: '8px', 
-                                padding: '8px', 
-                                display: 'grid', 
-                                gridTemplateColumns: 'repeat(5, 1fr)', 
-                                gap: '4px', 
+                                position: 'absolute',
+                                bottom: '100%',
+                                left: '32px',
+                                marginBottom: '12px',
+                                background: 'var(--surface)',
+                                border: '1px solid var(--border-color)',
+                                borderRadius: '8px',
+                                padding: '8px',
+                                display: 'grid',
+                                gridTemplateColumns: 'repeat(5, 1fr)',
+                                gap: '4px',
                                 zIndex: 100,
                                 boxShadow: '0 4px 12px rgba(0,0,0,0.15)'
                             }}>
                                 {['📈', '📉', '💰', '💸', '💵', '🏦', '💼', '📊', '🚀', '💎', '🐂', '🐻', '🤝', '✍️', '⏳', '🔔', '💡', '✅', '❌', '❓', '👍', '👎', '🙏', '🤔', '😎'].map(emoji => (
-                                    <button 
-                                        key={emoji} 
+                                    <button
+                                        key={emoji}
                                         onClick={() => {
                                             setMessageInput(prev => prev + emoji);
-                                        }} 
-                                        style={{background: 'transparent', border: 'none', fontSize: '1.2rem', cursor: 'pointer', padding: '4px', borderRadius: '4px'}}
+                                        }}
+                                        style={{ background: 'transparent', border: 'none', fontSize: '1.2rem', cursor: 'pointer', padding: '4px', borderRadius: '4px' }}
                                         onMouseOver={(e) => e.target.style.background = 'var(--border-color)'}
                                         onMouseOut={(e) => e.target.style.background = 'transparent'}
                                     >
@@ -689,25 +723,25 @@ export default function LiveChat({ onBack }) {
                             </div>
                         )}
                     </div>
-                    
-                    <div className="input-wrapper" style={{flex:1, display:'flex', alignItems:'center', background:'transparent'}}>
-                        <input 
-                            type="text" 
-                            placeholder={t('Start typing...')} 
+
+                    <div className="input-wrapper" style={{ flex: 1, display: 'flex', alignItems: 'center', background: 'transparent' }}>
+                        <input
+                            type="text"
+                            placeholder={t('Start typing...')}
                             value={messageInput}
                             onChange={(e) => setMessageInput(e.target.value)}
                             onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
-                            style={{width:'100%', padding:'10px 0', fontSize:'0.9rem', outline:'none', border:'none', background:'transparent', color:'var(--text-main)'}}
+                            style={{ width: '100%', padding: '10px 0', fontSize: '0.9rem', outline: 'none', border: 'none', background: 'transparent', color: 'var(--text-main)' }}
                         />
                     </div>
 
-                    <div style={{display:'flex', alignItems:'center', gap:'12px'}}>
-                        <label className="icon-btn file-upload-btn" style={{padding:0}}>
-                            <Paperclip size={20} color="#9ca3af"/>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                        <label className="icon-btn file-upload-btn" style={{ padding: 0 }}>
+                            <Paperclip size={20} color="#9ca3af" />
                             <input type="file" hidden accept=".pdf,.doc,.docx,image/jpeg,image/png,image/gif,image/webp" onChange={handleFileChange} />
                         </label>
-                        <button className="icon-btn action-btn blue-btn" onClick={handleSendMessage} disabled={!messageInput.trim() && !selectedFile} style={{width:'36px', height:'36px', borderRadius:'50%', display:'flex', alignItems:'center', justifyContent:'center'}}>
-                            <Send size={18} color="white" style={{marginLeft:'-2px', marginTop:'2px'}}/>
+                        <button className="icon-btn action-btn blue-btn" onClick={handleSendMessage} disabled={!messageInput.trim() && !selectedFile} style={{ width: '36px', height: '36px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            <Send size={18} color="white" style={{ marginLeft: '-2px', marginTop: '2px' }} />
                         </button>
                     </div>
                 </div>
@@ -727,27 +761,52 @@ export default function LiveChat({ onBack }) {
                                     <ArrowLeft size={16} /> {t('Back to Options')}
                                 </button>
                             </div>
-                            <div className="chat-search-container" style={{ paddingBottom: '10px', borderBottom: '1px solid var(--border-color)', marginBottom: '10px' }}>
-                                <h4 style={{ margin: '0 0 10px 0', fontSize: '0.9rem', color: 'var(--text-main)' }}>{t('Related Queries')}</h4>
-                                <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--text-muted)' }}>{t('Select a topic below or type your own message')}</p>
-                            </div>
-                            <div className="chat-list" style={{ overflowY: 'auto', flex: 1, minHeight: 0, padding: '0 16px' }}>
-                                {[
-                                    t("How do I deposit funds into my wallet?"),
-                                    t("Why was my recent transaction declined?"),
-                                    t("How can I withdraw money to my bank account?"),
-                                    t("Why is my order execution delayed?"),
-                                    t("What are the fees for trading?"),
-                                    t("How do I change my account type?"),
-                                    t("Where can I see my transaction history?"),
-                                    t("How do I set a stop-loss order?"),
-                                    t("My wallet balance is not updating."),
-                                    t("Can I transfer funds between accounts?")
-                                ].map((query, idx) => (
-                                    <div key={idx} className="faq-query-item" onClick={() => handleSendMessage(query)} style={{ padding: '12px', background: 'var(--surface)', border: '1px solid var(--border-color)', borderRadius: '8px', marginBottom: '8px', cursor: 'pointer', fontSize: '0.85rem', transition: 'border-color 0.2s', color: 'var(--text-main)' }}>
-                                        {query}
-                                    </div>
-                                ))}
+                            <div style={{ overflowY: 'auto', flex: 1, minHeight: 0 }}>
+                                {/* Active Chats */}
+                                {chatList.filter(c => c.status !== 'closed' && c.status !== 'ended').length > 0 && (
+                                    <>
+                                        <div className="wa-section-heading">{t('Active Chats')}</div>
+                                        {chatList.filter(c => c.status !== 'closed' && c.status !== 'ended').map(chat => (
+                                            <div key={chat.id} className={`wa-chat-item ${chat.id === activeChat ? 'active' : ''}`} onClick={() => handleSelectChat(chat)}>
+                                                <div className="wa-avatar-container">
+                                                    <div className="wa-avatar"><User size={22} /></div>
+                                                    <span className="wa-status-dot active"></span>
+                                                </div>
+                                                <div className="wa-chat-info">
+                                                    <div className="wa-chat-header">
+                                                        <h4 className="wa-chat-name">{chat.name}</h4>
+                                                        <span className="wa-chat-time">{chat.time}</span>
+                                                    </div>
+                                                    <p className="wa-chat-preview">{chat.message}</p>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </>
+                                )}
+                                {/* Existing / Closed Chats */}
+                                {chatList.filter(c => c.status === 'closed' || c.status === 'ended').length > 0 && (
+                                    <>
+                                        <div className="wa-section-heading">{t('Closed Chats')}</div>
+                                        {chatList.filter(c => c.status === 'closed' || c.status === 'ended').map(chat => (
+                                            <div key={chat.id} className={`wa-chat-item ${chat.id === activeChat ? 'active' : ''}`} onClick={() => handleSelectChat(chat)}>
+                                                <div className="wa-avatar-container">
+                                                    <div className="wa-avatar"><User size={22} /></div>
+                                                    <span className="wa-status-dot closed"></span>
+                                                </div>
+                                                <div className="wa-chat-info">
+                                                    <div className="wa-chat-header">
+                                                        <h4 className="wa-chat-name">{chat.name}</h4>
+                                                        <span className="wa-chat-time">{chat.time}</span>
+                                                    </div>
+                                                    <p className="wa-chat-preview">{chat.message}</p>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </>
+                                )}
+                                {chatList.length === 0 && (
+                                    <p style={{ padding: '16px', fontSize: '0.85rem', color: 'var(--text-muted)', textAlign: 'center' }}>{t('No previous chats')}</p>
+                                )}
                             </div>
                         </div>
                     )}
@@ -759,33 +818,83 @@ export default function LiveChat({ onBack }) {
                                     <ArrowLeft size={18} />
                                 </button>
                                 <div className="default-avatar header-default-avatar"><User size={18} /></div>
-                                <h3>{t('Support Agent')}</h3> 
+                                <div>
+                                    <h3 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 600 }}>
+                                        {selectedIssueType
+                                            ? `${selectedIssueType} query for ${selectedAccountType}`
+                                            : t('Support')}
+                                    </h3>
+                                    {typingIndicator ? (
+                                        <span style={{ fontSize: '0.75rem', color: '#10b981', fontStyle: 'italic' }}>{typingIndicator}</span>
+                                    ) : (
+                                        <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{selectedAccountType}</span>
+                                    )}
+                                </div>
                             </div>
-                            <div className="header-actions">
-                                <button className="icon-btn" onClick={() => setIsNewChatExpanded(!isNewChatExpanded)} title={isNewChatExpanded ? t("Restore panel") : t("Expand chat")} style={{ marginRight: '8px' }}>
+                            <div className="header-actions" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <button className="icon-btn" onClick={() => setIsNewChatExpanded(!isNewChatExpanded)} title={isNewChatExpanded ? t("Restore panel") : t("Expand chat")}>
                                     {isNewChatExpanded ? <Minimize size={16} /> : <Maximize size={16} />}
                                 </button>
-                                {(activeChatStatus !== 'closed' && activeChatStatus !== 'ended') ? (
-                                    <button className="end-chat-btn" onClick={handleEndChat}>
-                                        <X size={14} style={{ marginRight: '4px' }} /> {t('Stop chat')}
-                                    </button>
-                                ) : (
-                                    <button className="end-chat-btn" onClick={handleStartNewAfterClose} style={{ backgroundColor: '#10b981' }}>
-                                        + {t('Start New Chat')}
-                                    </button>
-                                )}
                                 <span className="new-chat-badge">{selectedAccountType} • {selectedIssueType}</span>
+                                <div className="more-menu-container">
+                                    <button className="icon-btn" onClick={() => setShowHeaderMenu(prev => !prev)} title={t('More options')}>
+                                        <MoreVertical size={18} />
+                                    </button>
+                                    {showHeaderMenu && (
+                                        <div className="more-menu-dropdown" onClick={() => setShowHeaderMenu(false)}>
+                                            {(activeChatStatus !== 'closed' && activeChatStatus !== 'ended') && (
+                                                <button className="more-menu-item danger" onClick={handleEndChat}>
+                                                    🛑 {t('End Chat')}
+                                                </button>
+                                            )}
+                                            {(activeChatStatus === 'closed' || activeChatStatus === 'ended') && (
+                                                <button className="more-menu-item" onClick={handleStartNewAfterClose} style={{ color: '#10b981' }}>
+                                                    ✚ {t('Start New Chat')}
+                                                </button>
+                                            )}
+                                            <button className="more-menu-item" onClick={() => { setShowRelatedQueriesModal(true); setShowHeaderMenu(false); }}>
+                                                💡 {t('Related Queries')}
+                                            </button>
+                                        </div>
+                                    )}
+                                </div>
                             </div>
                         </div>
 
                         <div className="chat-messages-area" ref={messagesAreaRef}>
                             <div className="date-separator"><span>{dateStr}</span></div>
-                            {messages.map((msg, index) => (
-                                <div key={index} className={`message ${msg.type}`}>
-                                    <div className="message-bubble" dangerouslySetInnerHTML={{ __html: msg.text }} />
-                                    <span className="message-time">{msg.time}</span>
+                            {messages.map((msg, index) => {
+                                const { name } = getUserData();
+                                const userName = name || 'You';
+                                const senderLabel = msg.type === 'user'
+                                    ? t('You')
+                                    : msg.type === 'agent'
+                                        ? (msg.senderName || t('Agent'))
+                                        : null;
+                                return (
+                                    <div key={index} className={`message ${msg.type}`}>
+                                        {senderLabel && (
+                                            <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginBottom: '2px', display: 'block', textAlign: msg.type === 'user' ? 'right' : 'left', paddingRight: msg.type === 'user' ? '4px' : '0', paddingLeft: msg.type !== 'user' ? '4px' : '0' }}>
+                                                {senderLabel}
+                                            </span>
+                                        )}
+                                        <div className="message-bubble" dangerouslySetInnerHTML={{ __html: msg.text }} />
+                                        <span className="message-time">{msg.time}</span>
+                                    </div>
+                                );
+                            })}
+                            {typingIndicator && (
+                                <div className="message agent" style={{ opacity: 0.7 }}>
+                                    <div className="message-bubble" style={{ fontStyle: 'italic', fontSize: '0.82rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                        <span style={{ display: 'inline-flex', gap: '3px' }}>
+                                            <span className="typing-dot"></span>
+                                            <span className="typing-dot"></span>
+                                            <span className="typing-dot"></span>
+                                        </span>
+                                        {typingIndicator}
+                                    </div>
                                 </div>
-                            ))}
+                            )}
                         </div>
                         {renderChatInputOrReset()}
                     </div>
@@ -803,6 +912,36 @@ export default function LiveChat({ onBack }) {
                         </div>
                     </div>
                 )}
+
+                {/* Related Queries Modal */}
+                {showRelatedQueriesModal && (
+                    <div className="confirm-overlay" onClick={() => setShowRelatedQueriesModal(false)}>
+                        <div className="confirm-dialog" style={{ maxWidth: '360px', width: '90%' }} onClick={e => e.stopPropagation()}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                                <h3 style={{ margin: 0, fontSize: '1rem' }}>💡 {t('Related Queries')}</h3>
+                                <button className="icon-btn" onClick={() => setShowRelatedQueriesModal(false)}><X size={16} /></button>
+                            </div>
+                            <div style={{ maxHeight: '300px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                {[
+                                    t("How do I deposit funds into my wallet?"),
+                                    t("Why was my recent transaction declined?"),
+                                    t("How can I withdraw money to my bank account?"),
+                                    t("Why is my order execution delayed?"),
+                                    t("What are the fees for trading?"),
+                                    t("How do I change my account type?"),
+                                    t("Where can I see my transaction history?"),
+                                    t("How do I set a stop-loss order?"),
+                                    t("My wallet balance is not updating."),
+                                    t("Can I transfer funds between accounts?")
+                                ].map((query, idx) => (
+                                    <button key={idx} className="more-menu-item" style={{ border: '1px solid var(--border-color)', borderRadius: '8px', textAlign: 'left' }} onClick={() => { handleSendMessage(query); setShowRelatedQueriesModal(false); }}>
+                                        {query}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+                )}
             </div>
         );
     }
@@ -811,7 +950,7 @@ export default function LiveChat({ onBack }) {
     return (
         <div className="live-chat-interface-wrapper" style={{ height: 'calc(100vh - 60px)', maxHeight: 'calc(100vh - 60px)' }}>
             <div className="live-chat-interface" style={{ minHeight: 0, flex: 1 }}>
-                    <div className="chat-sidebar">
+                <div className="chat-sidebar">
                     <div className="sidebar-back-header">
                         <button className="back-btn" onClick={() => setChatStep('options')}>
                             <ArrowLeft size={16} /> {t('Back to Options')}
@@ -823,28 +962,52 @@ export default function LiveChat({ onBack }) {
                         <input type="text" placeholder={t('Search by name')} value={sidebarSearch} onChange={(e) => setSidebarSearch(e.target.value)} />
                     </div>
 
-                    <div className="chat-list" style={{ overflowY: 'scroll', flex: 1, minHeight: 0 }}>
-                        {filteredChatList.map((chat) => {
-                            const isActive = chat.status !== 'closed' && chat.status !== 'ended';
-                            return (
-                            <div key={chat.id} className={`chat-list-item ${chat.id === activeChat ? 'active' : ''}`} onClick={() => handleSelectChat(chat)}>
-                                <div className="chat-avatar" style={{position:'relative'}}>
-                                    <div className="default-avatar"><User size={20} /></div>
-                                    <span style={{position:'absolute', bottom:0, right:0, width:'10px', height:'10px', borderRadius:'50%', background: isActive ? '#10b981' : '#9ca3af', border:'2px solid var(--surface)'}}></span>
-                                </div>
-                                <div className="chat-info">
-                                    <div style={{display:'flex', justifyContent:'space-between', alignItems:'center'}}>
-                                        <h4 style={{margin:0, fontSize:'0.88rem', fontWeight:600}}>{chat.name}</h4>
-                                        <span style={{fontSize:'0.7rem', color: isActive ? '#10b981' : 'var(--text-muted)', fontWeight: isActive ? 600 : 400}}>
-                                            {isActive ? t('Active') : t('Closed')}
-                                        </span>
+                    <div style={{ overflowY: 'auto', flex: 1, minHeight: 0 }}>
+                        {/* Active Chats */}
+                        {filteredChatList.filter(c => c.status !== 'closed' && c.status !== 'ended').length > 0 && (
+                            <>
+                                <div className="wa-section-heading">{t('Active Chats')}</div>
+                                {filteredChatList.filter(c => c.status !== 'closed' && c.status !== 'ended').map(chat => (
+                                    <div key={chat.id} className={`wa-chat-item ${chat.id === activeChat ? 'active' : ''}`} onClick={() => handleSelectChat(chat)}>
+                                        <div className="wa-avatar-container">
+                                            <div className="wa-avatar"><User size={22} /></div>
+                                            <span className="wa-status-dot active"></span>
+                                        </div>
+                                        <div className="wa-chat-info">
+                                            <div className="wa-chat-header">
+                                                <h4 className="wa-chat-name">{chat.name}</h4>
+                                                <span className="wa-chat-time">{chat.time}</span>
+                                            </div>
+                                            <p className="wa-chat-preview">{chat.message}</p>
+                                        </div>
                                     </div>
-                                    <p className="chat-preview">{chat.message}</p>
-                                    <div className="chat-time">{chat.time}</div>
-                                </div>
-                            </div>
-                            );
-                        })}
+                                ))}
+                            </>
+                        )}
+                        {/* Past / Closed Chats */}
+                        {filteredChatList.filter(c => c.status === 'closed' || c.status === 'ended').length > 0 && (
+                            <>
+                                <div className="wa-section-heading">{t('Past Chats')}</div>
+                                {filteredChatList.filter(c => c.status === 'closed' || c.status === 'ended').map(chat => (
+                                    <div key={chat.id} className={`wa-chat-item ${chat.id === activeChat ? 'active' : ''}`} onClick={() => handleSelectChat(chat)}>
+                                        <div className="wa-avatar-container">
+                                            <div className="wa-avatar"><User size={22} /></div>
+                                            <span className="wa-status-dot closed"></span>
+                                        </div>
+                                        <div className="wa-chat-info">
+                                            <div className="wa-chat-header">
+                                                <h4 className="wa-chat-name">{chat.name}</h4>
+                                                <span className="wa-chat-time">{chat.time}</span>
+                                            </div>
+                                            <p className="wa-chat-preview">{chat.message}</p>
+                                        </div>
+                                    </div>
+                                ))}
+                            </>
+                        )}
+                        {filteredChatList.length === 0 && (
+                            <p style={{ padding: '16px', fontSize: '0.85rem', color: 'var(--text-muted)', textAlign: 'center' }}>{t('No chats found')}</p>
+                        )}
                     </div>
                 </div>
 
@@ -854,19 +1017,32 @@ export default function LiveChat({ onBack }) {
                             <div className="default-avatar header-default-avatar"><User size={18} /></div>
                             <h3>{selectedChat.name}</h3>
                         </div>
-                        <div className="header-actions">
-                            {(activeChatStatus !== 'closed' && activeChatStatus !== 'ended') ? (
-                                <button className="end-chat-btn" onClick={handleEndChat}>
-                                    <X size={14} style={{ marginRight: '4px' }} /> {t('Stop chat')}
-                                </button>
-                            ) : (
-                                <button className="end-chat-btn" onClick={handleStartNewAfterClose} style={{ backgroundColor: '#10b981' }}>
-                                    + {t('Start New Chat')}
-                                </button>
-                            )}
+                        <div className="header-actions" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                             <button className="icon-btn search-btn" onClick={() => { setSearchOpen(!searchOpen); setSearchTerm(''); setCurrentMatchIndex(0); }}>
                                 {searchOpen ? <X size={18} /> : <Search size={18} />}
                             </button>
+                            <div className="more-menu-container">
+                                <button className="icon-btn" onClick={() => setShowHeaderMenu(prev => !prev)} title={t('More options')}>
+                                    <MoreVertical size={18} />
+                                </button>
+                                {showHeaderMenu && (
+                                    <div className="more-menu-dropdown" onClick={() => setShowHeaderMenu(false)}>
+                                        {(activeChatStatus !== 'closed' && activeChatStatus !== 'ended') && (
+                                            <button className="more-menu-item danger" onClick={handleEndChat}>
+                                                🛑 {t('End Chat')}
+                                            </button>
+                                        )}
+                                        {(activeChatStatus === 'closed' || activeChatStatus === 'ended') && (
+                                            <button className="more-menu-item" onClick={handleStartNewAfterClose} style={{ color: '#10b981' }}>
+                                                ✚ {t('Start New Chat')}
+                                            </button>
+                                        )}
+                                        <button className="more-menu-item" onClick={() => { setShowRelatedQueriesModal(true); setShowHeaderMenu(false); }}>
+                                            💡 {t('Related Queries')}
+                                        </button>
+                                    </div>
+                                )}
+                            </div>
                         </div>
                     </div>
 
@@ -888,7 +1064,7 @@ export default function LiveChat({ onBack }) {
                         <div className="date-separator"><span>Today</span></div>
 
                         {messages.length === 0 && (
-                            <div style={{textAlign: 'center', color: '#888', marginTop: '20px'}}>
+                            <div style={{ textAlign: 'center', color: '#888', marginTop: '20px' }}>
                                 {activeChatStatus === 'closed' ? t('Loading history...') : t('No messages yet.')}
                             </div>
                         )}
@@ -897,14 +1073,36 @@ export default function LiveChat({ onBack }) {
                             const hasMatch = searchTerm.trim() && msg.text && msg.text.replace(/<br\s*\/?>/gi, ' ').toLowerCase().includes(searchTerm.toLowerCase());
                             if (hasMatch) matchCounter++;
                             const isCurrentMatch = hasMatch && matchCounter === currentMatchIndex;
+                            const senderLabel = msg.type === 'user'
+                                ? t('You')
+                                : msg.type === 'agent'
+                                    ? (msg.senderName || t('Agent'))
+                                    : null;
 
                             return (
                                 <div key={index} className={`message ${msg.type} ${hasMatch ? 'search-match' : ''} ${isCurrentMatch ? 'current-match' : ''}`}>
+                                    {senderLabel && (
+                                        <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginBottom: '2px', display: 'block', textAlign: msg.type === 'user' ? 'right' : 'left', paddingRight: msg.type === 'user' ? '4px' : '0', paddingLeft: msg.type !== 'user' ? '4px' : '0' }}>
+                                            {senderLabel}
+                                        </span>
+                                    )}
                                     <div className="message-bubble" dangerouslySetInnerHTML={{ __html: highlightText(msg.text) }} />
                                     <span className="message-time">{msg.time}</span>
                                 </div>
                             );
                         })}
+                        {typingIndicator && (
+                            <div className="message agent" style={{ opacity: 0.7 }}>
+                                <div className="message-bubble" style={{ fontStyle: 'italic', fontSize: '0.82rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                    <span style={{ display: 'inline-flex', gap: '3px' }}>
+                                        <span className="typing-dot"></span>
+                                        <span className="typing-dot"></span>
+                                        <span className="typing-dot"></span>
+                                    </span>
+                                    {typingIndicator}
+                                </div>
+                            </div>
+                        )}
                     </div>
                     {renderChatInputOrReset()}
                 </div>
@@ -918,6 +1116,36 @@ export default function LiveChat({ onBack }) {
                         <div className="confirm-actions">
                             <button className="confirm-btn confirm-no" onClick={() => setShowEndChatConfirm(false)}>{t('No')}</button>
                             <button className="confirm-btn confirm-yes" onClick={confirmEndChat}>{t('Yes')}</button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Related Queries Modal */}
+            {showRelatedQueriesModal && (
+                <div className="confirm-overlay" onClick={() => setShowRelatedQueriesModal(false)}>
+                    <div className="confirm-dialog" style={{ maxWidth: '360px', width: '90%' }} onClick={e => e.stopPropagation()}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                            <h3 style={{ margin: 0, fontSize: '1rem' }}>💡 {t('Related Queries')}</h3>
+                            <button className="icon-btn" onClick={() => setShowRelatedQueriesModal(false)}><X size={16} /></button>
+                        </div>
+                        <div style={{ maxHeight: '300px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                            {[
+                                t("How do I deposit funds into my wallet?"),
+                                t("Why was my recent transaction declined?"),
+                                t("How can I withdraw money to my bank account?"),
+                                t("Why is my order execution delayed?"),
+                                t("What are the fees for trading?"),
+                                t("How do I change my account type?"),
+                                t("Where can I see my transaction history?"),
+                                t("How do I set a stop-loss order?"),
+                                t("My wallet balance is not updating."),
+                                t("Can I transfer funds between accounts?")
+                            ].map((query, idx) => (
+                                <button key={idx} className="more-menu-item" style={{ border: '1px solid var(--border-color)', borderRadius: '8px', textAlign: 'left' }} onClick={() => { handleSendMessage(query); setShowRelatedQueriesModal(false); }}>
+                                    {query}
+                                </button>
+                            ))}
                         </div>
                     </div>
                 </div>
