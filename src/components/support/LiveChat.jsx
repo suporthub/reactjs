@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Search, Paperclip, Send, ArrowLeft, Play, MessageSquare, X, ChevronUp, ChevronDown, User, Monitor, Smartphone, HelpCircle, ArrowRightLeft, Download, Upload, Info } from 'lucide-react';
+import { Search, Paperclip, Send, ArrowLeft, Play, MessageSquare, X, ChevronUp, ChevronDown, User, Monitor, Smartphone, HelpCircle, ArrowRightLeft, Download, Upload, Info, Hash, Smile, Maximize, Minimize } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import './live-chat.css';
 
@@ -12,6 +12,9 @@ export default function LiveChat({ onBack }) {
     const [searchTerm, setSearchTerm] = useState('');
     const [currentMatchIndex, setCurrentMatchIndex] = useState(0);
     const [sidebarSearch, setSidebarSearch] = useState('');
+    const [showEndChatConfirm, setShowEndChatConfirm] = useState(false);
+    const [isNewChatExpanded, setIsNewChatExpanded] = useState(false);
+    const [showEmojiPicker, setShowEmojiPicker] = useState(false);
     const messagesAreaRef = useRef(null);
 
     // --- New chat flow states ---
@@ -304,7 +307,7 @@ export default function LiveChat({ onBack }) {
     useEffect(() => {
         const isChatView = chatStep === 'new-chat-conversation' || chatStep === 'chat-interface';
         
-        if (isChatView && activeChat && activeChatStatus !== 'closed') {
+        if (isChatView && activeChat && activeChatStatus !== 'closed' && activeChatStatus !== 'ended') {
             ws.current = new WebSocket(`wss://support.livefxhub.com/ws/chat/${activeChat}/`);
 
             ws.current.onmessage = (event) => {
@@ -375,77 +378,84 @@ export default function LiveChat({ onBack }) {
     }, [chatStep, activeChat, activeChatStatus]);
 
     // SEND MESSAGE — text via WS, file via REST upload
-    const handleSendMessage = async () => {
+    const handleSendMessage = async (customText = null) => {
+        const textToSend = typeof customText === 'string' ? customText : messageInput;
         const { email, name } = getUserData();
         const senderName = name || email.split('@')[0] || 'User';
 
-        // ── File upload via REST ──────────────────────────────────────────────
+        // ── File upload via Base64 and WebSocket ──────────────────────────────
         if (selectedFile) {
             const file = selectedFile;
             const fname = file.name;
             const previewUrl = filePreview;
+            const isImage = file.type.startsWith('image/');
             handleClearFile();
 
-            // Optimistic UI — show while uploading
-            const isImage = file.type.startsWith('image/');
-            const previewHtml = isImage && previewUrl
-                ? `<img src="${previewUrl}" alt="${fname}" style="max-width:200px;border-radius:8px;" />`
-                : `📎 <strong>${fname}</strong> <em style="font-size:0.75rem;opacity:0.6;">(uploading…)</em>`;
-            const tempId = Date.now();
-            setMessages(prev => [...prev, { id: tempId, type: 'user', text: previewHtml, time: formatMessageDateTime(new Date()) }]);
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                const base64DataUrl = reader.result;
+                
+                let fileHtml = '';
+                if (isImage) {
+                    fileHtml = `<img src="${base64DataUrl}" alt="${fname}" style="max-width:200px;border-radius:8px;" />`;
+                } else {
+                    fileHtml = `<a href="${base64DataUrl}" download="${fname}" target="_blank" rel="noopener noreferrer" style="display:flex;align-items:center;gap:6px;color:inherit;">📎 <span style="text-decoration:underline">${fname}</span></a>`;
+                }
 
-            try {
-                const formData = new FormData();
-                formData.append('file', file);
-                formData.append('chat_id', activeChat);
-                formData.append('sender_name', senderName);
-                formData.append('message_type', 'user');
+                // Add to local UI
+                setMessages(prev => [...prev, {
+                    type: 'user',
+                    text: fileHtml,
+                    senderName,
+                    time: formatMessageDateTime(new Date())
+                }]);
 
-                const res = await fetch('https://support.livefxhub.com/api/upload-chat-file/', {
-                    method: 'POST',
-                    body: formData
-                });
+                // Send to agent via WebSocket
+                if (ws.current && ws.current.readyState === WebSocket.OPEN) {
+                    ws.current.send(JSON.stringify({
+                        message: fileHtml,
+                        message_type: 'user',
+                        sender_name: senderName
+                    }));
+                }
+            };
+            
+            reader.onerror = () => {
+                console.error('Failed to read file');
+                setMessages(prev => [...prev, { type: 'system', text: `❌ Failed to read file: ${fname}`, time: formatMessageDateTime(new Date()) }]);
+            };
 
-                if (!res.ok) throw new Error(await res.text());
-                const result = await res.json();
-
-                // Replace temp bubble with real downloadable link
-                const realIsImage = /\.(jpg|jpeg|png|gif|webp)$/i.test(fname);
-                const realHtml = realIsImage
-                    ? `<a href="${result.file_url}" target="_blank" rel="noopener noreferrer"><img src="${result.file_url}" alt="${fname}" style="max-width:200px;border-radius:8px;" /></a>`
-                    : `<a href="${result.file_url}" target="_blank" rel="noopener noreferrer" style="display:flex;align-items:center;gap:6px;color:inherit;">📎 <span style="text-decoration:underline">${fname}</span></a>`;
-                setMessages(prev => prev.map(m => m.id === tempId ? { ...m, text: realHtml } : m));
-            } catch (err) {
-                console.error('File upload failed:', err);
-                setMessages(prev => prev.map(m =>
-                    m.id === tempId ? { ...m, text: `❌ Upload failed: ${fname}`, type: 'system' } : m
-                ));
-            }
+            reader.readAsDataURL(file);
         }
 
         // ── Text message via WebSocket ────────────────────────────────────────
-        if (messageInput.trim()) {
+        if (textToSend.trim()) {
             if (ws.current && ws.current.readyState === WebSocket.OPEN) {
                 ws.current.send(JSON.stringify({
-                    message:      messageInput,
+                    message:      textToSend,
                     message_type: 'user',
                     sender_name:  senderName
                 }));
                 setMessages(prev => [...prev, {
                     type: 'user',
-                    text: messageInput,
+                    text: textToSend,
                     senderName,
                     time: formatMessageDateTime(new Date())
                 }]);
-                setMessageInput('');
+                if (typeof customText !== 'string') {
+                    setMessageInput('');
+                }
             }
         }
     };
 
     // END CHAT (user-initiated)
     const handleEndChat = () => {
-        if (!window.confirm(t('Are you sure you want to end this chat?'))) return;
+        setShowEndChatConfirm(true);
+    };
 
+    const confirmEndChat = () => {
+        setShowEndChatConfirm(false);
         const { email, name } = getUserData();
         const senderName = name || email.split('@')[0] || 'User';
 
@@ -623,18 +633,15 @@ export default function LiveChat({ onBack }) {
     const renderChatInputOrReset = () => {
         if (activeChatStatus === 'closed') {
             return (
-                <div className="chat-ended-banner">
-                    <span>💬 {t('This chat session has ended.')}</span>
-                    <button className="chat-action-btn primary" style={{ marginLeft: 12, padding: '6px 18px', fontSize: '0.8rem' }} onClick={handleStartNewAfterClose}>
-                        + {t('Start New Chat')}
-                    </button>
+                <div style={{ padding: '20px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.9rem', borderTop: '1px solid var(--border-color)' }}>
+                    💬 {t('This chat session has ended.')}
                 </div>
             );
         }
         return (
-            <div className="chat-input-area" style={{flexDirection:'column', gap:'6px'}}>
+            <div className="chat-input-area" style={{flexDirection:'column', gap:'6px', padding:'12px 20px'}}>
                 {selectedFile && (
-                    <div style={{display:'flex', alignItems:'center', gap:'8px', padding:'4px 8px', background:'#f0f4ff', borderRadius:'8px', fontSize:'13px'}}>
+                    <div style={{display:'flex', alignItems:'center', gap:'8px', padding:'4px 8px', background:'#f0f4ff', borderRadius:'8px', fontSize:'13px', width:'100%'}}>
                         {filePreview
                             ? <img src={filePreview} alt="preview" style={{width:'36px', height:'36px', objectFit:'cover', borderRadius:'4px'}} />
                             : <Paperclip size={16} />
@@ -643,23 +650,66 @@ export default function LiveChat({ onBack }) {
                         <button onClick={handleClearFile} style={{background:'none', border:'none', cursor:'pointer', padding:'0 4px'}}><X size={14} /></button>
                     </div>
                 )}
-                <div style={{display:'flex', alignItems:'center', gap:'6px', width:'100%'}}>
-                    <label className="icon-btn file-upload-btn">
-                        <Paperclip size={18} />
-                        <input type="file" hidden accept=".pdf,.doc,.docx,image/jpeg,image/png,image/gif,image/webp" onChange={handleFileChange} />
-                    </label>
-                    <div className="input-wrapper" style={{flex:1}}>
+                <div style={{display:'flex', alignItems:'center', gap:'12px', width:'100%'}}>
+                    <div style={{display:'flex', alignItems:'center', gap:'12px', position:'relative'}}>
+                        <button className="icon-btn" style={{color:'#3b82f6', padding:0}}><Hash size={20} /></button>
+                        <button className="icon-btn" onClick={() => setShowEmojiPicker(!showEmojiPicker)} style={{color: showEmojiPicker ? '#3b82f6' : '#9ca3af', padding:0}}>
+                            <Smile size={20} />
+                        </button>
+                        
+                        {showEmojiPicker && (
+                            <div className="emoji-picker" style={{
+                                position: 'absolute', 
+                                bottom: '100%', 
+                                left: '32px', 
+                                marginBottom: '12px', 
+                                background: 'var(--surface)', 
+                                border: '1px solid var(--border-color)', 
+                                borderRadius: '8px', 
+                                padding: '8px', 
+                                display: 'grid', 
+                                gridTemplateColumns: 'repeat(5, 1fr)', 
+                                gap: '4px', 
+                                zIndex: 100,
+                                boxShadow: '0 4px 12px rgba(0,0,0,0.15)'
+                            }}>
+                                {['📈', '📉', '💰', '💸', '💵', '🏦', '💼', '📊', '🚀', '💎', '🐂', '🐻', '🤝', '✍️', '⏳', '🔔', '💡', '✅', '❌', '❓', '👍', '👎', '🙏', '🤔', '😎'].map(emoji => (
+                                    <button 
+                                        key={emoji} 
+                                        onClick={() => {
+                                            setMessageInput(prev => prev + emoji);
+                                        }} 
+                                        style={{background: 'transparent', border: 'none', fontSize: '1.2rem', cursor: 'pointer', padding: '4px', borderRadius: '4px'}}
+                                        onMouseOver={(e) => e.target.style.background = 'var(--border-color)'}
+                                        onMouseOut={(e) => e.target.style.background = 'transparent'}
+                                    >
+                                        {emoji}
+                                    </button>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                    
+                    <div className="input-wrapper" style={{flex:1, display:'flex', alignItems:'center', background:'transparent'}}>
                         <input 
                             type="text" 
-                            placeholder={t('Type message')} 
+                            placeholder={t('Start typing...')} 
                             value={messageInput}
                             onChange={(e) => setMessageInput(e.target.value)}
                             onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
+                            style={{width:'100%', padding:'10px 0', fontSize:'0.9rem', outline:'none', border:'none', background:'transparent', color:'var(--text-main)'}}
                         />
                     </div>
-                    <button className="icon-btn action-btn blue-btn" onClick={handleSendMessage} disabled={!messageInput.trim() && !selectedFile}>
-                        <Send size={18} color="white" />
-                    </button>
+
+                    <div style={{display:'flex', alignItems:'center', gap:'12px'}}>
+                        <label className="icon-btn file-upload-btn" style={{padding:0}}>
+                            <Paperclip size={20} color="#9ca3af"/>
+                            <input type="file" hidden accept=".pdf,.doc,.docx,image/jpeg,image/png,image/gif,image/webp" onChange={handleFileChange} />
+                        </label>
+                        <button className="icon-btn action-btn blue-btn" onClick={handleSendMessage} disabled={!messageInput.trim() && !selectedFile} style={{width:'36px', height:'36px', borderRadius:'50%', display:'flex', alignItems:'center', justifyContent:'center'}}>
+                            <Send size={18} color="white" style={{marginLeft:'-2px', marginTop:'2px'}}/>
+                        </button>
+                    </div>
                 </div>
             </div>
         );
@@ -669,7 +719,39 @@ export default function LiveChat({ onBack }) {
         const dateStr = new Date().toLocaleDateString();
         return (
             <div className="live-chat-interface-wrapper" style={{ height: 'calc(100vh - 60px)', maxHeight: 'calc(100vh - 60px)' }}>
-                <div className="live-chat-interface new-chat-full">
+                <div className={`live-chat-interface ${isNewChatExpanded ? 'new-chat-full' : ''}`} style={{ minHeight: 0, flex: 1 }}>
+                    {!isNewChatExpanded && (
+                        <div className="chat-sidebar">
+                            <div className="sidebar-back-header">
+                                <button className="back-btn" onClick={() => setChatStep('options')}>
+                                    <ArrowLeft size={16} /> {t('Back to Options')}
+                                </button>
+                            </div>
+                            <div className="chat-search-container" style={{ paddingBottom: '10px', borderBottom: '1px solid var(--border-color)', marginBottom: '10px' }}>
+                                <h4 style={{ margin: '0 0 10px 0', fontSize: '0.9rem', color: 'var(--text-main)' }}>{t('Related Queries')}</h4>
+                                <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--text-muted)' }}>{t('Select a topic below or type your own message')}</p>
+                            </div>
+                            <div className="chat-list" style={{ overflowY: 'auto', flex: 1, minHeight: 0, padding: '0 16px' }}>
+                                {[
+                                    t("How do I deposit funds into my wallet?"),
+                                    t("Why was my recent transaction declined?"),
+                                    t("How can I withdraw money to my bank account?"),
+                                    t("Why is my order execution delayed?"),
+                                    t("What are the fees for trading?"),
+                                    t("How do I change my account type?"),
+                                    t("Where can I see my transaction history?"),
+                                    t("How do I set a stop-loss order?"),
+                                    t("My wallet balance is not updating."),
+                                    t("Can I transfer funds between accounts?")
+                                ].map((query, idx) => (
+                                    <div key={idx} className="faq-query-item" onClick={() => handleSendMessage(query)} style={{ padding: '12px', background: 'var(--surface)', border: '1px solid var(--border-color)', borderRadius: '8px', marginBottom: '8px', cursor: 'pointer', fontSize: '0.85rem', transition: 'border-color 0.2s', color: 'var(--text-main)' }}>
+                                        {query}
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
                     <div className="chat-main">
                         <div className="chat-main-header">
                             <div className="current-chat-info">
@@ -680,8 +762,17 @@ export default function LiveChat({ onBack }) {
                                 <h3>{t('Support Agent')}</h3> 
                             </div>
                             <div className="header-actions">
-                                {(activeChatStatus === 'open' || activeChatStatus === 'active') && (
-                                    <button className="end-chat-btn" onClick={handleEndChat}>{t('End Chat')}</button>
+                                <button className="icon-btn" onClick={() => setIsNewChatExpanded(!isNewChatExpanded)} title={isNewChatExpanded ? t("Restore panel") : t("Expand chat")} style={{ marginRight: '8px' }}>
+                                    {isNewChatExpanded ? <Minimize size={16} /> : <Maximize size={16} />}
+                                </button>
+                                {(activeChatStatus !== 'closed' && activeChatStatus !== 'ended') ? (
+                                    <button className="end-chat-btn" onClick={handleEndChat}>
+                                        <X size={14} style={{ marginRight: '4px' }} /> {t('Stop chat')}
+                                    </button>
+                                ) : (
+                                    <button className="end-chat-btn" onClick={handleStartNewAfterClose} style={{ backgroundColor: '#10b981' }}>
+                                        + {t('Start New Chat')}
+                                    </button>
                                 )}
                                 <span className="new-chat-badge">{selectedAccountType} • {selectedIssueType}</span>
                             </div>
@@ -699,6 +790,19 @@ export default function LiveChat({ onBack }) {
                         {renderChatInputOrReset()}
                     </div>
                 </div>
+
+                {/* End Chat Confirm Dialog */}
+                {showEndChatConfirm && (
+                    <div className="confirm-overlay" onClick={() => setShowEndChatConfirm(false)}>
+                        <div className="confirm-dialog" onClick={e => e.stopPropagation()}>
+                            <p className="confirm-message">{t('Do you want to end this chat?')}</p>
+                            <div className="confirm-actions">
+                                <button className="confirm-btn confirm-no" onClick={() => setShowEndChatConfirm(false)}>{t('No')}</button>
+                                <button className="confirm-btn confirm-yes" onClick={confirmEndChat}>{t('Yes')}</button>
+                            </div>
+                        </div>
+                    </div>
+                )}
             </div>
         );
     }
@@ -707,7 +811,7 @@ export default function LiveChat({ onBack }) {
     return (
         <div className="live-chat-interface-wrapper" style={{ height: 'calc(100vh - 60px)', maxHeight: 'calc(100vh - 60px)' }}>
             <div className="live-chat-interface" style={{ minHeight: 0, flex: 1 }}>
-                <div className="chat-sidebar">
+                    <div className="chat-sidebar">
                     <div className="sidebar-back-header">
                         <button className="back-btn" onClick={() => setChatStep('options')}>
                             <ArrowLeft size={16} /> {t('Back to Options')}
@@ -721,7 +825,7 @@ export default function LiveChat({ onBack }) {
 
                     <div className="chat-list" style={{ overflowY: 'scroll', flex: 1, minHeight: 0 }}>
                         {filteredChatList.map((chat) => {
-                            const isActive = chat.status === 'open' || chat.status === 'active';
+                            const isActive = chat.status !== 'closed' && chat.status !== 'ended';
                             return (
                             <div key={chat.id} className={`chat-list-item ${chat.id === activeChat ? 'active' : ''}`} onClick={() => handleSelectChat(chat)}>
                                 <div className="chat-avatar" style={{position:'relative'}}>
@@ -751,8 +855,14 @@ export default function LiveChat({ onBack }) {
                             <h3>{selectedChat.name}</h3>
                         </div>
                         <div className="header-actions">
-                            {(activeChatStatus === 'open' || activeChatStatus === 'active') && (
-                                <button className="end-chat-btn" onClick={handleEndChat}>{t('End Chat')}</button>
+                            {(activeChatStatus !== 'closed' && activeChatStatus !== 'ended') ? (
+                                <button className="end-chat-btn" onClick={handleEndChat}>
+                                    <X size={14} style={{ marginRight: '4px' }} /> {t('Stop chat')}
+                                </button>
+                            ) : (
+                                <button className="end-chat-btn" onClick={handleStartNewAfterClose} style={{ backgroundColor: '#10b981' }}>
+                                    + {t('Start New Chat')}
+                                </button>
                             )}
                             <button className="icon-btn search-btn" onClick={() => { setSearchOpen(!searchOpen); setSearchTerm(''); setCurrentMatchIndex(0); }}>
                                 {searchOpen ? <X size={18} /> : <Search size={18} />}
@@ -799,6 +909,19 @@ export default function LiveChat({ onBack }) {
                     {renderChatInputOrReset()}
                 </div>
             </div>
+
+            {/* End Chat Confirm Dialog */}
+            {showEndChatConfirm && (
+                <div className="confirm-overlay" onClick={() => setShowEndChatConfirm(false)}>
+                    <div className="confirm-dialog" onClick={e => e.stopPropagation()}>
+                        <p className="confirm-message">{t('Do you want to end this chat?')}</p>
+                        <div className="confirm-actions">
+                            <button className="confirm-btn confirm-no" onClick={() => setShowEndChatConfirm(false)}>{t('No')}</button>
+                            <button className="confirm-btn confirm-yes" onClick={confirmEndChat}>{t('Yes')}</button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

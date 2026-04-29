@@ -1,5 +1,5 @@
 .live-chat-options-container {
-    padding: 40px;
+    padding: 20px;
     height: 100%;
     display: flex;
     flex-direction: column;
@@ -35,7 +35,7 @@
     font-size: 1.8rem;
     font-weight: 700;
     color: var(--text-main);
-    margin-bottom: 40px;
+    margin-bottom: 20px;
 }
 
 .chat-options-grid {
@@ -694,7 +694,7 @@
     display: flex;
     align-items: center;
     gap: 0;
-    margin-bottom: 28px;
+    margin-bottom: 20px;
 }
 
 .step {
@@ -735,7 +735,7 @@
 .step-subtitle {
     font-size: 0.9rem;
     color: var(--text-muted);
-    margin-bottom: 28px;
+    margin-bottom: 20px;
     text-align: center;
 }
 
@@ -745,7 +745,7 @@
     gap: 16px;
     max-width: 700px;
     width: 100%;
-    margin-bottom: 28px;
+    margin-bottom: 30px;
 }
 
 .selection-cards-grid.four-cols {
@@ -810,6 +810,7 @@
 
 .continue-btn {
     max-width: 280px;
+    margin-top: 10px;
 }
 
 .continue-btn:disabled {
@@ -908,7 +909,7 @@
    END CHAT BUTTON
    --------------------------------- */
 .end-chat-btn {
-    background-color: #ef4444;
+    background-color: var(--primary, #2563eb);
     color: white;
     border: none;
     padding: 8px 16px;
@@ -918,10 +919,12 @@
     cursor: pointer;
     transition: background-color 0.2s;
     margin-right: 12px;
+    display: flex;
+    align-items: center;
 }
 
 .end-chat-btn:hover {
-    background-color: #dc2626;
+    background-color: #1d4ed8;
 }
 
 /* ---------------------------------
@@ -982,6 +985,167 @@
     min-height: 0;
 }
 
-.chat-input-area {
+/* ========== Sidebar Chat Sections (New Chats / My Chats) ========== */
+
+.chat-section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 16px 6px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    background: var(--bg-color);
+    position: sticky;
+    top: 0;
+    z-index: 1;
+}
+
+.chat-section-count {
+    background: var(--border-color);
+    color: var(--text-muted);
+    font-size: 0.68rem;
+    font-weight: 700;
+    padding: 1px 7px;
+    border-radius: 10px;
+    min-width: 18px;
+    text-align: center;
+}
+
+/* Avatar with initial letter */
+.chat-avatar-inner {
+    width: 38px !important;
+    height: 38px !important;
+    border-radius: 50%;
+    background: linear-gradient(135deg, rgba(37, 99, 235, 0.18), rgba(37, 99, 235, 0.08));
+    color: var(--primary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.9rem;
+    font-weight: 700;
     flex-shrink: 0;
+    border: 1.5px solid rgba(37, 99, 235, 0.2);
+}
+
+/* Online status dot */
+.avatar-status-dot {
+    position: absolute;
+    bottom: 1px;
+    right: 1px;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    border: 2px solid var(--surface);
+}
+
+.active-dot {
+    background: #10b981;
+}
+
+.closed-dot {
+    background: #9ca3af;
+}
+
+/* Status badge pill */
+.chat-status-badge {
+    font-size: 0.68rem;
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 10px;
+    flex-shrink: 0;
+}
+
+.active-badge {
+    background: rgba(16, 185, 129, 0.12);
+    color: #10b981;
+}
+
+.closed-badge {
+    background: rgba(156, 163, 175, 0.15);
+    color: var(--text-muted);
+}
+
+/* ========== End Chat Confirm Dialog ========== */
+
+.confirm-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.45);
+    backdrop-filter: blur(2px);
+    -webkit-backdrop-filter: blur(2px);
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    animation: fadeIn 0.15s ease;
+}
+
+.confirm-dialog {
+    background: var(--surface);
+    border: 1px solid var(--border-color);
+    border-radius: 14px;
+    padding: 28px 32px 24px;
+    min-width: 280px;
+    max-width: 340px;
+    width: 90%;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.18);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
+    animation: dialogPop 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes dialogPop {
+    from { opacity: 0; transform: scale(0.88); }
+    to   { opacity: 1; transform: scale(1); }
+}
+
+.confirm-message {
+    font-size: 0.98rem;
+    font-weight: 600;
+    color: var(--text-main);
+    text-align: center;
+    margin: 0;
+    line-height: 1.45;
+}
+
+.confirm-actions {
+    display: flex;
+    gap: 10px;
+    width: 100%;
+}
+
+.confirm-btn {
+    flex: 1;
+    padding: 10px 0;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    border: none;
+    transition: all 0.18s;
+}
+
+.confirm-no {
+    background: var(--bg-color);
+    border: 1.5px solid var(--border-color);
+    color: var(--text-main);
+}
+
+.confirm-no:hover {
+    border-color: var(--primary);
+    color: var(--primary);
+}
+
+.confirm-yes {
+    background: #ef4444;
+    color: #fff;
+}
+
+.confirm-yes:hover {
+    background: #dc2626;
 }
