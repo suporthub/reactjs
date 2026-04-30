@@ -1,95 +1,28 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { X, ChevronDown, ChevronUp, Pencil } from 'lucide-react';
+import { ordersManager } from '../../utils/ordersCache';
+import { ordersWebSocket } from '../../utils/ordersWebSocket';
 
 const TABS = ['Open Positions', 'Pending Orders', 'Rejected Orders', 'History'];
 
-const OPEN_POSITIONS_DATA = [
-    {
-        orderId: '8990041241000',
-        symbolName: 'AUDCAD',
-        orderTime: '2026-02-28T07:11:48.002Z',
-        orderType: 'BUY',
-        quantity: 2.00,
-        openPrice: 0.97378,
-        marketPrice: 0.95127,
-        commission: 20.00,
-        swap: -4.87,
-        stopLoss: null,
-        takeProfit: null,
-        profitLoss: -3342.17,
-    },
-    {
-        orderId: '9056158141000',
-        symbolName: 'AUDCNH',
-        orderTime: '2026-02-26T07:23:01.002Z',
-        orderType: 'BUY',
-        quantity: 0.01,
-        openPrice: 4.87280,
-        marketPrice: 4.85730,
-        commission: 0.10,
-        swap: 0.01,
-        stopLoss: null,
-        takeProfit: null,
-        profitLoss: 2.36,
-    }
-];
-
-const PENDING_ORDERS_DATA = [
-    {
-        orderId: '6539352602000',
-        symbolName: 'AUDCAD',
-        orderTime: '2026-01-23T10:49:53.000Z',
-        orderType: 'SELL LIMIT',
-        quantity: 0.01,
-        openPrice: 1.00000,
-        marketPrice: 0.96639
-    }
-];
-
-const REJECTED_ORDERS_DATA = [
-    {
-        orderId: '3424813917000',
-        symbolName: 'XAUUSD',
-        rejectedTime: '2026-03-09T05:30:48.000Z',
-        orderType: 'BUY',
-        quantity: 0.01,
-        rejectedPrice: 5099.24,
-        reason: 'insufficient_margin'
-    },
-    {
-        orderId: '3420777217000',
-        symbolName: 'XAUUSD',
-        rejectedTime: '2026-03-09T05:30:07.000Z',
-        orderType: 'SELL',
-        quantity: 0.01,
-        rejectedPrice: 5095.93,
-        reason: 'insufficient_margin'
-    }
-];
-
-const HISTORY_DATA = [
-    {
-        orderId: '3322766417000',
-        symbolName: 'XAUUSD',
-        openTime: '2026-03-10T09:00:27.000Z',
-        closeTime: '2026-03-10T09:00:32.000Z',
-        orderType: 'BUY',
-        quantity: 0.01,
-        openPrice: 5183.38,
-        closePrice: 5181.38,
-        commission: 0.10,
-        swap: 0.00,
-        netProfit: -2.10,
-        closeMessage: 'Closed'
-    }
-];
+// Kept as local static data — these tabs are NOT part of the /orders/active API
+const REJECTED_ORDERS_DATA = [];
+const HISTORY_DATA = [];
 
 export default React.memo(function OrdersPanel({ isMinimized, onToggleMinimize }) {
     const [activeTab, setActiveTab] = useState('Open Positions');
     const [utcTime, setUtcTime] = useState('');
+    const [openPositions, setOpenPositions] = useState([]);
+    const [pendingOrders, setPendingOrders] = useState([]);
+    const [isLoading, setIsLoading] = useState(true);
+    const [showCloseAllConfirm, setShowCloseAllConfirm] = useState(false);
+    const [symbolConfigs, setSymbolConfigs] = useState({});
+    const [livePrices, setLivePrices] = useState({});
+    const [editOrderPopup, setEditOrderPopup] = useState({ isOpen: false, orderId: null, type: '', price: '', precision: 5 });
+    const mountedRef = useRef(true);
 
     // ── Clock ──────────────────────────────────────────────────
-    React.useEffect(() => {
+    useEffect(() => {
         const tick = () => {
             const now = new Date();
             const timeStr = now.toLocaleTimeString('en-US', { hour12: false, timeZone: 'UTC' });
@@ -99,6 +32,119 @@ export default React.memo(function OrdersPanel({ isMinimized, onToggleMinimize }
         const id = setInterval(tick, 1000);
         return () => clearInterval(id);
     }, []);
+
+    // ── Initial fetch and setup ──────────────────────────────────
+    useEffect(() => {
+        mountedRef.current = true;
+
+        (async () => {
+            try {
+                // 1. Fetch initial snapshot
+                const [orders, config] = await Promise.all([
+                    ordersManager.getOrders(true),
+                    import('../../utils/tradingConfigCache').then(m => m.tradingConfigManager.getConfig())
+                ]);
+
+                if (mountedRef.current) {
+                    setOpenPositions(orders.open_positions || []);
+                    setPendingOrders(orders.pending_orders || []);
+                    
+                    if (config?.symbols) {
+                        const configMap = {};
+                        config.symbols.forEach(s => { configMap[s.symbol] = s; });
+                        setSymbolConfigs(configMap);
+                    }
+
+                    setIsLoading(false);
+                    ordersWebSocket.connect();
+                }
+            } catch (err) {
+                console.error('[OrdersPanel] Init failed:', err);
+                if (mountedRef.current) setIsLoading(false);
+            }
+        })();
+
+        return () => { 
+            mountedRef.current = false; 
+            ordersWebSocket.disconnect();
+        };
+    }, []);
+
+    // ── Live updates via custom events ───────────────────────────
+    useEffect(() => {
+        const onOrdersUpdate = (e) => {
+            if (mountedRef.current && e.detail) {
+                setOpenPositions(e.detail.open_positions || []);
+                setPendingOrders(e.detail.pending_orders || []);
+            }
+        };
+
+        const onPriceUpdate = (e) => {
+            if (mountedRef.current && e.detail) {
+                const { symbol, vals } = e.detail;
+                setLivePrices(prev => ({
+                    ...prev,
+                    [symbol]: { bid: vals[0], ask: vals[1] }
+                }));
+            }
+        };
+
+        window.addEventListener('ordersUpdated', onOrdersUpdate);
+        window.addEventListener('marketPriceUpdate', onPriceUpdate);
+        return () => {
+            window.removeEventListener('ordersUpdated', onOrdersUpdate);
+            window.removeEventListener('marketPriceUpdate', onPriceUpdate);
+        };
+    }, []);
+
+    // ── Format helpers ──────────────────────────────────────────
+    const formatTime = useCallback((time) => {
+        if (!time) return '—';
+        try {
+            return new Date(time).toISOString().replace('T', ' ').slice(0, 23).replace(' ', 'T') + 'Z';
+        } catch { return '—'; }
+    }, []);
+
+    const safeFixed = useCallback((val, digits = 2) => {
+        const num = parseFloat(val);
+        return isNaN(num) ? '—' : num.toFixed(digits);
+    }, []);
+
+    const getUSDConversionRate = useCallback((symbolName) => {
+        if (!symbolName) return 1;
+        const config = symbolConfigs[symbolName];
+        if (!config) return 1;
+
+        // Extract currency from instrumentType or symbol name
+        // For Forex (type 1), quote currency is usually the last 3 chars
+        const type = (config.instrumentType || '').toString().toLowerCase();
+        let quoteCurrency = 'USD';
+        
+        if (type === '1' || type === 'forex') {
+            const base = symbolName.split('.')[0].replace('+', '');
+            if (base.length >= 6) quoteCurrency = base.substring(3, 6);
+        } else if (type === '3' || type === 'indices' || type === 'index') {
+            const base = symbolName.split('.')[0].replace('+', '');
+            if (base.includes('JPN225')) quoteCurrency = 'JPY';
+            else if (base.includes('GER40') || base.includes('ESP35') || base.includes('FRA40')) quoteCurrency = 'EUR';
+            else if (base.includes('UK100')) quoteCurrency = 'GBP';
+            else if (base.includes('AUS200')) quoteCurrency = 'AUD';
+            else if (base.includes('HK50')) quoteCurrency = 'HKD';
+        }
+
+        if (quoteCurrency === 'USD') return 1;
+
+        // Try to find conversion rate from live prices
+        // Direct pair: e.g. GBPUSD
+        const directPair = `${quoteCurrency}USD`;
+        if (livePrices[directPair]?.bid) return parseFloat(livePrices[directPair].bid);
+
+        // Indirect pair: e.g. USDJPY
+        const indirectPair = `USD${quoteCurrency}`;
+        if (livePrices[indirectPair]?.bid) return 1 / parseFloat(livePrices[indirectPair].bid);
+
+        return 1; // Fallback
+    }, [symbolConfigs, livePrices]);
 
     const renderHeader = () => {
         switch (activeTab) {
@@ -117,7 +163,13 @@ export default React.memo(function OrdersPanel({ isMinimized, onToggleMinimize }
                         <th>Stop Loss</th>
                         <th>Take Profit</th>
                         <th>Profit/Loss</th>
-                        <th style={{ textAlign: 'center' }}>Close All <span className="close-all-x">×</span></th>
+                        <th 
+                            style={{ textAlign: 'center', cursor: 'pointer' }}
+                            onClick={() => setShowCloseAllConfirm(true)}
+                            title="Close All Open Positions"
+                        >
+                            Close All <span className="close-all-x" style={{ color: '#DA5244', marginLeft: '4px' }}>×</span>
+                        </th>
                     </tr>
                 );
             case 'Pending Orders':
@@ -168,51 +220,98 @@ export default React.memo(function OrdersPanel({ isMinimized, onToggleMinimize }
     };
 
     const renderRows = () => {
-        const formatTime = (time) => new Date(time).toISOString().replace('T', ' ').slice(0, 23).replace(' ', 'T') + 'Z';
-
         switch (activeTab) {
             case 'Open Positions':
-                return OPEN_POSITIONS_DATA.map((order) => (
-                    <tr key={order.orderId}>
-                        <td className="order-id-cell">{order.orderId}</td>
-                        <td className="order-symbol-cell">{order.symbolName}</td>
-                        <td className="order-time-cell">{formatTime(order.orderTime)}</td>
-                        <td>
-                            <span className={`order-type-badge ${order.orderType.toLowerCase().includes('buy') ? 'buy' : 'sell'}`}>
-                                {order.orderType}
-                            </span>
-                        </td>
-                        <td>{order.quantity.toFixed(2)}</td>
-                        <td>{order.openPrice.toFixed(5)}</td>
-                        <td>{order.marketPrice.toFixed(5)}</td>
-                        <td>{order.commission.toFixed(2)}</td>
-                        <td className={order.swap >= 0 ? 'positive' : 'negative'}>{order.swap.toFixed(2)}</td>
-                        <td className="order-action-cell"><span className="order-add-link">Add SL +</span></td>
-                        <td className="order-action-cell"><span className="order-add-link">Add TP +</span></td>
-                        <td className={`order-pl-cell ${order.profitLoss >= 0 ? 'positive' : 'negative'}`}>{order.profitLoss.toFixed(2)}</td>
-                        <td className="order-close-cell" style={{ textAlign: 'center' }}><X size={14} className="order-close-btn" /></td>
-                    </tr>
-                ));
+                if (isLoading) return <tr><td colSpan={13} style={{ textAlign: 'center', padding: '16px', color: 'var(--text-muted)' }}>Loading orders...</td></tr>;
+                if (openPositions.length === 0) return <tr><td colSpan={13} style={{ textAlign: 'center', padding: '16px', color: 'var(--text-muted)' }}>No open positions</td></tr>;
+                
+                const sortedOpenPositions = [...openPositions].sort((a, b) => new Date(b.orderTime) - new Date(a.orderTime));
+                
+                return sortedOpenPositions.map((order) => {
+                    const config = symbolConfigs[order.symbolName];
+                    const precision = config?.showPoints ?? 5;
+                    const contractSize = config?.contractSize ?? 1;
+                    const live = livePrices[order.symbolName];
+                    
+                    // Logic: BUY orders close at BID, SELL orders close at ASK
+                    const isBuy = order.orderType.toUpperCase().includes('BUY');
+                    const displayMarketPrice = live 
+                        ? (isBuy ? live.bid : live.ask) 
+                        : order.marketPrice;
+
+                    // Calculate P/L: (Current - Open) * Volume * ContractSize for BUY
+                    //                (Open - Current) * Volume * ContractSize for SELL
+                    const priceDiff = isBuy 
+                        ? (displayMarketPrice - order.openPrice)
+                        : (order.openPrice - displayMarketPrice);
+                    
+                    const conversionRate = getUSDConversionRate(order.symbolName);
+                    const floatingPL = (priceDiff * order.quantity * contractSize) * conversionRate;
+                    const finalPL = floatingPL - order.commission + order.swap;
+
+                    return (
+                        <tr key={order.orderId}>
+                            <td className="order-id-cell">{order.orderId}</td>
+                            <td className="order-symbol-cell">{order.symbolName}</td>
+                            <td className="order-time-cell">{formatTime(order.orderTime)}</td>
+                            <td>
+                                <span className={`order-type-badge ${isBuy ? 'buy' : 'sell'}`}>
+                                    {order.orderType}
+                                </span>
+                            </td>
+                            <td>{safeFixed(order.quantity, 2)}</td>
+                            <td>{safeFixed(order.openPrice, precision)}</td>
+                            <td>{safeFixed(displayMarketPrice, precision)}</td>
+                            <td>{safeFixed(order.commission, 2)}</td>
+                            <td className={order.swap >= 0 ? 'positive' : 'negative'}>{safeFixed(order.swap, 2)}</td>
+                            <td className="order-action-cell">
+                                {order.stopLoss > 0 ? safeFixed(order.stopLoss, precision) : <span className="order-add-link" onClick={() => setEditOrderPopup({ isOpen: true, orderId: order.orderId, type: 'SL', price: safeFixed(order.openPrice, precision), precision })}>Add SL +</span>}
+                            </td>
+                            <td className="order-action-cell">
+                                {order.takeProfit > 0 ? safeFixed(order.takeProfit, precision) : <span className="order-add-link" onClick={() => setEditOrderPopup({ isOpen: true, orderId: order.orderId, type: 'TP', price: safeFixed(order.openPrice, precision), precision })}>Add TP +</span>}
+                            </td>
+                            <td className={`order-pl-cell ${finalPL >= 0 ? 'positive' : 'negative'}`}>
+                                {safeFixed(finalPL, 2)}
+                            </td>
+                            <td className="order-close-cell" style={{ textAlign: 'center' }}><X size={14} className="order-close-btn" /></td>
+                        </tr>
+                    );
+                });
             case 'Pending Orders':
-                return PENDING_ORDERS_DATA.map((order) => (
-                    <tr key={order.orderId}>
-                        <td className="order-id-cell">{order.orderId}</td>
-                        <td className="order-symbol-cell">{order.symbolName}</td>
-                        <td className="order-time-cell">{formatTime(order.orderTime)}</td>
-                        <td>
-                            <span className={`order-type-badge ${order.orderType.toLowerCase().includes('buy') ? 'buy' : 'sell'}`}>
-                                {order.orderType}
-                            </span>
-                        </td>
-                        <td>{order.quantity.toFixed(2)}</td>
-                        <td>{order.openPrice.toFixed(5)}</td>
-                        <td>{order.marketPrice.toFixed(5)}</td>
-                        <td style={{ textAlign: 'center' }}>
-                            <Pencil size={14} style={{ color: '#3687ED', cursor: 'pointer' }} />
-                        </td>
-                    </tr>
-                ));
+                if (isLoading) return <tr><td colSpan={8} style={{ textAlign: 'center', padding: '16px', color: 'var(--text-muted)' }}>Loading orders...</td></tr>;
+                if (pendingOrders.length === 0) return <tr><td colSpan={8} style={{ textAlign: 'center', padding: '16px', color: 'var(--text-muted)' }}>No pending orders</td></tr>;
+                
+                const sortedPendingOrders = [...pendingOrders].sort((a, b) => new Date(b.orderTime) - new Date(a.orderTime));
+                
+                return sortedPendingOrders.map((order) => {
+                    const precision = symbolConfigs[order.symbolName]?.showPoints ?? 5;
+                    const live = livePrices[order.symbolName];
+                    const isBuy = order.orderType.toUpperCase().includes('BUY');
+                    const displayMarketPrice = live 
+                        ? live.ask 
+                        : order.marketPrice;
+
+                    return (
+                        <tr key={order.orderId}>
+                            <td className="order-id-cell">{order.orderId}</td>
+                            <td className="order-symbol-cell">{order.symbolName}</td>
+                            <td className="order-time-cell">{formatTime(order.orderTime)}</td>
+                            <td>
+                                <span className={`order-type-badge ${isBuy ? 'buy' : 'sell'}`}>
+                                    {order.orderType}
+                                </span>
+                            </td>
+                            <td>{safeFixed(order.quantity, 2)}</td>
+                            <td>{safeFixed(order.openPrice, precision)}</td>
+                            <td>{safeFixed(displayMarketPrice, precision)}</td>
+                            <td style={{ textAlign: 'center' }}>
+                                <Pencil size={14} style={{ color: '#3687ED', cursor: 'pointer' }} />
+                            </td>
+                        </tr>
+                    );
+                });
             case 'Rejected Orders':
+                if (REJECTED_ORDERS_DATA.length === 0) return <tr><td colSpan={7} style={{ textAlign: 'center', padding: '16px', color: 'var(--text-muted)' }}>No rejected orders</td></tr>;
                 return REJECTED_ORDERS_DATA.map((order) => (
                     <tr key={order.orderId}>
                         <td className="order-id-cell">{order.orderId}</td>
@@ -223,12 +322,13 @@ export default React.memo(function OrdersPanel({ isMinimized, onToggleMinimize }
                                 {order.orderType}
                             </span>
                         </td>
-                        <td>{order.quantity.toFixed(2)}</td>
-                        <td>{order.rejectedPrice.toFixed(2)}</td>
+                        <td>{safeFixed(order.quantity, 2)}</td>
+                        <td>{safeFixed(order.rejectedPrice, 2)}</td>
                         <td style={{ color: '#DA5244' }}>{order.reason}</td>
                     </tr>
                 ));
             case 'History':
+                if (HISTORY_DATA.length === 0) return <tr><td colSpan={12} style={{ textAlign: 'center', padding: '16px', color: 'var(--text-muted)' }}>No history</td></tr>;
                 return HISTORY_DATA.map((order) => (
                     <tr key={order.orderId}>
                         <td className="order-id-cell">{order.orderId}</td>
@@ -240,12 +340,12 @@ export default React.memo(function OrdersPanel({ isMinimized, onToggleMinimize }
                                 {order.orderType}
                             </span>
                         </td>
-                        <td>{order.quantity.toFixed(2)}</td>
-                        <td>{order.openPrice.toFixed(2)}</td>
-                        <td>{order.closePrice.toFixed(2)}</td>
-                        <td>{order.commission.toFixed(2)}</td>
-                        <td>{order.swap.toFixed(2)}</td>
-                        <td className={order.netProfit >= 0 ? 'positive' : 'negative'}>{order.netProfit.toFixed(2)}</td>
+                        <td>{safeFixed(order.quantity, 2)}</td>
+                        <td>{safeFixed(order.openPrice, 2)}</td>
+                        <td>{safeFixed(order.closePrice, 2)}</td>
+                        <td>{safeFixed(order.commission, 2)}</td>
+                        <td>{safeFixed(order.swap, 2)}</td>
+                        <td className={order.netProfit >= 0 ? 'positive' : 'negative'}>{safeFixed(order.netProfit, 2)}</td>
                         <td>{order.closeMessage}</td>
                     </tr>
                 ));
@@ -303,6 +403,186 @@ export default React.memo(function OrdersPanel({ isMinimized, onToggleMinimize }
                             {renderRows()}
                         </tbody>
                     </table>
+                </div>
+            )}
+
+            {/* Close All Confirmation Modal */}
+            {showCloseAllConfirm && (
+                <div className="orders-confirm-overlay" style={{
+                    position: 'absolute',
+                    top: 0, left: 0, right: 0, bottom: 0,
+                    backgroundColor: 'rgba(10, 15, 28, 0.7)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    zIndex: 100,
+                    backdropFilter: 'blur(2px)'
+                }}>
+                    <div className="orders-confirm-modal" style={{
+                        backgroundColor: '#111625',
+                        border: '1px solid #1A2138',
+                        borderRadius: '6px',
+                        padding: '16px 24px',
+                        boxShadow: '0 4px 12px rgba(0,0,0,0.6)',
+                        textAlign: 'center',
+                        minWidth: '260px',
+                        fontFamily: 'Arial, sans-serif'
+                    }}>
+                        <p style={{ margin: '0 0 16px 0', fontSize: '10px', color: '#FFFFFF', fontWeight: 'normal' }}>
+                            Are you sure you want to close all open positions?
+                        </p>
+                        <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
+                            <button 
+                                onClick={() => {
+                                    console.log('Close All Confirmed');
+                                    setShowCloseAllConfirm(false);
+                                    // TODO: Dispatch API call to close all
+                                }}
+                                style={{
+                                    backgroundColor: 'rgba(76, 175, 80, 0.1)',
+                                    border: '1px solid #4CAF50',
+                                    color: '#4CAF50',
+                                    padding: '4px 20px',
+                                    borderRadius: '4px',
+                                    cursor: 'pointer',
+                                    fontWeight: 'normal',
+                                    fontSize: '10px',
+                                    fontFamily: 'Arial, sans-serif',
+                                    transition: 'all 0.2s'
+                                }}
+                                onMouseEnter={(e) => e.target.style.backgroundColor = 'rgba(76, 175, 80, 0.2)'}
+                                onMouseLeave={(e) => e.target.style.backgroundColor = 'rgba(76, 175, 80, 0.1)'}
+                            >
+                                Yes
+                            </button>
+                            <button 
+                                onClick={() => setShowCloseAllConfirm(false)}
+                                style={{
+                                    backgroundColor: 'rgba(218, 82, 68, 0.1)',
+                                    border: '1px solid #DA5244',
+                                    color: '#DA5244',
+                                    padding: '4px 20px',
+                                    borderRadius: '4px',
+                                    cursor: 'pointer',
+                                    fontWeight: 'normal',
+                                    fontSize: '10px',
+                                    fontFamily: 'Arial, sans-serif',
+                                    transition: 'all 0.2s'
+                                }}
+                                onMouseEnter={(e) => e.target.style.backgroundColor = 'rgba(218, 82, 68, 0.2)'}
+                                onMouseLeave={(e) => e.target.style.backgroundColor = 'rgba(218, 82, 68, 0.1)'}
+                            >
+                                No
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* SL/TP Edit Modal */}
+            {editOrderPopup.isOpen && (
+                <div className="orders-edit-overlay" style={{
+                    position: 'fixed', // Use fixed to ensure it stays in viewport
+                    top: 0, left: 0, right: 0, bottom: 0,
+                    backgroundColor: 'rgba(10, 15, 28, 0.6)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    zIndex: 999, // Ensure it's above everything
+                    backdropFilter: 'blur(2px)'
+                }}>
+                    <div className="orders-edit-modal" style={{
+                        backgroundColor: 'var(--surface)',
+                        border: '1px solid var(--border-color)',
+                        borderRadius: '12px',
+                        padding: '24px',
+                        boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
+                        minWidth: '300px',
+                        fontFamily: 'Arial, sans-serif',
+                        position: 'relative'
+                    }}>
+                        {/* Close button (X) in top right */}
+                        <button 
+                            onClick={() => setEditOrderPopup({ ...editOrderPopup, isOpen: false })}
+                            style={{
+                                position: 'absolute',
+                                top: '16px',
+                                right: '16px',
+                                background: 'transparent',
+                                border: 'none',
+                                color: 'var(--text-muted)',
+                                cursor: 'pointer',
+                                padding: '4px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center'
+                            }}
+                        >
+                            <X size={16} />
+                        </button>
+                        
+                        <h3 style={{ 
+                            margin: '0 0 16px 0', 
+                            fontSize: '14px', 
+                            color: 'var(--text-main)', 
+                            fontWeight: 'bold' 
+                        }}>
+                            {editOrderPopup.type === 'SL' ? 'Stop Loss' : 'Take Profit'}
+                        </h3>
+                        
+                        <div style={{ marginBottom: '24px' }}>
+                            <label style={{ 
+                                display: 'block', 
+                                fontSize: '12px', 
+                                color: 'var(--text-muted)', 
+                                marginBottom: '8px' 
+                            }}>
+                                price
+                            </label>
+                            <input 
+                                type="number" 
+                                step="any"
+                                value={editOrderPopup.price}
+                                onChange={(e) => setEditOrderPopup({ ...editOrderPopup, price: e.target.value })}
+                                style={{
+                                    width: '100%',
+                                    boxSizing: 'border-box',
+                                    padding: '10px 12px',
+                                    borderRadius: '6px',
+                                    border: '1px solid var(--primary)', // Blue border like image
+                                    backgroundColor: 'transparent',
+                                    color: 'var(--text-main)',
+                                    fontSize: '14px',
+                                    fontFamily: 'Arial, sans-serif',
+                                    outline: 'none'
+                                }}
+                            />
+                        </div>
+                        
+                        <button 
+                            onClick={() => {
+                                console.log(`Applying ${editOrderPopup.type} of ${editOrderPopup.price} to order ${editOrderPopup.orderId}`);
+                                // TODO: Dispatch API call to modify order
+                                setEditOrderPopup({ ...editOrderPopup, isOpen: false });
+                            }}
+                            style={{
+                                width: '100%',
+                                backgroundColor: 'var(--primary)', // Blue button
+                                color: '#ffffff',
+                                border: 'none',
+                                borderRadius: '6px',
+                                padding: '12px',
+                                fontSize: '13px',
+                                fontWeight: 'bold',
+                                cursor: 'pointer',
+                                transition: 'background-color 0.2s'
+                            }}
+                            onMouseEnter={(e) => e.target.style.opacity = '0.9'}
+                            onMouseLeave={(e) => e.target.style.opacity = '1'}
+                        >
+                            Apply
+                        </button>
+                    </div>
                 </div>
             )}
         </div>

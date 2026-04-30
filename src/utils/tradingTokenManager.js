@@ -55,6 +55,10 @@ export function clearTradingSession() {
     localStorage.removeItem('tradingSessionId');
     localStorage.removeItem('trading_config');
     localStorage.removeItem('trading_config_version');
+    localStorage.removeItem('portfolio_summary');
+    localStorage.removeItem('portfolio_summary_ts');
+    localStorage.removeItem('orders_active');
+    localStorage.removeItem('orders_active_ts');
     
     // Clear tradingRefreshToken cookie
     document.cookie = 'tradingRefreshToken=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/; SameSite=Strict; Secure';

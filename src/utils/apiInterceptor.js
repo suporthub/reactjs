@@ -49,7 +49,8 @@ const isAuthEndpoint = (url) => {
   const skipPaths = [
     '/login', '/signup', '/refresh-token', '/forgot',
     '/verify', '/reset', '/otp',
-    '/trading-config', '/order/place', '/order/close'
+    '/trading-config', '/order/place', '/order/close',
+    '/orders/portfolio', '/orders/active'
   ];
   return skipPaths.some(path => url.includes(path));
 };
