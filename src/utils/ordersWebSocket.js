@@ -58,6 +58,7 @@ class OrdersWebSocketManager {
                     token: token
                 };
                 this.ws.send(JSON.stringify(authMessage));
+                console.log('[OrdersWS] Sent AUTH message with token.');
 
                 // 2. Start 10-second authentication timeout
                 this._startAuthTimeout();
@@ -87,11 +88,32 @@ class OrdersWebSocketManager {
                         return;
                     }
 
-                    // Handle ORDER_RESULT
-                    if (data.type === 'ORDER_RESULT') {
-                        console.log('[OrdersWS] Order Result:', data.data);
-                        window.dispatchEvent(new CustomEvent('orderResult', { detail: data.data }));
-                        return;
+                    // Handle Order/Modify/Cancel/Close Results
+                    if (data.type === 'ORDER_RESULT' || 
+                        data.type === 'MODIFY_ORDER_RESULT' || 
+                        data.type === 'CANCEL_ORDER_RESULT' || 
+                        data.type === 'CLOSE_ORDER_RESULT' ||
+                        (data.type === 'ORDER_STATE_CHANGE' && 
+                            (data.data?.status === 'MODIFIED' || data.data?.status === 'CANCELLED' || data.data?.status === 'CLOSED'))) {
+                        
+                        console.log(`[OrdersWS] Result (${data.type}):`, data.data);
+                        
+                        // For ORDER_STATE_CHANGE, we synthesize a success result
+                        let resultData = data.data;
+                        if (data.type === 'ORDER_STATE_CHANGE') {
+                            let msg = 'Order updated';
+                            if (data.data.status === 'MODIFIED') msg = 'SL/TP updated successfully';
+                            else if (data.data.status === 'CANCELLED') msg = 'Order cancelled successfully';
+                            else if (data.data.status === 'CLOSED') msg = 'Order closed successfully';
+                            
+                            resultData = { success: true, message: msg, ticket_id: data.data.ticket_id || data.data.orderId };
+                        }
+
+                        window.dispatchEvent(new CustomEvent('orderResult', { detail: resultData }));
+                        
+                        // If it's a result message, we can return. 
+                        // But if it's a state change, we MUST also fall through to update the cache.
+                        if (data.type !== 'ORDER_STATE_CHANGE') return;
                     }
 
                     // Handle PORTFOLIO_UPDATE
@@ -154,6 +176,113 @@ class OrdersWebSocketManager {
         };
         this.ws.send(JSON.stringify(msg));
         console.log('[OrdersWS] Sent PLACE_ORDER:', msg);
+        return true;
+    }
+
+    /**
+     * Sends a cancel order request through the websocket.
+     * @param {string} ticketId The order ID to cancel
+     * @returns {boolean} True if sent successfully
+     */
+    /**
+     * Ensures the WebSocket is connected before sending an action.
+     * @returns {boolean} True if connected/connecting
+     */
+    ensureConnected() {
+        if (!this.ws || (this.ws.readyState !== WebSocket.OPEN && this.ws.readyState !== WebSocket.CONNECTING)) {
+            console.log('[OrdersWS] Connection missing or closed. Attempting to connect...');
+            this.connect();
+            return false;
+        }
+        return true;
+    }
+
+    /**
+     * Sends a cancel order request through the websocket.
+     * @param {string} ticketId The order ID to cancel
+     * @returns {boolean} True if sent successfully
+     */
+    cancelOrder(ticketId) {
+        this.ensureConnected();
+        
+        if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
+            console.error('[OrdersWS] Cannot cancel order: WebSocket is not connected.', { readyState: this.ws?.readyState });
+            return false;
+        }
+
+        if (!this.isAuthenticated) {
+            console.error('[OrdersWS] Cannot cancel order: WebSocket is connected but not yet authenticated.');
+            return false;
+        }
+
+        const msg = {
+            action: 'CANCEL_ORDER',
+            payload: {
+                ticket_id: String(ticketId)
+            }
+        };
+        this.ws.send(JSON.stringify(msg));
+        console.log('[OrdersWS] Sent CANCEL_ORDER:', msg);
+        return true;
+    }
+
+    /**
+     * Sends a modify order request through the websocket.
+     * @param {Object} payload { ticket_id, new_sl, new_tp }
+     * @returns {boolean} True if sent successfully
+     */
+    modifyOrder(payload) {
+        this.ensureConnected();
+
+        if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
+            console.error('[OrdersWS] Cannot modify order: WebSocket is not connected.', { readyState: this.ws?.readyState });
+            return false;
+        }
+
+        if (!this.isAuthenticated) {
+            console.error('[OrdersWS] Cannot modify order: WebSocket is connected but not yet authenticated.');
+            return false;
+        }
+
+        const msg = {
+            action: 'MODIFY_ORDER',
+            payload: {
+                ticket_id: String(payload.ticket_id),
+                new_sl: parseFloat(payload.new_sl || 0),
+                new_tp: parseFloat(payload.new_tp || 0)
+            }
+        };
+        this.ws.send(JSON.stringify(msg));
+        console.log('[OrdersWS] Sent MODIFY_ORDER:', msg);
+        return true;
+    }
+
+    /**
+     * Sends a close order request through the websocket.
+     * @param {string} ticketId The order ID to close
+     * @returns {boolean} True if sent successfully
+     */
+    closeOrder(ticketId) {
+        this.ensureConnected();
+
+        if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
+            console.error('[OrdersWS] Cannot close order: WebSocket is not connected.', { readyState: this.ws?.readyState });
+            return false;
+        }
+
+        if (!this.isAuthenticated) {
+            console.error('[OrdersWS] Cannot close order: WebSocket is connected but not yet authenticated.');
+            return false;
+        }
+
+        const msg = {
+            action: 'CLOSE_ORDER',
+            payload: {
+                ticket_id: String(ticketId)
+            }
+        };
+        this.ws.send(JSON.stringify(msg));
+        console.log('[OrdersWS] Sent CLOSE_ORDER:', msg);
         return true;
     }
 

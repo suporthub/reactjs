@@ -19,6 +19,9 @@ export default React.memo(function OrdersPanel({ isMinimized, onToggleMinimize }
     const [symbolConfigs, setSymbolConfigs] = useState({});
     const [livePrices, setLivePrices] = useState({});
     const [editOrderPopup, setEditOrderPopup] = useState({ isOpen: false, orderId: null, type: '', price: '', precision: 5 });
+    const [cancelOrderConfirm, setCancelOrderConfirm] = useState({ isOpen: false, ticketId: null });
+    const [cancelExitConfirm, setCancelExitConfirm] = useState({ isOpen: false, ticketId: null, type: null });
+    const [orderMessage, setOrderMessage] = useState(null);
     const mountedRef = useRef(true);
 
     // ── Clock ──────────────────────────────────────────────────
@@ -89,11 +92,27 @@ export default React.memo(function OrdersPanel({ isMinimized, onToggleMinimize }
             }
         };
 
+        const handleOrderResult = (e) => {
+            if (mountedRef.current && e.detail) {
+                const data = e.detail;
+                setOrderMessage({
+                    type: data.success ? 'success' : 'error',
+                    text: data.message || (data.success ? 'Order processed' : 'Order failed')
+                });
+                // Clear message after 4 seconds
+                setTimeout(() => {
+                    if (mountedRef.current) setOrderMessage(null);
+                }, 4000);
+            }
+        };
+
         window.addEventListener('ordersUpdated', onOrdersUpdate);
         window.addEventListener('marketPriceUpdate', onPriceUpdate);
+        window.addEventListener('orderResult', handleOrderResult);
         return () => {
             window.removeEventListener('ordersUpdated', onOrdersUpdate);
             window.removeEventListener('marketPriceUpdate', onPriceUpdate);
+            window.removeEventListener('orderResult', handleOrderResult);
         };
     }, []);
 
@@ -265,15 +284,43 @@ export default React.memo(function OrdersPanel({ isMinimized, onToggleMinimize }
                             <td>{safeFixed(order.commission, 2)}</td>
                             <td className={order.swap >= 0 ? 'positive' : 'negative'}>{safeFixed(order.swap, 2)}</td>
                             <td className="order-action-cell">
-                                {order.stopLoss > 0 ? safeFixed(order.stopLoss, precision) : <span className="order-add-link" onClick={() => setEditOrderPopup({ isOpen: true, orderId: order.orderId, type: 'SL', price: safeFixed(order.openPrice, precision), precision })}>Add SL +</span>}
+                                {order.stopLoss > 0 ? (
+                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}>
+                                        {safeFixed(order.stopLoss, precision)}
+                                        <X 
+                                            size={12} 
+                                            style={{ color: '#DA5244', cursor: 'pointer' }} 
+                                            onClick={() => setCancelExitConfirm({ isOpen: true, ticketId: order.orderId, type: 'SL' })}
+                                        />
+                                    </div>
+                                ) : (
+                                    <span className="order-add-link" onClick={() => setEditOrderPopup({ isOpen: true, orderId: order.orderId, type: 'SL', price: safeFixed(order.openPrice, precision), precision })}>Add SL +</span>
+                                )}
                             </td>
                             <td className="order-action-cell">
-                                {order.takeProfit > 0 ? safeFixed(order.takeProfit, precision) : <span className="order-add-link" onClick={() => setEditOrderPopup({ isOpen: true, orderId: order.orderId, type: 'TP', price: safeFixed(order.openPrice, precision), precision })}>Add TP +</span>}
+                                {order.takeProfit > 0 ? (
+                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}>
+                                        {safeFixed(order.takeProfit, precision)}
+                                        <X 
+                                            size={12} 
+                                            style={{ color: '#DA5244', cursor: 'pointer' }} 
+                                            onClick={() => setCancelExitConfirm({ isOpen: true, ticketId: order.orderId, type: 'TP' })}
+                                        />
+                                    </div>
+                                ) : (
+                                    <span className="order-add-link" onClick={() => setEditOrderPopup({ isOpen: true, orderId: order.orderId, type: 'TP', price: safeFixed(order.openPrice, precision), precision })}>Add TP +</span>
+                                )}
                             </td>
                             <td className={`order-pl-cell ${finalPL >= 0 ? 'positive' : 'negative'}`}>
                                 {safeFixed(finalPL, 2)}
                             </td>
-                            <td className="order-close-cell" style={{ textAlign: 'center' }}><X size={14} className="order-close-btn" /></td>
+                            <td className="order-close-cell" style={{ textAlign: 'center' }}>
+                                <X 
+                                    size={14} 
+                                    className="order-close-btn" 
+                                    onClick={() => ordersWebSocket.closeOrder(order.orderId)}
+                                />
+                            </td>
                         </tr>
                     );
                 });
@@ -305,7 +352,11 @@ export default React.memo(function OrdersPanel({ isMinimized, onToggleMinimize }
                             <td>{safeFixed(order.openPrice, precision)}</td>
                             <td>{safeFixed(displayMarketPrice, precision)}</td>
                             <td style={{ textAlign: 'center' }}>
-                                <Pencil size={14} style={{ color: '#3687ED', cursor: 'pointer' }} />
+                                <Pencil 
+                                    size={14} 
+                                    style={{ color: '#3687ED', cursor: 'pointer' }} 
+                                    onClick={() => setCancelOrderConfirm({ isOpen: true, ticketId: order.orderId })}
+                                />
                             </td>
                         </tr>
                     );
@@ -391,6 +442,28 @@ export default React.memo(function OrdersPanel({ isMinimized, onToggleMinimize }
                     </button>
                 </div>
             </div>
+
+            {/* Order Message Notification */}
+            {orderMessage && (
+                <div style={{
+                    position: 'fixed',
+                    top: '20px',
+                    right: '20px',
+                    zIndex: 2000,
+                    padding: '8px 16px',
+                    borderRadius: '4px',
+                    backgroundColor: orderMessage.type === 'success' ? 'rgba(76, 175, 80, 0.9)' : 'rgba(218, 82, 68, 0.9)',
+                    color: 'white',
+                    fontSize: '11px',
+                    fontWeight: '600',
+                    boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
+                    border: '1px solid rgba(255,255,255,0.1)',
+                    pointerEvents: 'none',
+                    fontFamily: 'Arial, sans-serif'
+                }}>
+                    {orderMessage.text}
+                </div>
+            )}
 
             {/* Orders Table - hidden when minimized */}
             {!isMinimized && (
@@ -561,8 +634,22 @@ export default React.memo(function OrdersPanel({ isMinimized, onToggleMinimize }
                         
                         <button 
                             onClick={() => {
-                                console.log(`Applying ${editOrderPopup.type} of ${editOrderPopup.price} to order ${editOrderPopup.orderId}`);
-                                // TODO: Dispatch API call to modify order
+                                const orderId = editOrderPopup.orderId;
+                                const val = parseFloat(editOrderPopup.price) || 0;
+                                
+                                // Find the existing order in either openPositions or pendingOrders
+                                const allOrders = [...openPositions, ...pendingOrders];
+                                const order = allOrders.find(o => o.orderId === orderId);
+                                
+                                if (order) {
+                                    const payload = {
+                                        ticket_id: orderId,
+                                        new_sl: editOrderPopup.type === 'SL' ? val : (order.stopLoss || 0),
+                                        new_tp: editOrderPopup.type === 'TP' ? val : (order.takeProfit || 0)
+                                    };
+                                    ordersWebSocket.modifyOrder(payload);
+                                }
+                                
                                 setEditOrderPopup({ ...editOrderPopup, isOpen: false });
                             }}
                             style={{
@@ -582,6 +669,153 @@ export default React.memo(function OrdersPanel({ isMinimized, onToggleMinimize }
                         >
                             Apply
                         </button>
+                    </div>
+                </div>
+            )}
+
+            {/* Cancel Order Confirmation Modal */}
+            {cancelOrderConfirm.isOpen && (
+                <div className="orders-confirm-overlay" style={{
+                    position: 'absolute',
+                    top: 0, left: 0, right: 0, bottom: 0,
+                    backgroundColor: 'rgba(10, 15, 28, 0.7)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    zIndex: 100,
+                    backdropFilter: 'blur(2px)'
+                }}>
+                    <div className="orders-confirm-modal" style={{
+                        backgroundColor: '#111625',
+                        border: '1px solid #1A2138',
+                        borderRadius: '6px',
+                        padding: '16px 24px',
+                        boxShadow: '0 4px 12px rgba(0,0,0,0.6)',
+                        textAlign: 'center',
+                        minWidth: '260px',
+                        fontFamily: 'Arial, sans-serif'
+                    }}>
+                        <p style={{ margin: '0 0 16px 0', fontSize: '11px', color: '#FFFFFF', fontWeight: 'normal' }}>
+                            Are you sure you want to cancel this order?
+                        </p>
+                        <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
+                            <button 
+                                onClick={() => {
+                                    ordersWebSocket.cancelOrder(cancelOrderConfirm.ticketId);
+                                    setCancelOrderConfirm({ isOpen: false, ticketId: null });
+                                }}
+                                style={{
+                                    backgroundColor: 'rgba(76, 175, 80, 0.1)',
+                                    border: '1px solid #4CAF50',
+                                    color: '#4CAF50',
+                                    padding: '4px 20px',
+                                    borderRadius: '4px',
+                                    cursor: 'pointer',
+                                    fontWeight: 'normal',
+                                    fontSize: '11px',
+                                    fontFamily: 'Arial, sans-serif',
+                                    transition: 'all 0.2s'
+                                }}
+                                onMouseEnter={(e) => e.target.style.backgroundColor = 'rgba(76, 175, 80, 0.2)'}
+                                onMouseLeave={(e) => e.target.style.backgroundColor = 'rgba(76, 175, 80, 0.1)'}
+                            >
+                                Yes
+                            </button>
+                            <button 
+                                onClick={() => setCancelOrderConfirm({ isOpen: false, ticketId: null })}
+                                style={{
+                                    backgroundColor: 'rgba(218, 82, 68, 0.1)',
+                                    border: '1px solid #DA5244',
+                                    color: '#DA5244',
+                                    padding: '4px 20px',
+                                    borderRadius: '4px',
+                                    cursor: 'pointer',
+                                    fontWeight: 'normal',
+                                    fontSize: '11px',
+                                    fontFamily: 'Arial, sans-serif',
+                                    transition: 'all 0.2s'
+                                }}
+                                onMouseEnter={(e) => e.target.style.backgroundColor = 'rgba(218, 82, 68, 0.2)'}
+                                onMouseLeave={(e) => e.target.style.backgroundColor = 'rgba(218, 82, 68, 0.1)'}
+                            >
+                                No
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Cancel SL/TP Confirmation Modal */}
+            {cancelExitConfirm.isOpen && (
+                <div className="orders-confirm-overlay" style={{
+                    position: 'absolute',
+                    top: 0, left: 0, right: 0, bottom: 0,
+                    backgroundColor: 'rgba(10, 15, 28, 0.7)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    zIndex: 100,
+                    backdropFilter: 'blur(2px)'
+                }}>
+                    <div className="orders-confirm-modal" style={{
+                        backgroundColor: '#111625',
+                        border: '1px solid #1A2138',
+                        borderRadius: '6px',
+                        padding: '16px 24px',
+                        boxShadow: '0 4px 12px rgba(0,0,0,0.6)',
+                        textAlign: 'center',
+                        minWidth: '260px',
+                        fontFamily: 'Arial, sans-serif'
+                    }}>
+                        <p style={{ margin: '0 0 16px 0', fontSize: '11px', color: '#FFFFFF', fontWeight: 'normal' }}>
+                            Are you sure you want to cancel this {cancelExitConfirm.type === 'SL' ? 'Stop Loss' : 'Take Profit'}?
+                        </p>
+                        <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
+                            <button 
+                                onClick={() => {
+                                    const allOrders = [...openPositions, ...pendingOrders];
+                                    const order = allOrders.find(o => o.orderId === cancelExitConfirm.ticketId);
+                                    if (order) {
+                                        const payload = {
+                                            ticket_id: cancelExitConfirm.ticketId,
+                                            new_sl: cancelExitConfirm.type === 'SL' ? 0 : (order.stopLoss || 0),
+                                            new_tp: cancelExitConfirm.type === 'TP' ? 0 : (order.takeProfit || 0)
+                                        };
+                                        ordersWebSocket.modifyOrder(payload);
+                                    }
+                                    setCancelExitConfirm({ isOpen: false, ticketId: null, type: null });
+                                }}
+                                style={{
+                                    backgroundColor: 'rgba(76, 175, 80, 0.1)',
+                                    border: '1px solid #4CAF50',
+                                    color: '#4CAF50',
+                                    padding: '4px 20px',
+                                    borderRadius: '4px',
+                                    cursor: 'pointer',
+                                    fontWeight: 'normal',
+                                    fontSize: '11px',
+                                    fontFamily: 'Arial, sans-serif'
+                                }}
+                            >
+                                Yes
+                            </button>
+                            <button 
+                                onClick={() => setCancelExitConfirm({ isOpen: false, ticketId: null, type: null })}
+                                style={{
+                                    backgroundColor: 'rgba(218, 82, 68, 0.1)',
+                                    border: '1px solid #DA5244',
+                                    color: '#DA5244',
+                                    padding: '4px 20px',
+                                    borderRadius: '4px',
+                                    cursor: 'pointer',
+                                    fontWeight: 'normal',
+                                    fontSize: '11px',
+                                    fontFamily: 'Arial, sans-serif'
+                                }}
+                            >
+                                No
+                            </button>
+                        </div>
                     </div>
                 </div>
             )}

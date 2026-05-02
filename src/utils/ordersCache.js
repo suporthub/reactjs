@@ -57,9 +57,9 @@ function normalizePendingOrder(ord) {
         orderId: ord.ticket_id || ord.orderId || '',
         symbolName: ord.symbol || ord.symbolName || '',
         orderTime: ord.order_time || ord.open_time || ord.orderTime || null,
-        orderType: (ord.order_side || ord.side || ord.order_type || ord.orderType || '').toUpperCase(),
+        orderType: (ord.order_type || ord.orderType || ord.order_side || ord.side || '').toUpperCase(),
         quantity: parseFloat(ord.volume || ord.quantity) || 0,
-        openPrice: parseFloat(ord.open_price || ord.openPrice || ord.price) || 0,
+        openPrice: parseFloat(ord.requested_price || ord.open_price || ord.openPrice || ord.price) || 0,
         marketPrice: parseFloat(ord.market_price || ord.marketPrice) || 0,
     };
 }
