@@ -215,13 +215,19 @@ export default function ChartMain({ selectedSymbol, selectedTimeframe, setSelect
                 widgetRef.current.onChartReady(() => {
                     if (!isMounted) return;
                     const w = widgetRef.current;
-                    w.applyOverrides(overrides);
-                    w.applyStudiesOverrides(studiesOverrides);
 
                     // ── Restore saved drawings/indicators via low-level load() ──
                     if (savedState) {
                         console.log('[ChartMain] Restoring saved chart state (drawings/indicators)...');
-                        w.load(savedState);
+                        w.load(savedState).then(() => {
+                            if (isMounted) {
+                                w.applyOverrides(overrides);
+                                w.applyStudiesOverrides(studiesOverrides);
+                            }
+                        });
+                    } else {
+                        w.applyOverrides(overrides);
+                        w.applyStudiesOverrides(studiesOverrides);
                     }
 
                     // ── Sync timeframe to parent UI ──
