@@ -1,13 +1,19 @@
 import { tradingConfigManager } from '../../utils/tradingConfigCache';
 
 /**
- * LiveFXHub TradingView Datafeed — Production-Ready v2
+ * LiveFXHub TradingView Datafeed — Production-Ready v3
  *
  * – History:  fetches OHLC from /candles REST API (protobuf)
- * – Live:     subscribes to tick updates via protobuf WebSocket
- * – Scroll:   infinite left-scroll triggers older history fetch
+ * – Live:     subscribes to tick updates via MarketSidebar events
+ * – Scroll:   robust infinite left-scroll with gap-skipping for
+ *             24x5 markets (forex/metals) and 24x7 (crypto)
  * – Background: visibilitychange gap recovery on tab refocus
  * – Time:     all bar timestamps are UTC-aligned epoch seconds
+ *
+ * Key improvement in v3: scroll-back no longer stops at weekend
+ * gaps. When an empty response is received, we retry further back
+ * (up to 3 times, each jump = 3 × barDuration × countBack) before
+ * declaring noData.
  */
 
 // ── Interval mappings ──────────────────────────────────────────
@@ -36,6 +42,13 @@ const RES_TO_SEC = {
     '1D': 86400, '1W': 604800, '1M': 2592000,
     '1S': 1, '5S': 5, '15S': 15, '30S': 30,
 };
+
+// ── How far back to scan on empty gaps (per retry) ─────────────
+// Uses exponential backoff: 3→6→12→24→48→96 days.
+// Total coverage: 189 days — handles multi-week data gaps
+// (e.g. service downtime, holiday periods, missing ingestion).
+const GAP_SKIP_INITIAL_DAYS = 3;
+const MAX_GAP_RETRIES = 6;
 
 // ── Helper: Derive PriceScale from Precision ──────────────────
 function getPriceScale(precision) {
@@ -161,9 +174,8 @@ async function _fetchCandlesImpl(symbol, resolution, fromMs, toMs) {
 }
 
 /**
- * WssManager — NOW A PASSIVE LISTENER
- * Instead of opening its own WebSocket, it listens for 'marketPriceUpdate'
- * events broadcasted by the MarketSidebar component.
+ * WssManager — PASSIVE LISTENER
+ * Listens for 'marketPriceUpdate' events broadcasted by MarketSidebar.
  */
 class WssManager {
     constructor() {
@@ -270,8 +282,12 @@ export function createDatafeed() {
     const wss = getWssManager();
 
     // Shared state: capture lastBar from getBars for each symbol+resolution
-    // so subscribeBars can use it directly (no separate fetch)
     const _lastBarMap = new Map(); // "SYMBOL|resolution" → lastBar
+
+    // Track the earliest known timestamp per symbol+resolution
+    // Once we get noData from the server, record the floor so we
+    // don't keep hammering the API for dates before the data begins.
+    const _earliestDataMap = new Map(); // "SYMBOL|resolution" → earliest epoch ms (or -1 = truly no more)
 
     return {
         onReady(callback) {
@@ -349,6 +365,8 @@ export function createDatafeed() {
         async getBars(symbolInfo, resolution, periodParams, onHistoryCallback, onErrorCallback) {
             const { from, to, firstDataRequest, countBack } = periodParams;
             const symbol = symbolInfo.name;
+            const key = `${symbol}|${resolution}`;
+            const barDuration = RES_TO_SEC[resolution] || 60;
 
             // TradingView passes from/to as UTC seconds
             let fromMs = from * 1000;
@@ -356,21 +374,53 @@ export function createDatafeed() {
 
             console.log(`[Datafeed] getBars ${symbol} res=${resolution} from=${new Date(fromMs).toISOString()} to=${new Date(toMs).toISOString()} first=${firstDataRequest} countBack=${countBack}`);
 
+            // Early exit: only if we've exhaustively confirmed no more data exists
+            // (-1 means gap-skip retries were fully exhausted with zero results)
+            const knownEarliest = _earliestDataMap.get(key);
+            if (knownEarliest === -1) {
+                console.log(`[Datafeed] ${symbol}: data boundary exhausted, noData=true`);
+                onHistoryCallback([], { noData: true });
+                return;
+            }
+
             try {
                 let bars = await fetchCandles(symbol, resolution, fromMs, toMs);
 
-                // If firstDataRequest returned no data, try fetching a wider range
-                // to find the nearest available data
+                // ── Gap-skipping logic for scroll-back ──
+                // If this is NOT the first request (i.e. user scrolled left)
+                // and we got 0 bars, there might be a weekend/holiday gap
+                // or a multi-week data gap (service downtime etc.).
+                // Uses exponential backoff: 3→6→12→24→48→96 days per retry.
+                if (bars.length === 0 && !firstDataRequest) {
+                    let retryFrom = fromMs;
+                    let retryTo = toMs;
+                    let jumpDays = GAP_SKIP_INITIAL_DAYS;
+
+                    for (let attempt = 0; attempt < MAX_GAP_RETRIES; attempt++) {
+                        const jumpMs = jumpDays * 86400 * 1000;
+                        retryFrom -= jumpMs;
+                        console.log(`[Datafeed] Gap detected for ${symbol}, retry #${attempt + 1} (${jumpDays}d jump): from=${new Date(retryFrom).toISOString()} to=${new Date(retryTo).toISOString()}`);
+
+                        bars = await fetchCandles(symbol, resolution, retryFrom, retryTo);
+                        if (bars.length > 0) {
+                            console.log(`[Datafeed] Found ${bars.length} bars after ${attempt + 1} gap-skip retries`);
+                            break;
+                        }
+                        jumpDays *= 2; // exponential: 3→6→12→24→48→96
+                    }
+                }
+
+                // ── First data request: if still empty, try a wide 90-day scan ──
                 if (bars.length === 0 && firstDataRequest) {
-                    const barDuration = RES_TO_SEC[resolution] || 60;
-                    // Try up to 24 hours back
-                    const widerFrom = Date.now() - (86400 * 1000);
-                    console.log(`[Datafeed] No data in range, trying wider: from=${new Date(widerFrom).toISOString()}`);
+                    const widerFrom = Date.now() - (90 * 86400 * 1000); // 90 days back
+                    console.log(`[Datafeed] No data in initial range for ${symbol}, trying 90-day scan from=${new Date(widerFrom).toISOString()}`);
                     bars = await fetchCandles(symbol, resolution, widerFrom, Date.now());
                 }
 
                 if (bars.length === 0) {
-                    console.log(`[Datafeed] ${symbol}: noData=true`);
+                    console.log(`[Datafeed] ${symbol}: truly no data available, noData=true`);
+                    // Record that we've exhausted all data for this symbol
+                    _earliestDataMap.set(key, -1);
                     onHistoryCallback([], { noData: true });
                     return;
                 }
@@ -388,6 +438,10 @@ export function createDatafeed() {
                 // Sort ascending
                 uniqueBars.sort((a, b) => a.time - b.time);
 
+                // Note: we do NOT record earliest bar from successful responses.
+                // _earliestDataMap is only set to -1 when gap-skip retries are
+                // exhausted, confirming we've reached the true data boundary.
+
                 // If countBack is provided, return only the last N bars
                 let result = uniqueBars;
                 if (countBack && countBack > 0 && uniqueBars.length > countBack) {
@@ -396,7 +450,6 @@ export function createDatafeed() {
 
                 // Store the last bar for subscribeBars to use
                 const lastBar = result[result.length - 1];
-                const key = `${symbol}|${resolution}`;
 
                 // ONLY update if it's the first data request (most recent data),
                 // OR if the new lastBar is newer than what we already have.
@@ -405,7 +458,7 @@ export function createDatafeed() {
                     _lastBarMap.set(key, { ...lastBar });
                 }
 
-                console.log(`[Datafeed] ${symbol} res=${resolution}: returning ${result.length} bars, lastBar time=${new Date(lastBar.time).toISOString()} close=${lastBar.close}`);
+                console.log(`[Datafeed] ${symbol} res=${resolution}: returning ${result.length} bars, firstBar=${new Date(result[0].time).toISOString()}, lastBar=${new Date(lastBar.time).toISOString()}`);
 
                 onHistoryCallback(result, { noData: false });
             } catch (err) {
@@ -419,7 +472,6 @@ export function createDatafeed() {
             const key = `${symbol}|${resolution}`;
 
             // Use the lastBar captured from getBars — this is what TradingView has
-            // Using a different lastBar would cause TradingView to reject updates
             const lastBar = _lastBarMap.get(key) || null;
 
             console.log(`[Datafeed] subscribeBars ${symbol} res=${resolution} lastBar=${lastBar ? new Date(lastBar.time).toISOString() : 'null'}`);

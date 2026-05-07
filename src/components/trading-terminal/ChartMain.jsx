@@ -20,6 +20,8 @@ const TIMEFRAMES = [
     { label: '1M', tv: '1M' },
 ];
 
+const API_BASE = 'https://v3.livefxhub.com:8444/api/live/charts';
+
 // ── TradingView chart loader ──────────────────────────────────
 function loadTradingViewScript() {
     return new Promise((resolve, reject) => {
@@ -57,7 +59,6 @@ export default function ChartMain({ selectedSymbol, selectedTimeframe, setSelect
         window.addEventListener('tradingModeChanged', handleModeChange);
         window.addEventListener('themeChanged', handleThemeChange);
 
-        // Observer for theme changes on documentElement (fallback)
         const observer = new MutationObserver(() => {
             const currentTheme = document.documentElement.getAttribute('data-theme') || 'dark';
             setTheme(currentTheme);
@@ -113,12 +114,33 @@ export default function ChartMain({ selectedSymbol, selectedTimeframe, setSelect
                 const bgColor = isDark ? '#0d1117' : '#ffffff';
                 const textColor = isDark ? '#8b949e' : '#24292f';
                 const gridColor = isDark ? '#21262d' : '#f0f3fa';
-                
-                // Sidebar exact colors
                 const primaryBlue = '#3687ED'; 
                 const primaryRed = '#DA5244';
 
                 console.log('[ChartMain] Initializing with theme:', theme, 'isDark:', isDark, 'bgColor:', bgColor);
+
+                // ── Pre-fetch saved chart state from server ──
+                const sym = selectedSymbol || 'AUDCAD';
+                let savedState = null;
+                let savedResolution = null;
+                try {
+                    const token = localStorage.getItem('tradingAccessToken');
+                    if (token) {
+                        const res = await fetch(`${API_BASE}/${sym}`, {
+                            headers: { 'Authorization': `Bearer ${token}` }
+                        });
+                        if (res.ok) {
+                            const json = await res.json();
+                            if (json?.data?.content) {
+                                savedState = JSON.parse(json.data.content);
+                                savedResolution = json.data.resolution;
+                                console.log('[ChartMain] Loaded saved chart for', sym, 'resolution:', savedResolution);
+                            }
+                        }
+                    }
+                } catch (e) { console.warn('[ChartMain] Failed to fetch saved chart:', e); }
+
+                const initialResolution = savedResolution || activeTf;
 
                 // Intervals based on mode
                 const intervals = tradingMode === 'Normal'
@@ -138,17 +160,12 @@ export default function ChartMain({ selectedSymbol, selectedTimeframe, setSelect
                     'mainSeriesProperties.candleStyle.wickDownColor': primaryRed,
                     'mainSeriesProperties.candleStyle.borderUpColor': primaryBlue,
                     'mainSeriesProperties.candleStyle.borderDownColor': primaryRed,
-                    
-                    // Force background
                     'paneProperties.background': bgColor,
                     'paneProperties.backgroundType': 'solid',
-
                     'scalesProperties.textColor': textColor,
                     'scalesProperties.lineColor': gridColor,
                     'paneProperties.vertGridProperties.color': gridColor,
                     'paneProperties.horzGridProperties.color': gridColor,
-                    
-                    // Scale sizes (requested 10px)
                     'scalesProperties.fontSize': 10,
                 };
 
@@ -161,16 +178,17 @@ export default function ChartMain({ selectedSymbol, selectedTimeframe, setSelect
                     container: containerRef.current,
                     library_path: '/trading-view/charting_library/',
                     locale: 'en',
-                    symbol: selectedSymbol || 'AUDCAD',
-                    interval: activeTf,
+                    symbol: sym,
+                    interval: initialResolution,
                     datafeed: datafeed,
                     theme: isDark ? 'Dark' : 'Light',
                     style: '1',
                     toolbar_bg: bgColor,
-                    overrides: overrides,
+                    overrides,
                     studies_overrides: studiesOverrides,
                     fullscreen: false,
                     autosize: true,
+                    auto_save_delay: 5,
                     disabled_features: [
                         'header_symbol_search',
                         'header_compare',
@@ -186,25 +204,57 @@ export default function ChartMain({ selectedSymbol, selectedTimeframe, setSelect
                         'hide_last_na_study_output',
                         'move_logo_to_main_pane',
                         'seconds_resolution',
-                        'use_localstorage_for_settings',
-                        'save_chart_properties_to_local_storage',
                     ],
                     custom_resolutions: true,
-                    favorites: {
-                        intervals: intervals,
-                    },
+                    favorites: { intervals },
                     custom_css_url: '/chart-custom.css',
-                    load_last_chart: true,
                     client_id: 'livefxhub',
                     user_id: 'public',
                 });
 
                 widgetRef.current.onChartReady(() => {
-                    if (isMounted) {
-                        widgetRef.current.applyOverrides(overrides);
-                        widgetRef.current.applyStudiesOverrides(studiesOverrides);
-                        setLoading(false);
+                    if (!isMounted) return;
+                    const w = widgetRef.current;
+                    w.applyOverrides(overrides);
+                    w.applyStudiesOverrides(studiesOverrides);
+
+                    // ── Restore saved drawings/indicators via low-level load() ──
+                    if (savedState) {
+                        console.log('[ChartMain] Restoring saved chart state (drawings/indicators)...');
+                        w.load(savedState);
                     }
+
+                    // ── Sync timeframe to parent UI ──
+                    if (savedResolution && setSelectedTimeframe) {
+                        const tf = TIMEFRAMES.find(t => t.tv === savedResolution);
+                        if (tf) setSelectedTimeframe(tf.label);
+                    }
+
+                    w.chart().onIntervalChanged().subscribe(null, (interval) => {
+                        const tf = TIMEFRAMES.find(t => t.tv === interval);
+                        if (tf && setSelectedTimeframe) setSelectedTimeframe(tf.label);
+                    });
+
+                    // ── Auto-save: persist chart state on user changes ──
+                    w.subscribe('onAutoSaveNeeded', () => {
+                        const token = localStorage.getItem('tradingAccessToken');
+                        if (!token) return;
+                        w.save((state) => {
+                            const currentSym = w.chart().symbol() || sym;
+                            const resolution = w.chart().resolution();
+                            console.log('[ChartMain] Auto-saving chart for', currentSym, 'res:', resolution);
+                            fetch(`${API_BASE}/${currentSym}`, {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    'Authorization': `Bearer ${token}`
+                                },
+                                body: JSON.stringify({ resolution, content: JSON.stringify(state) })
+                            }).catch(e => console.error('[ChartMain] Auto-save failed:', e));
+                        });
+                    });
+
+                    setLoading(false);
                 });
             } catch (err) {
                 console.error('[ChartMain] init error:', err);
@@ -213,9 +263,7 @@ export default function ChartMain({ selectedSymbol, selectedTimeframe, setSelect
         };
 
         init();
-        return () => {
-            isMounted = false;
-        };
+        return () => { isMounted = false; };
     }, [containerRef, theme, tradingMode]);
 
     // ── Symbol/Timeframe Updates (In-place) ──────────────────────
@@ -252,7 +300,6 @@ export default function ChartMain({ selectedSymbol, selectedTimeframe, setSelect
                         <button onClick={() => window.location.reload()}>Retry</button>
                     </div>
                 )}
-                {/* TradingView mounts into this div */}
                 <div ref={containerRef} style={{ width: '100%', height: '100%' }} />
             </div>
         </div>
