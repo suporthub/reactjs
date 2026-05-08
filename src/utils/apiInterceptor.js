@@ -50,7 +50,7 @@ const isAuthEndpoint = (url) => {
     '/login', '/signup', '/refresh-token', '/forgot',
     '/verify', '/reset', '/otp',
     '/trading-config', '/order/place', '/order/close',
-    '/orders/portfolio', '/orders/active'
+    '/orders/portfolio', '/orders/active', '/orders/history'
   ];
   return skipPaths.some(path => url.includes(path));
 };

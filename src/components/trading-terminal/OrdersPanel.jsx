@@ -2,12 +2,14 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { X, ChevronDown, ChevronUp, Pencil } from 'lucide-react';
 import { ordersManager } from '../../utils/ordersCache';
 import { ordersWebSocket } from '../../utils/ordersWebSocket';
+import { tradingFetch } from '../../utils/tradingTokenManager';
 
 const TABS = ['Open Positions', 'Pending Orders', 'Rejected Orders', 'History'];
 
-// Kept as local static data — these tabs are NOT part of the /orders/active API
-const REJECTED_ORDERS_DATA = [];
-const HISTORY_DATA = [];
+// API config for history & rejected orders
+
+const HISTORY_API_URL = 'https://v3.livefxhub.com:8444/api/orders/history';
+const HISTORY_PAGE_LIMIT = 50;
 
 export default React.memo(function OrdersPanel({ isMinimized, onToggleMinimize }) {
     const [activeTab, setActiveTab] = useState('Open Positions');
@@ -22,7 +24,25 @@ export default React.memo(function OrdersPanel({ isMinimized, onToggleMinimize }
     const [cancelOrderConfirm, setCancelOrderConfirm] = useState({ isOpen: false, ticketId: null });
     const [cancelExitConfirm, setCancelExitConfirm] = useState({ isOpen: false, ticketId: null, type: null });
     const [orderMessage, setOrderMessage] = useState(null);
+
+    // ── History tab state ──────────────────────────────────────
+    const [historyData, setHistoryData] = useState([]);
+    const [historyLoading, setHistoryLoading] = useState(false);
+    const [historyCursor, setHistoryCursor] = useState(null);
+    const [historyHasMore, setHistoryHasMore] = useState(true);
+    const [historyInitialLoaded, setHistoryInitialLoaded] = useState(false);
+
+    // ── Rejected Orders tab state ──────────────────────────────
+    const [rejectedData, setRejectedData] = useState([]);
+    const [rejectedLoading, setRejectedLoading] = useState(false);
+    const [rejectedCursor, setRejectedCursor] = useState(null);
+    const [rejectedHasMore, setRejectedHasMore] = useState(true);
+    const [rejectedInitialLoaded, setRejectedInitialLoaded] = useState(false);
+
+    const tableScrollRef = useRef(null);
     const mountedRef = useRef(true);
+    const historyFetchingRef = useRef(false);
+    const rejectedFetchingRef = useRef(false);
 
     // ── Clock ──────────────────────────────────────────────────
     useEffect(() => {
@@ -115,6 +135,125 @@ export default React.memo(function OrdersPanel({ isMinimized, onToggleMinimize }
             window.removeEventListener('orderResult', handleOrderResult);
         };
     }, []);
+
+    // ── History API fetch ────────────────────────────────────────
+    const fetchHistory = useCallback(async (cursor = null, isLoadMore = false) => {
+        // Prevent duplicate fetches
+        if (historyFetchingRef.current) return;
+        historyFetchingRef.current = true;
+
+        if (!isLoadMore) {
+            setHistoryLoading(true);
+        }
+
+        try {
+            let url = `${HISTORY_API_URL}?type=completed&limit=${HISTORY_PAGE_LIMIT}`;
+            if (cursor) {
+                url += `&cursor=${cursor}`;
+            }
+
+            const response = await tradingFetch(url, { method: 'GET' });
+
+            if (!response.ok) {
+                console.error('[OrdersPanel] History fetch failed:', response.status);
+                return;
+            }
+
+            const result = await response.json();
+            const newOrders = result.data || [];
+            const nextCursor = result.next_cursor || null;
+
+            if (mountedRef.current) {
+                if (isLoadMore) {
+                    setHistoryData(prev => [...prev, ...newOrders]);
+                } else {
+                    setHistoryData(newOrders);
+                }
+                setHistoryCursor(nextCursor);
+                setHistoryHasMore(nextCursor !== null && newOrders.length >= HISTORY_PAGE_LIMIT);
+                setHistoryInitialLoaded(true);
+            }
+        } catch (err) {
+            console.error('[OrdersPanel] History fetch error:', err);
+        } finally {
+            if (mountedRef.current) {
+                setHistoryLoading(false);
+            }
+            historyFetchingRef.current = false;
+        }
+    }, []);
+
+    // ── Rejected Orders API fetch ────────────────────────────────
+    const fetchRejected = useCallback(async (cursor = null, isLoadMore = false) => {
+        if (rejectedFetchingRef.current) return;
+        rejectedFetchingRef.current = true;
+
+        if (!isLoadMore) {
+            setRejectedLoading(true);
+        }
+
+        try {
+            let url = `${HISTORY_API_URL}?type=rejected&limit=${HISTORY_PAGE_LIMIT}`;
+            if (cursor) {
+                url += `&cursor=${cursor}`;
+            }
+
+            const response = await tradingFetch(url, { method: 'GET' });
+
+            if (!response.ok) {
+                console.error('[OrdersPanel] Rejected fetch failed:', response.status);
+                return;
+            }
+
+            const result = await response.json();
+            const newOrders = result.data || [];
+            const nextCursor = result.next_cursor || null;
+
+            if (mountedRef.current) {
+                if (isLoadMore) {
+                    setRejectedData(prev => [...prev, ...newOrders]);
+                } else {
+                    setRejectedData(newOrders);
+                }
+                setRejectedCursor(nextCursor);
+                setRejectedHasMore(nextCursor !== null && newOrders.length >= HISTORY_PAGE_LIMIT);
+                setRejectedInitialLoaded(true);
+            }
+        } catch (err) {
+            console.error('[OrdersPanel] Rejected fetch error:', err);
+        } finally {
+            if (mountedRef.current) {
+                setRejectedLoading(false);
+            }
+            rejectedFetchingRef.current = false;
+        }
+    }, []);
+
+    // ── Fetch data when tab is selected ──────────────────────────
+    useEffect(() => {
+        if (activeTab === 'History' && !historyInitialLoaded) {
+            fetchHistory();
+        }
+        if (activeTab === 'Rejected Orders' && !rejectedInitialLoaded) {
+            fetchRejected();
+        }
+    }, [activeTab, historyInitialLoaded, rejectedInitialLoaded, fetchHistory, fetchRejected]);
+
+    // ── Infinite scroll handler for both History & Rejected ─────
+    const handleTableScroll = useCallback((e) => {
+        const el = e.target;
+        if (el.scrollHeight - el.scrollTop - el.clientHeight >= 40) return;
+
+        if (activeTab === 'History') {
+            if (!historyHasMore || historyLoading || historyFetchingRef.current) return;
+            const lastItem = historyData[historyData.length - 1];
+            if (lastItem) fetchHistory(lastItem.id, true);
+        } else if (activeTab === 'Rejected Orders') {
+            if (!rejectedHasMore || rejectedLoading || rejectedFetchingRef.current) return;
+            const lastItem = rejectedData[rejectedData.length - 1];
+            if (lastItem) fetchRejected(lastItem.id, true);
+        }
+    }, [activeTab, historyHasMore, historyLoading, historyData, fetchHistory, rejectedHasMore, rejectedLoading, rejectedData, fetchRejected]);
 
     // ── Format helpers ──────────────────────────────────────────
     const formatTime = useCallback((time) => {
@@ -362,44 +501,68 @@ export default React.memo(function OrdersPanel({ isMinimized, onToggleMinimize }
                     );
                 });
             case 'Rejected Orders':
-                if (REJECTED_ORDERS_DATA.length === 0) return <tr><td colSpan={7} style={{ textAlign: 'center', padding: '16px', color: 'var(--text-muted)' }}>No rejected orders</td></tr>;
-                return REJECTED_ORDERS_DATA.map((order) => (
-                    <tr key={order.orderId}>
-                        <td className="order-id-cell">{order.orderId}</td>
-                        <td className="order-symbol-cell">{order.symbolName}</td>
-                        <td className="order-time-cell">{formatTime(order.rejectedTime)}</td>
-                        <td>
-                            <span className={`order-type-badge ${order.orderType.toLowerCase().includes('buy') ? 'buy' : 'sell'}`}>
-                                {order.orderType}
-                            </span>
-                        </td>
-                        <td>{safeFixed(order.quantity, 2)}</td>
-                        <td>{safeFixed(order.rejectedPrice, 2)}</td>
-                        <td style={{ color: '#DA5244' }}>{order.reason}</td>
-                    </tr>
-                ));
+                if (rejectedLoading && rejectedData.length === 0) return <tr><td colSpan={7} style={{ textAlign: 'center', padding: '16px', color: 'var(--text-muted)' }}>Loading rejected orders...</td></tr>;
+                if (!rejectedLoading && rejectedData.length === 0) return <tr><td colSpan={7} style={{ textAlign: 'center', padding: '16px', color: 'var(--text-muted)' }}>No rejected orders</td></tr>;
+                return (
+                    <>
+                        {rejectedData.map((order) => {
+                            const precision = symbolConfigs[order.symbol]?.showPoints ?? 5;
+                            return (
+                                <tr key={order.id}>
+                                    <td className="order-id-cell">{order.orderId}</td>
+                                    <td className="order-symbol-cell">{order.symbol}</td>
+                                    <td className="order-time-cell">{formatTime(order.updatedAt)}</td>
+                                    <td>
+                                        <span className={`order-type-badge ${order.orderType.toLowerCase().includes('buy') ? 'buy' : 'sell'}`}>
+                                            {order.orderType}
+                                        </span>
+                                    </td>
+                                    <td>{safeFixed(order.volume, 2)}</td>
+                                    <td>{safeFixed(order.openPrice, precision)}</td>
+                                    <td style={{ color: '#DA5244', textTransform: 'capitalize' }}>{order.closeReason || '—'}</td>
+                                </tr>
+                            );
+                        })}
+                        {rejectedLoading && (
+                            <tr><td colSpan={7} style={{ textAlign: 'center', padding: '10px', color: 'var(--text-muted)' }}>Loading more...</td></tr>
+                        )}
+                    </>
+                );
             case 'History':
-                if (HISTORY_DATA.length === 0) return <tr><td colSpan={12} style={{ textAlign: 'center', padding: '16px', color: 'var(--text-muted)' }}>No history</td></tr>;
-                return HISTORY_DATA.map((order) => (
-                    <tr key={order.orderId}>
-                        <td className="order-id-cell">{order.orderId}</td>
-                        <td className="order-symbol-cell">{order.symbolName}</td>
-                        <td className="order-time-cell">{formatTime(order.openTime)}</td>
-                        <td className="order-time-cell">{formatTime(order.closeTime)}</td>
-                        <td>
-                            <span className={`order-type-badge ${order.orderType.toLowerCase().includes('buy') ? 'buy' : 'sell'}`}>
-                                {order.orderType}
-                            </span>
-                        </td>
-                        <td>{safeFixed(order.quantity, 2)}</td>
-                        <td>{safeFixed(order.openPrice, 2)}</td>
-                        <td>{safeFixed(order.closePrice, 2)}</td>
-                        <td>{safeFixed(order.commission, 2)}</td>
-                        <td>{safeFixed(order.swap, 2)}</td>
-                        <td className={order.netProfit >= 0 ? 'positive' : 'negative'}>{safeFixed(order.netProfit, 2)}</td>
-                        <td>{order.closeMessage}</td>
-                    </tr>
-                ));
+                if (historyLoading && historyData.length === 0) return <tr><td colSpan={12} style={{ textAlign: 'center', padding: '16px', color: 'var(--text-muted)' }}>Loading history...</td></tr>;
+                if (!historyLoading && historyData.length === 0) return <tr><td colSpan={12} style={{ textAlign: 'center', padding: '16px', color: 'var(--text-muted)' }}>No history</td></tr>;
+                return (
+                    <>
+                        {historyData.map((order) => {
+                            const precision = symbolConfigs[order.symbol]?.showPoints ?? 5;
+                            const totalCommission = parseFloat(order.openCommission || 0) + parseFloat(order.closeCommission || 0);
+                            const netPnl = parseFloat(order.netPnl || 0);
+                            return (
+                                <tr key={order.id}>
+                                    <td className="order-id-cell">{order.orderId}</td>
+                                    <td className="order-symbol-cell">{order.symbol}</td>
+                                    <td className="order-time-cell">{formatTime(order.openedAt)}</td>
+                                    <td className="order-time-cell">{formatTime(order.closedAt)}</td>
+                                    <td>
+                                        <span className={`order-type-badge ${order.orderType.toLowerCase().includes('buy') ? 'buy' : 'sell'}`}>
+                                            {order.orderType}
+                                        </span>
+                                    </td>
+                                    <td>{safeFixed(order.volume, 2)}</td>
+                                    <td>{safeFixed(order.openPrice, precision)}</td>
+                                    <td>{safeFixed(order.closePrice, precision)}</td>
+                                    <td>{safeFixed(totalCommission, 2)}</td>
+                                    <td>{safeFixed(order.swap, 2)}</td>
+                                    <td className={netPnl >= 0 ? 'positive' : 'negative'}>{safeFixed(netPnl, 2)}</td>
+                                    <td style={{ textTransform: 'capitalize' }}>{order.closeReason || '—'}</td>
+                                </tr>
+                            );
+                        })}
+                        {historyLoading && (
+                            <tr><td colSpan={12} style={{ textAlign: 'center', padding: '10px', color: 'var(--text-muted)' }}>Loading more...</td></tr>
+                        )}
+                    </>
+                );
             default:
                 return null;
         }
@@ -414,7 +577,16 @@ export default React.memo(function OrdersPanel({ isMinimized, onToggleMinimize }
                         <button
                             key={tab}
                             className={`orders-tab ${activeTab === tab ? 'active' : ''}`}
-                            onClick={() => setActiveTab(tab)}
+                            onClick={() => {
+                                setActiveTab(tab);
+                                // Fetch data on first visit for API-backed tabs
+                                if (tab === 'History' && !historyInitialLoaded) {
+                                    fetchHistory();
+                                }
+                                if (tab === 'Rejected Orders' && !rejectedInitialLoaded) {
+                                    fetchRejected();
+                                }
+                            }}
                         >
                             {tab}
                         </button>
@@ -467,7 +639,11 @@ export default React.memo(function OrdersPanel({ isMinimized, onToggleMinimize }
 
             {/* Orders Table - hidden when minimized */}
             {!isMinimized && (
-                <div className="orders-table-wrapper">
+                <div 
+                    className="orders-table-wrapper" 
+                    ref={tableScrollRef}
+                    onScroll={(activeTab === 'History' || activeTab === 'Rejected Orders') ? handleTableScroll : undefined}
+                >
                     <table className="orders-table">
                         <thead>
                             {renderHeader()}
