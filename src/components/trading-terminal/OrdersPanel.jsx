@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { X, ChevronDown, ChevronUp, Pencil } from 'lucide-react';
+import { X, ChevronDown, ChevronUp, Pencil, Download } from 'lucide-react';
 import { ordersManager } from '../../utils/ordersCache';
 import { ordersWebSocket } from '../../utils/ordersWebSocket';
 import { tradingFetch } from '../../utils/tradingTokenManager';
@@ -71,7 +71,7 @@ export default React.memo(function OrdersPanel({ isMinimized, onToggleMinimize }
                 if (mountedRef.current) {
                     setOpenPositions(orders.open_positions || []);
                     setPendingOrders(orders.pending_orders || []);
-                    
+
                     if (config?.symbols) {
                         const configMap = {};
                         config.symbols.forEach(s => { configMap[s.symbol] = s; });
@@ -87,8 +87,8 @@ export default React.memo(function OrdersPanel({ isMinimized, onToggleMinimize }
             }
         })();
 
-        return () => { 
-            mountedRef.current = false; 
+        return () => {
+            mountedRef.current = false;
             ordersWebSocket.disconnect();
         };
     }, []);
@@ -229,8 +229,43 @@ export default React.memo(function OrdersPanel({ isMinimized, onToggleMinimize }
         }
     }, []);
 
+    const handleDownloadCSV = useCallback(async () => {
+        try {
+            const endDate = new Date().toISOString().split('T')[0];
+            const startDate = '2024-01-01';
+            const url = `https://v3.livefxhub.com:8444/api/orders/export/csv?start_date=${startDate}&end_date=${endDate}`;
+
+            setOrderMessage({ type: 'success', text: 'Preparing statement download...' });
+
+            const response = await tradingFetch(url, { method: 'GET' });
+            if (!response.ok) {
+                if (response.status === 429) {
+                    throw new Error('Rate limit exceeded. Please wait a minute.');
+                }
+                throw new Error('Download failed');
+            }
+
+            const blob = await response.blob();
+            const downloadUrl = window.URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = downloadUrl;
+            link.setAttribute('download', `trading_statement_${startDate}_to_${endDate}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            window.URL.revokeObjectURL(downloadUrl);
+
+            setOrderMessage({ type: 'success', text: 'Statement downloaded' });
+        } catch (err) {
+            console.error('[OrdersPanel] Download error:', err);
+            setOrderMessage({ type: 'error', text: err.message || 'Failed to download statement' });
+        }
+    }, []);
+
     // ── Fetch data when tab is selected ──────────────────────────
     useEffect(() => {
+        // We handle initial fetch in the onClick and handleTableScroll, 
+        // but if the component ever mounts with these tabs active, we fetch here.
         if (activeTab === 'History' && !historyInitialLoaded) {
             fetchHistory();
         }
@@ -277,7 +312,7 @@ export default React.memo(function OrdersPanel({ isMinimized, onToggleMinimize }
         // For Forex (type 1), quote currency is usually the last 3 chars
         const type = (config.instrumentType || '').toString().toLowerCase();
         let quoteCurrency = 'USD';
-        
+
         if (type === '1' || type === 'forex') {
             const base = symbolName.split('.')[0].replace('+', '');
             if (base.length >= 6) quoteCurrency = base.substring(3, 6);
@@ -321,7 +356,7 @@ export default React.memo(function OrdersPanel({ isMinimized, onToggleMinimize }
                         <th>Stop Loss</th>
                         <th>Take Profit</th>
                         <th>Profit/Loss</th>
-                        <th 
+                        <th
                             style={{ textAlign: 'center', cursor: 'pointer' }}
                             onClick={() => setShowCloseAllConfirm(true)}
                             title="Close All Open Positions"
@@ -382,27 +417,27 @@ export default React.memo(function OrdersPanel({ isMinimized, onToggleMinimize }
             case 'Open Positions':
                 if (isLoading) return <tr><td colSpan={13} style={{ textAlign: 'center', padding: '16px', color: 'var(--text-muted)' }}>Loading orders...</td></tr>;
                 if (openPositions.length === 0) return <tr><td colSpan={13} style={{ textAlign: 'center', padding: '16px', color: 'var(--text-muted)' }}>No open positions</td></tr>;
-                
+
                 const sortedOpenPositions = [...openPositions].sort((a, b) => new Date(b.orderTime) - new Date(a.orderTime));
-                
+
                 return sortedOpenPositions.map((order) => {
                     const config = symbolConfigs[order.symbolName];
                     const precision = config?.showPoints ?? 5;
                     const contractSize = config?.contractSize ?? 1;
                     const live = livePrices[order.symbolName];
-                    
+
                     // Logic: BUY orders close at BID, SELL orders close at ASK
                     const isBuy = order.orderType.toUpperCase().includes('BUY');
-                    const displayMarketPrice = live 
-                        ? (isBuy ? live.bid : live.ask) 
+                    const displayMarketPrice = live
+                        ? (isBuy ? live.bid : live.ask)
                         : order.marketPrice;
 
                     // Calculate P/L: (Current - Open) * Volume * ContractSize for BUY
                     //                (Open - Current) * Volume * ContractSize for SELL
-                    const priceDiff = isBuy 
+                    const priceDiff = isBuy
                         ? (displayMarketPrice - order.openPrice)
                         : (order.openPrice - displayMarketPrice);
-                    
+
                     const conversionRate = getUSDConversionRate(order.symbolName);
                     const floatingPL = (priceDiff * order.quantity * contractSize) * conversionRate;
                     const finalPL = floatingPL - order.commission + order.swap;
@@ -426,9 +461,9 @@ export default React.memo(function OrdersPanel({ isMinimized, onToggleMinimize }
                                 {order.stopLoss > 0 ? (
                                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}>
                                         {safeFixed(order.stopLoss, precision)}
-                                        <X 
-                                            size={12} 
-                                            style={{ color: '#DA5244', cursor: 'pointer' }} 
+                                        <X
+                                            size={12}
+                                            style={{ color: '#DA5244', cursor: 'pointer' }}
                                             onClick={() => setCancelExitConfirm({ isOpen: true, ticketId: order.orderId, type: 'SL' })}
                                         />
                                     </div>
@@ -440,9 +475,9 @@ export default React.memo(function OrdersPanel({ isMinimized, onToggleMinimize }
                                 {order.takeProfit > 0 ? (
                                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}>
                                         {safeFixed(order.takeProfit, precision)}
-                                        <X 
-                                            size={12} 
-                                            style={{ color: '#DA5244', cursor: 'pointer' }} 
+                                        <X
+                                            size={12}
+                                            style={{ color: '#DA5244', cursor: 'pointer' }}
                                             onClick={() => setCancelExitConfirm({ isOpen: true, ticketId: order.orderId, type: 'TP' })}
                                         />
                                     </div>
@@ -454,9 +489,9 @@ export default React.memo(function OrdersPanel({ isMinimized, onToggleMinimize }
                                 {safeFixed(finalPL, 2)}
                             </td>
                             <td className="order-close-cell" style={{ textAlign: 'center' }}>
-                                <X 
-                                    size={14} 
-                                    className="order-close-btn" 
+                                <X
+                                    size={14}
+                                    className="order-close-btn"
                                     onClick={() => ordersWebSocket.closeOrder(order.orderId)}
                                 />
                             </td>
@@ -466,15 +501,15 @@ export default React.memo(function OrdersPanel({ isMinimized, onToggleMinimize }
             case 'Pending Orders':
                 if (isLoading) return <tr><td colSpan={8} style={{ textAlign: 'center', padding: '16px', color: 'var(--text-muted)' }}>Loading orders...</td></tr>;
                 if (pendingOrders.length === 0) return <tr><td colSpan={8} style={{ textAlign: 'center', padding: '16px', color: 'var(--text-muted)' }}>No pending orders</td></tr>;
-                
+
                 const sortedPendingOrders = [...pendingOrders].sort((a, b) => new Date(b.orderTime) - new Date(a.orderTime));
-                
+
                 return sortedPendingOrders.map((order) => {
                     const precision = symbolConfigs[order.symbolName]?.showPoints ?? 5;
                     const live = livePrices[order.symbolName];
                     const isBuy = order.orderType.toUpperCase().includes('BUY');
-                    const displayMarketPrice = live 
-                        ? live.ask 
+                    const displayMarketPrice = live
+                        ? live.ask
                         : order.marketPrice;
 
                     return (
@@ -491,9 +526,9 @@ export default React.memo(function OrdersPanel({ isMinimized, onToggleMinimize }
                             <td>{safeFixed(order.openPrice, precision)}</td>
                             <td>{safeFixed(displayMarketPrice, precision)}</td>
                             <td style={{ textAlign: 'center' }}>
-                                <Pencil 
-                                    size={14} 
-                                    style={{ color: '#3687ED', cursor: 'pointer' }} 
+                                <Pencil
+                                    size={14}
+                                    style={{ color: '#3687ED', cursor: 'pointer' }}
                                     onClick={() => setCancelOrderConfirm({ isOpen: true, ticketId: order.orderId })}
                                 />
                             </td>
@@ -553,8 +588,8 @@ export default React.memo(function OrdersPanel({ isMinimized, onToggleMinimize }
                                     <td>{safeFixed(order.closePrice, precision)}</td>
                                     <td>{safeFixed(totalCommission, 2)}</td>
                                     <td>{safeFixed(order.swap, 2)}</td>
-                                    <td className={netPnl >= 0 ? 'positive' : 'negative'}>{safeFixed(netPnl, 2)}</td>
-                                    <td style={{ textTransform: 'capitalize' }}>{order.closeReason || '—'}</td>
+                                    <td style={{ color: netPnl >= 0 ? '#3687ED' : '#DA5244', fontWeight: '600' }}>{safeFixed(netPnl, 2)}</td>
+                                    <td style={{ color: '#DA5244', textTransform: 'capitalize' }}>{order.closeReason || '—'}</td>
                                 </tr>
                             );
                         })}
@@ -579,11 +614,11 @@ export default React.memo(function OrdersPanel({ isMinimized, onToggleMinimize }
                             className={`orders-tab ${activeTab === tab ? 'active' : ''}`}
                             onClick={() => {
                                 setActiveTab(tab);
-                                // Fetch data on first visit for API-backed tabs
-                                if (tab === 'History' && !historyInitialLoaded) {
+                                // Fetch data on every click for History as requested
+                                if (tab === 'History') {
                                     fetchHistory();
                                 }
-                                if (tab === 'Rejected Orders' && !rejectedInitialLoaded) {
+                                if (tab === 'Rejected Orders') {
                                     fetchRejected();
                                 }
                             }}
@@ -593,9 +628,30 @@ export default React.memo(function OrdersPanel({ isMinimized, onToggleMinimize }
                     ))}
                 </div>
                 <div className="orders-tabs-right">
-                    <div className="orders-panel-clock" style={{ 
-                        padding: '0 12px', 
-                        color: 'var(--text-muted)', 
+                    <button
+                        className="orders-download-btn"
+                        onClick={handleDownloadCSV}
+                        title="Download Statement (CSV)"
+                        style={{
+                            background: 'transparent',
+                            border: 'none',
+                            color: 'var(--text-muted)',
+                            cursor: 'pointer',
+                            padding: '0 12px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            height: '100%',
+                            transition: 'color 0.2s',
+                            borderLeft: '1px solid var(--border-color)',
+                            outline: 'none'
+                        }}
+                    >
+                        <Download size={13} style={{ marginRight: '6px' }} />
+                        <span style={{ fontSize: '11px', fontWeight: '600' }}>Statement</span>
+                    </button>
+                    <div className="orders-panel-clock" style={{
+                        padding: '0 12px',
+                        color: 'var(--text-muted)',
                         fontSize: '11px',
                         fontWeight: '600',
                         borderLeft: '1px solid var(--border-color)',
@@ -639,8 +695,8 @@ export default React.memo(function OrdersPanel({ isMinimized, onToggleMinimize }
 
             {/* Orders Table - hidden when minimized */}
             {!isMinimized && (
-                <div 
-                    className="orders-table-wrapper" 
+                <div
+                    className="orders-table-wrapper"
                     ref={tableScrollRef}
                     onScroll={(activeTab === 'History' || activeTab === 'Rejected Orders') ? handleTableScroll : undefined}
                 >
@@ -681,7 +737,7 @@ export default React.memo(function OrdersPanel({ isMinimized, onToggleMinimize }
                             Are you sure you want to close all open positions?
                         </p>
                         <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
-                            <button 
+                            <button
                                 onClick={() => {
                                     console.log('Close All Confirmed');
                                     setShowCloseAllConfirm(false);
@@ -704,7 +760,7 @@ export default React.memo(function OrdersPanel({ isMinimized, onToggleMinimize }
                             >
                                 Yes
                             </button>
-                            <button 
+                            <button
                                 onClick={() => setShowCloseAllConfirm(false)}
                                 style={{
                                     backgroundColor: 'rgba(218, 82, 68, 0.1)',
@@ -729,125 +785,164 @@ export default React.memo(function OrdersPanel({ isMinimized, onToggleMinimize }
             )}
 
             {/* SL/TP Edit Modal */}
-            {editOrderPopup.isOpen && (
-                <div className="orders-edit-overlay" style={{
-                    position: 'fixed', // Use fixed to ensure it stays in viewport
-                    top: 0, left: 0, right: 0, bottom: 0,
-                    backgroundColor: 'rgba(10, 15, 28, 0.6)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    zIndex: 999, // Ensure it's above everything
-                    backdropFilter: 'blur(2px)'
-                }}>
-                    <div className="orders-edit-modal" style={{
-                        backgroundColor: 'var(--surface)',
-                        border: '1px solid var(--border-color)',
-                        borderRadius: '12px',
-                        padding: '24px',
-                        boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
-                        minWidth: '300px',
-                        fontFamily: 'Arial, sans-serif',
-                        position: 'relative'
+            {editOrderPopup.isOpen && (() => {
+                const activeOrder = [...openPositions, ...pendingOrders].find(o => o.orderId === editOrderPopup.orderId);
+                let validationError = null;
+
+                if (activeOrder && editOrderPopup.price) {
+                    const val = parseFloat(editOrderPopup.price);
+                    const isBuy = (activeOrder.orderType || '').toUpperCase().includes('BUY');
+                    const live = livePrices[activeOrder.symbolName];
+
+                    // Logic: BUY orders close at BID, SELL orders close at ASK
+                    // We validate against the price the order would close at
+                    const currentPrice = live
+                        ? (isBuy ? live.bid : live.ask)
+                        : (activeOrder.marketPrice || 0);
+
+                    if (editOrderPopup.type === 'SL') {
+                        if (isBuy && val >= currentPrice) {
+                            validationError = `SL must be less than ${safeFixed(currentPrice, editOrderPopup.precision)}`;
+                        } else if (!isBuy && val <= currentPrice && val !== 0) {
+                            validationError = `SL must be more than ${safeFixed(currentPrice, editOrderPopup.precision)}`;
+                        }
+                    } else if (editOrderPopup.type === 'TP') {
+                        if (isBuy && val <= currentPrice && val !== 0) {
+                            validationError = `TP must be more than ${safeFixed(currentPrice, editOrderPopup.precision)}`;
+                        } else if (!isBuy && val >= currentPrice) {
+                            validationError = `TP must be less than ${safeFixed(currentPrice, editOrderPopup.precision)}`;
+                        }
+                    }
+                }
+
+                return (
+                    <div className="orders-edit-overlay" style={{
+                        position: 'fixed',
+                        top: 0, left: 0, right: 0, bottom: 0,
+                        backgroundColor: 'rgba(10, 15, 28, 0.6)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        zIndex: 999,
+                        backdropFilter: 'blur(2px)'
                     }}>
-                        {/* Close button (X) in top right */}
-                        <button 
-                            onClick={() => setEditOrderPopup({ ...editOrderPopup, isOpen: false })}
-                            style={{
-                                position: 'absolute',
-                                top: '16px',
-                                right: '16px',
-                                background: 'transparent',
-                                border: 'none',
-                                color: 'var(--text-muted)',
-                                cursor: 'pointer',
-                                padding: '4px',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center'
-                            }}
-                        >
-                            <X size={16} />
-                        </button>
-                        
-                        <h3 style={{ 
-                            margin: '0 0 16px 0', 
-                            fontSize: '14px', 
-                            color: 'var(--text-main)', 
-                            fontWeight: 'bold' 
+                        <div className="orders-edit-modal" style={{
+                            backgroundColor: 'var(--surface)',
+                            border: '1px solid var(--border-color)',
+                            borderRadius: '12px',
+                            padding: '24px',
+                            boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
+                            minWidth: '300px',
+                            fontFamily: 'Arial, sans-serif',
+                            position: 'relative'
                         }}>
-                            {editOrderPopup.type === 'SL' ? 'Stop Loss' : 'Take Profit'}
-                        </h3>
-                        
-                        <div style={{ marginBottom: '24px' }}>
-                            <label style={{ 
-                                display: 'block', 
-                                fontSize: '12px', 
-                                color: 'var(--text-muted)', 
-                                marginBottom: '8px' 
+                            <button
+                                onClick={() => setEditOrderPopup({ ...editOrderPopup, isOpen: false })}
+                                style={{
+                                    position: 'absolute',
+                                    top: '16px',
+                                    right: '16px',
+                                    background: 'transparent',
+                                    border: 'none',
+                                    color: 'var(--text-muted)',
+                                    cursor: 'pointer',
+                                    padding: '4px',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center'
+                                }}
+                            >
+                                <X size={16} />
+                            </button>
+
+                            <h3 style={{
+                                margin: '0 0 16px 0',
+                                fontSize: '14px',
+                                color: 'var(--text-main)',
+                                fontWeight: 'bold'
                             }}>
-                                price
-                            </label>
-                            <input 
-                                type="number" 
-                                step="any"
-                                value={editOrderPopup.price}
-                                onChange={(e) => setEditOrderPopup({ ...editOrderPopup, price: e.target.value })}
+                                {editOrderPopup.type === 'SL' ? 'Stop Loss' : 'Take Profit'}
+                            </h3>
+
+                            <div style={{ marginBottom: validationError ? '12px' : '24px' }}>
+                                <label style={{
+                                    display: 'block',
+                                    fontSize: '12px',
+                                    color: 'var(--text-muted)',
+                                    marginBottom: '8px'
+                                }}>
+                                    price
+                                </label>
+                                <input
+                                    type="number"
+                                    step="any"
+                                    value={editOrderPopup.price}
+                                    onChange={(e) => setEditOrderPopup({ ...editOrderPopup, price: e.target.value })}
+                                    style={{
+                                        width: '100%',
+                                        boxSizing: 'border-box',
+                                        padding: '10px 12px',
+                                        borderRadius: '6px',
+                                        border: `1px solid ${validationError ? '#DA5244' : 'var(--primary)'}`,
+                                        backgroundColor: 'transparent',
+                                        color: 'var(--text-main)',
+                                        fontSize: '14px',
+                                        fontFamily: 'Arial, sans-serif',
+                                        outline: 'none'
+                                    }}
+                                />
+                                {validationError && (
+                                    <div style={{
+                                        color: '#DA5244',
+                                        fontSize: '10px',
+                                        marginTop: '6px',
+                                        fontWeight: '500'
+                                    }}>
+                                        {validationError}
+                                    </div>
+                                )}
+                            </div>
+
+                            <button
+                                disabled={!!validationError || !editOrderPopup.price}
+                                onClick={() => {
+                                    const orderId = editOrderPopup.orderId;
+                                    const val = parseFloat(editOrderPopup.price) || 0;
+
+                                    const allOrders = [...openPositions, ...pendingOrders];
+                                    const order = allOrders.find(o => o.orderId === orderId);
+
+                                    if (order) {
+                                        const payload = {
+                                            ticket_id: orderId,
+                                            new_sl: editOrderPopup.type === 'SL' ? val : (order.stopLoss || 0),
+                                            new_tp: editOrderPopup.type === 'TP' ? val : (order.takeProfit || 0)
+                                        };
+                                        ordersWebSocket.modifyOrder(payload);
+                                    }
+
+                                    setEditOrderPopup({ ...editOrderPopup, isOpen: false });
+                                }}
                                 style={{
                                     width: '100%',
-                                    boxSizing: 'border-box',
-                                    padding: '10px 12px',
+                                    backgroundColor: validationError || !editOrderPopup.price ? 'var(--border-color)' : 'var(--primary)',
+                                    color: '#ffffff',
+                                    border: 'none',
                                     borderRadius: '6px',
-                                    border: '1px solid var(--primary)', // Blue border like image
-                                    backgroundColor: 'transparent',
-                                    color: 'var(--text-main)',
-                                    fontSize: '14px',
-                                    fontFamily: 'Arial, sans-serif',
-                                    outline: 'none'
+                                    padding: '12px',
+                                    fontSize: '13px',
+                                    fontWeight: 'bold',
+                                    cursor: validationError || !editOrderPopup.price ? 'not-allowed' : 'pointer',
+                                    transition: 'all 0.2s',
+                                    opacity: validationError || !editOrderPopup.price ? 0.6 : 1
                                 }}
-                            />
+                            >
+                                Apply
+                            </button>
                         </div>
-                        
-                        <button 
-                            onClick={() => {
-                                const orderId = editOrderPopup.orderId;
-                                const val = parseFloat(editOrderPopup.price) || 0;
-                                
-                                // Find the existing order in either openPositions or pendingOrders
-                                const allOrders = [...openPositions, ...pendingOrders];
-                                const order = allOrders.find(o => o.orderId === orderId);
-                                
-                                if (order) {
-                                    const payload = {
-                                        ticket_id: orderId,
-                                        new_sl: editOrderPopup.type === 'SL' ? val : (order.stopLoss || 0),
-                                        new_tp: editOrderPopup.type === 'TP' ? val : (order.takeProfit || 0)
-                                    };
-                                    ordersWebSocket.modifyOrder(payload);
-                                }
-                                
-                                setEditOrderPopup({ ...editOrderPopup, isOpen: false });
-                            }}
-                            style={{
-                                width: '100%',
-                                backgroundColor: 'var(--primary)', // Blue button
-                                color: '#ffffff',
-                                border: 'none',
-                                borderRadius: '6px',
-                                padding: '12px',
-                                fontSize: '13px',
-                                fontWeight: 'bold',
-                                cursor: 'pointer',
-                                transition: 'background-color 0.2s'
-                            }}
-                            onMouseEnter={(e) => e.target.style.opacity = '0.9'}
-                            onMouseLeave={(e) => e.target.style.opacity = '1'}
-                        >
-                            Apply
-                        </button>
                     </div>
-                </div>
-            )}
+                );
+            })()}
 
             {/* Cancel Order Confirmation Modal */}
             {cancelOrderConfirm.isOpen && (
@@ -875,7 +970,7 @@ export default React.memo(function OrdersPanel({ isMinimized, onToggleMinimize }
                             Are you sure you want to cancel this order?
                         </p>
                         <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
-                            <button 
+                            <button
                                 onClick={() => {
                                     ordersWebSocket.cancelOrder(cancelOrderConfirm.ticketId);
                                     setCancelOrderConfirm({ isOpen: false, ticketId: null });
@@ -897,7 +992,7 @@ export default React.memo(function OrdersPanel({ isMinimized, onToggleMinimize }
                             >
                                 Yes
                             </button>
-                            <button 
+                            <button
                                 onClick={() => setCancelOrderConfirm({ isOpen: false, ticketId: null })}
                                 style={{
                                     backgroundColor: 'rgba(218, 82, 68, 0.1)',
@@ -947,7 +1042,7 @@ export default React.memo(function OrdersPanel({ isMinimized, onToggleMinimize }
                             Are you sure you want to cancel this {cancelExitConfirm.type === 'SL' ? 'Stop Loss' : 'Take Profit'}?
                         </p>
                         <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
-                            <button 
+                            <button
                                 onClick={() => {
                                     const allOrders = [...openPositions, ...pendingOrders];
                                     const order = allOrders.find(o => o.orderId === cancelExitConfirm.ticketId);
@@ -975,7 +1070,7 @@ export default React.memo(function OrdersPanel({ isMinimized, onToggleMinimize }
                             >
                                 Yes
                             </button>
-                            <button 
+                            <button
                                 onClick={() => setCancelExitConfirm({ isOpen: false, ticketId: null, type: null })}
                                 style={{
                                     backgroundColor: 'rgba(218, 82, 68, 0.1)',
