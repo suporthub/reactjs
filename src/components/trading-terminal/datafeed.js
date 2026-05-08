@@ -312,7 +312,7 @@ export function createDatafeed() {
                     full_name: s.symbol,
                     description: s.symbol,
                     type: (s.instrumentType || 'forex').toLowerCase(),
-                    exchange: 'LIVEFXHUB',
+                    exchange: 'Live Fx Hub',
                     ticker: s.symbol,
                 }));
             onResult(results);
@@ -328,7 +328,7 @@ export function createDatafeed() {
                 console.warn(`[Datafeed] Symbol ${sym} not found in config, using generic info`);
                 onSymbolResolvedCallback({
                     name: sym, ticker: sym, description: sym, type: 'forex',
-                    session: '24x7', timezone: 'Etc/UTC', exchange: 'LIVEFXHUB',
+                    session: '24x7', timezone: 'Etc/UTC', exchange: 'Live Fx Hub',
                     minmov: 1, pricescale: 100000, has_intraday: true, has_seconds: true,
                     seconds_multipliers: ['1', '5', '15', '30'], has_daily: true, has_weekly_and_monthly: true,
                     supported_resolutions: ['1S', '5S', '15S', '30S', '1', '5', '15', '30', '60', '120', '240', '480', '1D', '1W', '1M'],
@@ -347,7 +347,7 @@ export function createDatafeed() {
                 type: type,
                 session: '24x7',
                 timezone: 'Etc/UTC',
-                exchange: 'LIVEFXHUB',
+                exchange: 'Live Fx Hub',
                 minmov: 1,
                 pricescale: pricescale,
                 has_intraday: true,
