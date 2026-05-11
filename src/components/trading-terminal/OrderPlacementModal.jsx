@@ -15,11 +15,10 @@ export default function OrderPlacementModal({ symbol, bid, ask, tickDirection, a
     const [tpEnabled, setTpEnabled] = useState(false);
     const [slVal, setSlVal] = useState('');
     const [tpVal, setTpVal] = useState('');
-    const [isExitsOpen, setIsExitsOpen] = useState(false);
     const [timeMode, setTimeMode] = useState('GTC');
     const [timeVal, setTimeVal] = useState('');
 
-    const [orderMessage, setOrderMessage] = useState(null);
+
 
     useEffect(() => {
         const loadConfig = async () => {
@@ -39,23 +38,6 @@ export default function OrderPlacementModal({ symbol, bid, ask, tickDirection, a
             }
         };
         loadConfig();
-
-        const handleOrderResult = (e) => {
-            const data = e.detail;
-            if (data.success) {
-                setOrderMessage({ type: 'success', text: `${data.message} (Ticket: ${data.ticket_id})` });
-                // Optional: close modal on success
-                // setTimeout(onClose, 2000); 
-            } else {
-                setOrderMessage({ type: 'error', text: data.message || 'Order failed' });
-            }
-            
-            // Clear message after 4 seconds
-            setTimeout(() => setOrderMessage(null), 4000);
-        };
-
-        window.addEventListener('orderResult', handleOrderResult);
-        return () => window.removeEventListener('orderResult', handleOrderResult);
     }, [symbol]);
 
     const validateNumberInput = (value) => {
@@ -113,7 +95,9 @@ export default function OrderPlacementModal({ symbol, bid, ask, tickDirection, a
             : parseFloat(price);
 
         if ((activeTab === 'Limit' || activeTab === 'Stop') && (!reqPrice || isNaN(reqPrice))) {
-            setOrderMessage({ type: 'error', text: `Please enter a valid ${activeTab} price.` });
+            window.dispatchEvent(new CustomEvent('orderResult', {
+                detail: { success: false, message: `Please enter a valid ${activeTab} price.` }
+            }));
             return;
         }
 
@@ -133,11 +117,13 @@ export default function OrderPlacementModal({ symbol, bid, ask, tickDirection, a
             payload.tp = parseFloat(tpVal);
         }
 
-        setOrderMessage(null);
+
         import('../../utils/ordersWebSocket').then(({ ordersWebSocket }) => {
             const sent = ordersWebSocket.sendOrder(payload);
             if (!sent) {
-                setOrderMessage({ type: 'error', text: 'Failed to connect. Order not sent.' });
+                window.dispatchEvent(new CustomEvent('orderResult', {
+                    detail: { success: false, message: 'Failed to connect. Order not sent.' }
+                }));
             }
         });
     };
@@ -152,34 +138,7 @@ export default function OrderPlacementModal({ symbol, bid, ask, tickDirection, a
                 <h3 className="order-modal-title">{symbol}</h3>
             </div>
 
-            {orderMessage && (
-                <div style={{
-                    margin: '0 0 16px 0',
-                    padding: '12px 16px',
-                    borderRadius: '4px',
-                    fontSize: '12px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '12px',
-                    backgroundColor: orderMessage.type === 'success' ? 'rgba(76, 175, 80, 0.08)' : 'rgba(218, 82, 68, 0.08)',
-                    border: `1px solid ${orderMessage.type === 'success' ? 'rgba(76, 175, 80, 0.3)' : 'rgba(218, 82, 68, 0.3)'}`,
-                    borderLeft: `4px solid ${orderMessage.type === 'success' ? '#4CAF50' : '#DA5244'}`,
-                    color: 'var(--text-color)',
-                    boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
-                }}>
-                    <span style={{ 
-                        display: 'flex', 
-                        alignItems: 'center', 
-                        justifyContent: 'center',
-                        color: orderMessage.type === 'success' ? '#4CAF50' : '#DA5244',
-                        fontSize: '14px',
-                        fontWeight: 'bold'
-                    }}>
-                        {orderMessage.type === 'success' ? '✓' : '⚠'}
-                    </span>
-                    <span style={{ flex: 1, lineHeight: '1.4' }}>{orderMessage.text}</span>
-                </div>
-            )}
+
 
             <div className="order-modal-tabs">
                 {['Instant', 'Limit', 'Stop'].map(tab => (
@@ -279,43 +238,30 @@ export default function OrderPlacementModal({ symbol, bid, ask, tickDirection, a
                 </div>
             </div>
 
-            {/* Exits Section */}
-            <div className="order-modal-exits-container">
-                <div 
-                    className="order-modal-exits-header" 
-                    onClick={() => setIsExitsOpen(!isExitsOpen)}
-                >
-                    <span className="exits-title">Exits</span>
-                    <ChevronDown size={14} className={`exits-chevron ${isExitsOpen ? 'open' : ''}`} />
-                </div>
-
-                {isExitsOpen && (
-                    <div className="order-modal-exits-content">
-                        {/* Take Profit Row */}
-                        <div className="exit-row-inline">
-                            <span className="exit-label">Take profit, price</span>
-                            <input 
-                                type="text" 
-                                className="order-modal-toggle-input" 
-                                placeholder="0.00000"
-                                value={tpVal}
-                                onChange={(e) => setTpVal(validateNumberInput(e.target.value))}
-                            />
-                        </div>
-
-                        {/* Stop Loss Row */}
-                        <div className="exit-row-inline">
-                            <span className="exit-label">Stop loss, price</span>
-                            <input 
-                                type="text" 
-                                className="order-modal-toggle-input" 
-                                placeholder="0.00000"
-                                value={slVal}
-                                onChange={(e) => setSlVal(validateNumberInput(e.target.value))}
-                            />
-                        </div>
+            {/* Exits Section - Single Row */}
+            <div className="order-modal-exits-container no-border">
+                <div className="order-modal-exits-row">
+                    <div className="exit-input-group">
+                        <label>Take Profit</label>
+                        <input 
+                            type="text" 
+                            className="order-modal-basic-input" 
+                            placeholder="0.00000"
+                            value={tpVal}
+                            onChange={(e) => setTpVal(validateNumberInput(e.target.value))}
+                        />
                     </div>
-                )}
+                    <div className="exit-input-group">
+                        <label>Stop Loss</label>
+                        <input 
+                            type="text" 
+                            className="order-modal-basic-input" 
+                            placeholder="0.00000"
+                            value={slVal}
+                            onChange={(e) => setSlVal(validateNumberInput(e.target.value))}
+                        />
+                    </div>
+                </div>
             </div>
 
 

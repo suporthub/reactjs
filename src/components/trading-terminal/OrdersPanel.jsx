@@ -115,10 +115,22 @@ export default React.memo(function OrdersPanel({ isMinimized, onToggleMinimize }
         const handleOrderResult = (e) => {
             if (mountedRef.current && e.detail) {
                 const data = e.detail;
+                let messageText = data.message || (data.success ? 'Order processed' : 'Order failed');
+                
+                // If we have a ticket_id, append it for better clarity (matching the previous modal notification)
+                // Aggressively look for any form of ticket/order ID in the response
+                const ticketId = data.ticket_id || data.ticketId || data.orderId || data.order_id || data.ticket || data.id || 
+                                 data.data?.ticket_id || data.data?.orderId || data.order?.id || data.order?.ticket_id;
+                
+                if (data.success && ticketId) {
+                    messageText = `${messageText} (Ticket: ${ticketId})`;
+                }
+
                 setOrderMessage({
                     type: data.success ? 'success' : 'error',
-                    text: data.message || (data.success ? 'Order processed' : 'Order failed')
+                    text: messageText
                 });
+                
                 // Clear message after 4 seconds
                 setTimeout(() => {
                     if (mountedRef.current) setOrderMessage(null);

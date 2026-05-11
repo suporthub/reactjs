@@ -518,7 +518,7 @@ export default function Accounts({ setWalletTab }) {
                                 <div className="account-header">
                                     <div className="account-tags">
                                         <span className="tag">Live Fx Hub</span>
-                                        <span className="tag">{acc.groupName || 'Pro'}</span>
+                                        <span className="tag">{acc.accountName || acc.groupName || 'Pro'}</span>
                                         <span className="account-id"># {acc.accountNumber}</span>
                                     </div>
                                 </div>
@@ -689,7 +689,7 @@ export default function Accounts({ setWalletTab }) {
                                                     </div>
                                                     {showGroupDropdown && accountType !== 'demo' && (
                                                         <div className="select-menu">
-                                                            {['Standard', 'Classic', 'VIP', 'Elite', 'Royal+', 'ECN'].map(opt => (
+                                                            {['Standard', 'Classic', 'VIP', 'Elite', 'Royal+', 'ECN', 'Cent'].map(opt => (
                                                                 <div
                                                                     key={opt}
                                                                     className={`select-option ${formData.group === opt ? 'selected' : ''}`}

@@ -168,7 +168,7 @@ export default function ReferAndEarn() {
 
                             <div className="share-modal-link-copy">
                                 <input type="text" value={inviteLink} readOnly />
-                                <button onClick={handleCopy}>
+                                <button onClick={handleCopy} className={copied ? 'copied' : ''}>
                                     {copied ? t('Copied') : t('Copy Link')}
                                 </button>
                             </div>

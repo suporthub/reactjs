@@ -195,7 +195,7 @@ export default function IBWallet({ ibData, onRefresh }) {
                         </div>
                         <div className="hero-icon-box-v3">
                             <div className="glass-icon-circle">
-                                <Wallet size={32} />
+                                <Wallet size={24} />
                             </div>
                         </div>
                     </div>

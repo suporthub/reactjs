@@ -1759,13 +1759,13 @@ td.negative {
 }
 
 .order-modal-tab.active {
-    background: #1f2937;
-    color: #ffffffa4;
+    background: #58a6ff;
+    color: #ffffff;
 }
 
 [data-theme='light'] .order-modal-tab.active {
-    background: #111827;
-    color: #fff;
+    background: #58a6ff;
+    color: #ffffff;
 }
 
 .order-modal-prices {
@@ -2037,57 +2037,35 @@ td.negative {
     border: 1px dashed var(--border-color);
 }
 
-/* Exits Section (Collapsible) */
+/* Exits Section (Directly Visible) */
 .order-modal-exits-container {
-    background: var(--account-bg-hover);
+    background: transparent;
     border-radius: 8px;
-    margin: 2px 0;
-    border: 1px solid var(--border-color);
+    margin: 4px 0;
 }
 
-.order-modal-exits-header {
+.order-modal-exits-container.no-border {
+    border: none;
+}
+
+.order-modal-exits-row {
     display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 6px 12px;
-    cursor: pointer;
-    background: rgba(88, 166, 255, 0.05);
-    transition: background 0.2s;
+    gap: 12px;
+    padding: 2px 0;
 }
 
-.order-modal-exits-header:hover {
-    background: rgba(88, 166, 255, 0.1);
-}
-
-.exits-title {
-    font-size: 11px;
-    font-weight: 700;
-    color: var(--text-main);
-}
-
-.exits-chevron {
-    transition: transform 0.3s ease;
-    color: var(--text-muted);
-}
-
-.exits-chevron.open {
-    transform: rotate(180deg);
-}
-
-.order-modal-exits-content {
-    padding: 10px 12px;
+.exit-input-group {
     display: flex;
     flex-direction: column;
-    gap: 12px;
-    border-top: 1px solid var(--border-color);
-    background: var(--surface);
+    gap: 4px;
+    flex: 1;
 }
 
-.exit-row-inline {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 10px;
+.exit-input-group label {
+    font-size: 10px;
+    font-family: Arial, sans-serif;
+    text-align: center;
+    color: var(--text-muted);
 }
 
 .exit-row-inline .exit-label {
@@ -2230,10 +2208,10 @@ td.negative {
     box-shadow: 0 2px 4px rgba(16, 185, 129, 0.3);
 }
 
-/* GTC/FOK Active - Deep Purple Pattern (Distinct from Red/Green) */
+/* GTC/FOK Active - Blue Pattern */
 .order-modal-toggle-group.full-width .toggle-btn.active {
-    background: linear-gradient(135deg, #6366f1 0%, #4338ca 100%);
-    box-shadow: 0 2px 4px rgba(99, 102, 241, 0.3);
+    background: #58a6ff;
+    box-shadow: 0 2px 4px rgba(88, 166, 255, 0.3);
 }
 
 .order-modal-toggle-input {

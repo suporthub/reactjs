@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
 import { Pencil, Check, X } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 export default function Profile() {
+  const { t } = useTranslation();
   const userDataStr = localStorage.getItem('userData');
   const userData = userDataStr ? JSON.parse(userDataStr) : null;
   
@@ -12,18 +14,18 @@ export default function Profile() {
   const [firstName, setFirstName] = useState(initialFirstName);
   const [lastName, setLastName] = useState(initialLastName);
 
-  const fullName = `${firstName} ${lastName}`.trim() || 'Trader';
+  const fullName = `${firstName} ${lastName}`.trim() || t('Trader');
   const email = userData?.email || 'user@example.com';
   const phone = userData?.phoneNumber || '+000 000 0000';
-  const bio = 'Trader';
+  const bio = t('Trader');
   const kycStatus = userData?.kycStatus || 'none';
 
   const getKycStatusStyle = () => {
     switch (kycStatus?.toLowerCase()) {
-      case 'approved': return { label: 'Verified', color: '#10b981' };
-      case 'pending': return { label: 'Pending', color: '#f59e0b' };
-      case 'rejected': return { label: 'Rejected', color: '#ef4444' };
-      default: return { label: 'Not Verified', color: '#94a3b8' };
+      case 'approved': return { label: t('Verified'), color: '#10b981' };
+      case 'pending': return { label: t('Pending'), color: '#f59e0b' };
+      case 'rejected': return { label: t('Rejected'), color: '#ef4444' };
+      default: return { label: t('Not Verified'), color: '#94a3b8' };
     }
   };
 
@@ -55,12 +57,11 @@ export default function Profile() {
         const updatedUser = { ...userData, firstName, lastName };
         localStorage.setItem('userData', JSON.stringify(updatedUser));
         setIsEditing(false);
-        // Optional: Trigger a global state update or page refresh if needed
       } else {
-        alert(result.message || 'Failed to update profile');
+        alert(result.message || t('Failed to update profile'));
       }
     } catch (error) {
-      alert('Something went wrong. Please try again.');
+      alert(t('Something went wrong. Please try again.'));
     } finally {
       setLoading(false);
     }
@@ -68,7 +69,7 @@ export default function Profile() {
 
   return (
     <div className="settings-profile-view">
-      <h2>My Profile</h2>
+      <h2>{t('My Profile')}</h2>
 
       {/* Profile Header Card */}
       <div className="settings-section-card">
@@ -84,7 +85,6 @@ export default function Profile() {
               <p>{bio}</p>
             </div>
           </div>
-          {/* Edit button removed as per request */}
         </div>
       </div>
 
@@ -92,11 +92,11 @@ export default function Profile() {
       <div className="settings-section-card">
         <div className="card-header-with-action">
           <h3 className="info-label" style={{ fontSize: '0.9rem', color: 'var(--text-main)', marginBottom: '15px' }}>
-            Personal Information
+            {t('Personal Information')}
           </h3>
           {!isEditing ? (
             <button className="settings-edit-btn" onClick={() => setIsEditing(true)}>
-              Edit <Pencil size={12} />
+              {t('Edit')} <Pencil size={12} />
             </button>
           ) : (
             <div style={{ display: 'flex', gap: '8px' }}>
@@ -106,7 +106,7 @@ export default function Profile() {
                 disabled={loading}
                 style={{ color: '#10b981', borderColor: '#10b981', opacity: loading ? 0.7 : 1 }}
               >
-                {loading ? 'Saving...' : 'Save'} <Check size={12} />
+                {loading ? t('Saving...') : t('Save')} <Check size={12} />
               </button>
               <button 
                 className="settings-edit-btn cancel" 
@@ -114,7 +114,7 @@ export default function Profile() {
                 disabled={loading}
                 style={{ color: '#ef4444', borderColor: '#ef4444' }}
               >
-                Cancel <X size={12} />
+                {t('Cancel')} <X size={12} />
               </button>
             </div>
           )}
@@ -122,7 +122,7 @@ export default function Profile() {
         
         <div className="info-grid">
           <div className="info-field-group">
-            <span className="info-label">First Name</span>
+            <span className="info-label">{t('First Name')}</span>
             {isEditing ? (
               <input 
                 type="text" 
@@ -135,7 +135,7 @@ export default function Profile() {
             )}
           </div>
           <div className="info-field-group">
-            <span className="info-label">Last Name</span>
+            <span className="info-label">{t('Last Name')}</span>
             {isEditing ? (
               <input 
                 type="text" 
@@ -148,19 +148,19 @@ export default function Profile() {
             )}
           </div>
           <div className="info-field-group">
-            <span className="info-label">Email Address</span>
+            <span className="info-label">{t('Email Address')}</span>
             <span className="info-value">{email}</span>
           </div>
           <div className="info-field-group">
-            <span className="info-label">Phone</span>
+            <span className="info-label">{t('Phone')}</span>
             <span className="info-value">{phone}</span>
           </div>
           <div className="info-field-group">
-            <span className="info-label">Bio</span>
+            <span className="info-label">{t('Bio')}</span>
             <span className="info-value">{bio}</span>
           </div>
           <div className="info-field-group">
-            <span className="info-label">KYC Status</span>
+            <span className="info-label">{t('KYC Status')}</span>
             <span className="info-value" style={{ color: status.color, display: 'flex', alignItems: 'center', gap: '6px' }}>
               <span style={{ width: '6px', height: '6px', background: status.color, borderRadius: '50%' }}></span>
               {status.label}
@@ -168,8 +168,6 @@ export default function Profile() {
           </div>
         </div>
       </div>
-
-      {/* Removed Address Card as per request */}
     </div>
   );
 }

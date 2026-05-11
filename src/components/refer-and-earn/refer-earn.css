@@ -306,31 +306,33 @@
 /* Copy Toast Animation */
 .copy-toast {
     position: fixed;
-    top: 24px;
+    top: 30px;
     left: 50%;
     transform: translateX(-50%);
     background: #22c55e;
     color: #ffffff;
-    padding: 12px 24px;
-    border-radius: 50px;
+    padding: 14px 28px;
+    border-radius: 16px;
     display: flex;
     align-items: center;
-    gap: 10px;
-    font-size: 0.9rem;
+    gap: 12px;
+    font-size: 0.95rem;
     font-weight: 600;
-    box-shadow: 0 10px 15px -3px rgba(34, 197, 94, 0.3);
-    z-index: 9999;
-    animation: toastSlideIn 0.3s cubic-bezier(0.18, 0.89, 0.32, 1.28) forwards;
+    box-shadow: 0 20px 40px rgba(34, 197, 94, 0.25), 0 0 0 1px rgba(255, 255, 255, 0.1);
+    z-index: 11000;
+    animation: toastSlideIn 0.4s cubic-bezier(0.2, 0.8, 0.2, 1.2) forwards;
 }
 
 @keyframes toastSlideIn {
     0% {
-        top: -50px;
+        top: -100px;
         opacity: 0;
+        transform: translateX(-50%) scale(0.9);
     }
     100% {
-        top: 24px;
+        top: 30px;
         opacity: 1;
+        transform: translateX(-50%) scale(1);
     }
 }
 
@@ -475,6 +477,10 @@
 .share-modal-link-copy button:hover {
     background: #4a90e2;
     transform: translateY(-1px);
+}
+
+.share-modal-link-copy button.copied {
+    background: #22c55e;
 }
 
 @keyframes fadeIn {

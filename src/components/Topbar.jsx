@@ -21,7 +21,7 @@ export default function Topbar({ theme, toggleTheme, sidebarOpen, setSidebarOpen
 
     const userDataStr = localStorage.getItem('userData');
     const userData = userDataStr ? JSON.parse(userDataStr) : null;
-    const displayName = userData ? (userData.firstName ? `${userData.firstName} ${userData.lastName || ''}` : 'Trader') : 'Trader';
+    const displayName = userData ? (userData.firstName ? `${userData.firstName} ${userData.lastName || ''}` : t('Trader')) : t('Trader');
 
     const changeLanguage = (lng) => {
         i18n.changeLanguage(lng);
@@ -131,10 +131,10 @@ export default function Topbar({ theme, toggleTheme, sidebarOpen, setSidebarOpen
                             <div className="profile-status-item">
                                 <div className="status-label">
                                     <ShieldCheck size={16} />
-                                    KYC Status
+                                    {t('KYC Status')}
                                 </div>
                                 <div className="status-value" style={{ color: kycStatusColor() }}>
-                                    {userData.kycStatus || 'Not Started'}
+                                    {t(userData.kycStatus) || t('Not Started')}
                                 </div>
                             </div>
                         </div>

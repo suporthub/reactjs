@@ -11,8 +11,10 @@ import {
   AlertCircle,
   Loader2
 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 export default function KycUpdate() {
+  const { t } = useTranslation();
   const userDataStr = localStorage.getItem('userData');
   const userData = userDataStr ? JSON.parse(userDataStr) : null;
   const kycStatus = userData?.kycStatus || 'none';
@@ -36,7 +38,7 @@ export default function KycUpdate() {
 
   const handleNextStep = () => {
     if (!addressLine1 || !city || !pincode || !country) {
-      setStatus({ type: 'error', message: 'All address fields are required.' });
+      setStatus({ type: 'error', message: t('All address fields are required.') });
       return;
     }
     setStatus(null);
@@ -46,7 +48,7 @@ export default function KycUpdate() {
   const handleKycSubmit = async (e) => {
     e.preventDefault();
     if (!idProofFile || !addressProofFile) {
-      setStatus({ type: 'error', message: 'Please upload both documents.' });
+      setStatus({ type: 'error', message: t('Please upload both documents.') });
       return;
     }
 
@@ -75,7 +77,7 @@ export default function KycUpdate() {
 
       const result = await response.json();
       if (result.success || result.status === 'success') {
-        setStatus({ type: 'success', message: 'KYC documents submitted successfully!' });
+        setStatus({ type: 'success', message: t('KYC documents submitted successfully!') });
         // Update local cache
         const updatedUser = { ...userData, kycStatus: 'pending' };
         localStorage.setItem('userData', JSON.stringify(updatedUser));
@@ -85,10 +87,10 @@ export default function KycUpdate() {
           setStep(1);
         }, 2000);
       } else {
-        setStatus({ type: 'error', message: result.message || 'Submission failed' });
+        setStatus({ type: 'error', message: result.message || t('Submission failed') });
       }
     } catch (error) {
-      setStatus({ type: 'error', message: 'Network error. Please try again.' });
+      setStatus({ type: 'error', message: t('Network error. Please try again.') });
     } finally {
       setLoading(false);
     }
@@ -97,11 +99,11 @@ export default function KycUpdate() {
   if (kycStatus === 'approved') {
     return (
       <div className="settings-kyc-view">
-        <h2>KYC Update</h2>
+        <h2>{t('KYC Update')}</h2>
         <div className="kyc-approved-container">
           <BadgeCheck size={64} className="kyc-success-icon" />
-          <h3>KYC Approved</h3>
-          <p>Your account is fully verified. You have complete access to all features.</p>
+          <h3>{t('KYC Approved')}</h3>
+          <p>{t('KYC approved desc')}</p>
         </div>
       </div>
     );
@@ -111,19 +113,19 @@ export default function KycUpdate() {
     return (
       <div className="settings-kyc-view">
         <div className="kyc-wizard-header">
-          <button className="back-btn" onClick={() => setShowWizard(false)}><ArrowLeft size={18} /> Back</button>
-          <h2>Account Verification</h2>
+          <button className="back-btn" onClick={() => setShowWizard(false)}><ArrowLeft size={18} /> {t('Back')}</button>
+          <h2>{t('Account Verification')}</h2>
         </div>
 
         <div className="wizard-progress-bar">
           <div className={`progress-step ${step >= 1 ? 'active' : ''}`}>
             <span className="step-num">1</span>
-            <span className="step-label">Personal Details</span>
+            <span className="step-label">{t('Personal Details')}</span>
           </div>
           <div className="progress-connector"></div>
           <div className={`progress-step ${step >= 2 ? 'active' : ''}`}>
             <span className="step-num">2</span>
-            <span className="step-label">Document Upload</span>
+            <span className="step-label">{t('Document Upload')}</span>
           </div>
         </div>
 
@@ -137,42 +139,42 @@ export default function KycUpdate() {
 
           {step === 1 ? (
             <div className="kyc-step-content">
-              <h3>Step 1: Address Details</h3>
-              <p className="step-desc">Please provide your current residential address details.</p>
+              <h3>{t('Step 1: Address Details')}</h3>
+              <p className="step-desc">{t('Address details desc')}</p>
               
               <div className="kyc-form-grid">
                 <div className="kyc-form-group full">
-                  <label>Address Line 1</label>
+                  <label>{t('Address Line 1')}</label>
                   <input 
                     type="text" 
-                    placeholder="Street address, building number, etc." 
+                    placeholder={t('Address placeholder')} 
                     value={addressLine1}
                     onChange={(e) => setAddressLine1(e.target.value)}
                   />
                 </div>
                 <div className="kyc-form-group">
-                  <label>City</label>
+                  <label>{t('City')}</label>
                   <input 
                     type="text" 
-                    placeholder="Your city" 
+                    placeholder={t('City placeholder')} 
                     value={city}
                     onChange={(e) => setCity(e.target.value)}
                   />
                 </div>
                 <div className="kyc-form-group">
-                  <label>Pincode / Zip</label>
+                  <label>{t('Pincode / Zip')}</label>
                   <input 
                     type="text" 
-                    placeholder="e.g. 110001" 
+                    placeholder={t('Pincode placeholder')} 
                     value={pincode}
                     onChange={(e) => setPincode(e.target.value)}
                   />
                 </div>
                 <div className="kyc-form-group">
-                  <label>Country (2-letter ISO)</label>
+                  <label>{t('Country ISO')}</label>
                   <input 
                     type="text" 
-                    placeholder="e.g. US, AE, GB" 
+                    placeholder={t('Country placeholder')} 
                     maxLength="2"
                     style={{ textTransform: 'uppercase' }}
                     value={country}
@@ -183,24 +185,24 @@ export default function KycUpdate() {
 
               <div className="kyc-footer">
                 <button className="kyc-next-btn" onClick={handleNextStep}>
-                  Next Step <ChevronRight size={18} />
+                  {t('Next Step')} <ChevronRight size={18} />
                 </button>
               </div>
             </div>
           ) : (
             <div className="kyc-step-content">
-              <h3>Step 2: Proof of Identity & Address</h3>
-              <p className="step-desc">Upload clear photos or scans of your original documents.</p>
+              <h3>{t('Step 2 title')}</h3>
+              <p className="step-desc">{t('Step 2 desc')}</p>
 
               <div className="doc-upload-grid">
                 {/* ID Proof */}
                 <div className="doc-upload-box">
                   <div className="upload-header">
-                    <label>Identity Document</label>
+                    <label>{t('Identity Document')}</label>
                     <select value={idProofType} onChange={(e) => setIdProofType(e.target.value)}>
-                      <option value="passport">Passport</option>
-                      <option value="driving_license">Driving License</option>
-                      <option value="national_id">National ID</option>
+                      <option value="passport">{t('Passport')}</option>
+                      <option value="driving_license">{t('Driving License')}</option>
+                      <option value="national_id">{t('National ID')}</option>
                     </select>
                   </div>
                   <div className={`upload-zone ${idProofFile ? 'has-file' : ''}`}>
@@ -214,12 +216,12 @@ export default function KycUpdate() {
                       {idProofFile ? (
                         <>
                           <FileText size={24} />
-                          <span>{idProofFile.name} (Click to change)</span>
+                          <span>{idProofFile.name} ({t('Click to change')})</span>
                         </>
                       ) : (
                         <>
                           <UploadCloud size={32} />
-                          <span>Upload Front Side of ID</span>
+                          <span>{t('Upload front ID')}</span>
                         </>
                       )}
                     </label>
@@ -229,10 +231,10 @@ export default function KycUpdate() {
                 {/* Address Proof */}
                 <div className="doc-upload-box">
                   <div className="upload-header">
-                    <label>Proof of Address</label>
+                    <label>{t('Proof of Address')}</label>
                     <select value={addressProofType} onChange={(e) => setAddressProofType(e.target.value)}>
-                      <option value="utility_bill">Utility Bill</option>
-                      <option value="bank_statement">Bank Statement</option>
+                      <option value="utility_bill">{t('Utility Bill')}</option>
+                      <option value="bank_statement">{t('Bank Statement')}</option>
                     </select>
                   </div>
                   <div className={`upload-zone ${addressProofFile ? 'has-file' : ''}`}>
@@ -246,12 +248,12 @@ export default function KycUpdate() {
                       {addressProofFile ? (
                         <>
                           <FileText size={24} />
-                          <span>{addressProofFile.name} (Click to change)</span>
+                          <span>{addressProofFile.name} ({t('Click to change')})</span>
                         </>
                       ) : (
                         <>
                           <UploadCloud size={32} />
-                          <span>Upload Document (within 3 months)</span>
+                          <span>{t('Upload PoA desc')}</span>
                         </>
                       )}
                     </label>
@@ -261,14 +263,14 @@ export default function KycUpdate() {
 
               <div className="kyc-footer">
                 <button className="kyc-back-btn" onClick={() => setStep(1)} disabled={loading}>
-                  Previous
+                  {t('Previous')}
                 </button>
                 <button 
                   className={`kyc-submit-btn ${loading ? 'loading' : ''}`} 
                   onClick={handleKycSubmit}
                   disabled={loading}
                 >
-                  {loading ? <Loader2 className="spin" size={18} /> : 'Submit Verification'}
+                  {loading ? <Loader2 className="spin" size={18} /> : t('Submit Verification')}
                 </button>
               </div>
             </div>
@@ -280,27 +282,26 @@ export default function KycUpdate() {
 
   return (
     <div className="settings-kyc-view">
-      <h2>KYC Update</h2>
+      <h2>{t('KYC Update')}</h2>
 
       <div className="settings-section-card kyc-hero-card">
         <div className="kyc-hero-copy">
           <div className="kyc-status-badge">
             <Clock3 size={14} />
-            {kycStatus === 'pending' ? 'Pending review' : 'Action Required'}
+            {kycStatus === 'pending' ? t('Pending review') : t('Action Required')}
           </div>
-          <h3>Keep your account verification details current</h3>
+          <h3>{t('KYC hero title')}</h3>
           <p>
-            Update your identity documents and profile details to keep deposits, withdrawals,
-            and account access running smoothly.
+            {t('KYC hero desc')}
           </p>
           <div className="kyc-action-row">
             <button className="kyc-primary-btn" onClick={() => setShowWizard(true)}>
               <UploadCloud size={16} />
-              Upload Documents
+              {t('Upload Documents')}
             </button>
             <button className="kyc-secondary-btn">
               <FileText size={16} />
-              Review Submission
+              {t('Review Submission')}
             </button>
           </div>
         </div>
@@ -308,19 +309,19 @@ export default function KycUpdate() {
         <div className="kyc-summary-panel">
           <div className="kyc-summary-head">
             <BadgeCheck size={18} />
-            Verification Summary
+            {t('Verification Summary')}
           </div>
           <div className="kyc-summary-item">
-            <span>Identity Document</span>
-            <strong>{kycStatus === 'pending' ? 'Passport uploaded' : 'Required'}</strong>
+            <span>{t('Identity Document')}</span>
+            <strong>{kycStatus === 'pending' ? t('Passport uploaded') : t('Required')}</strong>
           </div>
           <div className="kyc-summary-item">
-            <span>Proof of Address</span>
-            <strong>{kycStatus === 'pending' ? 'Verified' : 'Required'}</strong>
+            <span>{t('Proof of Address')}</span>
+            <strong>{kycStatus === 'pending' ? t('Verified') : t('Required')}</strong>
           </div>
           <div className="kyc-summary-item">
-            <span>Review ETA</span>
-            <strong>Within 24 hours</strong>
+            <span>{t('Review ETA')}</span>
+            <strong>{t('Within 24 hours')}</strong>
           </div>
         </div>
       </div>

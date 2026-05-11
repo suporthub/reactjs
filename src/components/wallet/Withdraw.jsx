@@ -6,6 +6,10 @@ import VietnamWithdraw from './VietnamWithdraw';
 
 export default function Withdraw() {
     const { t } = useTranslation();
+    const userDataStr = localStorage.getItem('userData');
+    const userData = userDataStr ? JSON.parse(userDataStr) : null;
+    const countryCode = userData?.countryCode || userData?.country || '';
+
     const withdrawMethods = [
         {
             id: 'crypto',
@@ -25,7 +29,7 @@ export default function Withdraw() {
             fee: '0.00%',
             limits: '100 - 100,000 USD'
         },
-        {
+        ...(countryCode === 'VN' ? [{
             id: 'vietnam-withdraw',
             name: 'Vietnam Withdraw',
             icon: Landmark,
@@ -33,7 +37,7 @@ export default function Withdraw() {
             processing: '1 - 24 hours',
             fee: '0.00%',
             limits: '100 - 5,000 USD'
-        },
+        }] : []),
         {
             id: 'upi',
             name: 'UPI / Mobile Wallet',

@@ -9,6 +9,10 @@ export default function Deposit() {
     const { t } = useTranslation();
     const [selectedMethod, setSelectedMethod] = useState(null);
 
+    const userDataStr = localStorage.getItem('userData');
+    const userData = userDataStr ? JSON.parse(userDataStr) : null;
+    const countryCode = userData?.countryCode || userData?.country || '';
+
     const depositMethods = [
         {
             id: 'crypto',
@@ -20,7 +24,7 @@ export default function Deposit() {
             limits: '10 - 200,000 USD',
             recommended: true
         },
-        {
+        ...(countryCode === 'VN' ? [{
             id: 'vietnam-deposit',
             name: 'Vietnam Deposit',
             icon: Landmark,
@@ -28,7 +32,7 @@ export default function Deposit() {
             processing: 'Instant - 1 hour',
             fee: '0%',
             limits: '100 - 100,000 USD'
-        },
+        }] : []),
         {
             id: 'other-payment',
             name: 'Other Payment Option',

@@ -5,14 +5,15 @@ import Security from './Security';
 import KycUpdate from './KycUpdate';
 import DeleteAccount from './DeleteAccount';
 import { useTranslation } from 'react-i18next';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { getDeviceFingerprint } from '../../utils/fingerprint';
 import './settings.css';
 
 export default function Settings() {
     const { t } = useTranslation();
     const navigate = useNavigate();
-    const [activeTab, setActiveTab] = useState('Profile');
+    const location = useLocation();
+    const [activeTab, setActiveTab] = useState(location.state?.activeTab || 'Profile');
 
     const handleLogout = async (e) => {
         if (e) e.preventDefault();
@@ -95,7 +96,7 @@ export default function Settings() {
                                 <BadgeCheck size={16} />
                                 {t('KYC Update')}
                             </span>
-                            <span className="settings-nav-pill">New</span>
+                            <span className="settings-nav-pill">{t('New')}</span>
                         </button>
                         
                         <button 

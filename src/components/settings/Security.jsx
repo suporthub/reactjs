@@ -15,8 +15,10 @@ import {
   ShieldCheck,
   Lock
 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 export default function Security() {
+  const { t } = useTranslation();
   const [show2FA, setShow2FA] = useState(false);
   const [showTotpModal, setShowTotpModal] = useState(false);
   const [showPasswordModal, setShowPasswordModal] = useState(false);
@@ -68,10 +70,10 @@ export default function Security() {
         setSessionsData(result.data || []);
         setShowSessionsModal(true);
       } else {
-        showStatus(result.message || 'Failed to fetch sessions', 'error');
+        showStatus(result.message || t('Failed to fetch sessions'), 'error');
       }
     } catch (error) {
-      showStatus('Network error', 'error');
+      showStatus(t('Network error'), 'error');
     } finally {
       setLoading(false);
     }
@@ -80,7 +82,7 @@ export default function Security() {
   const handlePasswordChange = async (e) => {
     e.preventDefault();
     if (newPassword !== confirmPassword) {
-      showStatus('New passwords do not match', 'error');
+      showStatus(t('New passwords do not match'), 'error');
       return;
     }
     setLoading(true);
@@ -96,14 +98,14 @@ export default function Security() {
       });
       const result = await response.json();
       if (result.success || result.status === 'success') {
-        showStatus('Password changed successfully!');
+        showStatus(t('Password changed successfully!'));
         setShowPasswordModal(false);
         setCurrentPassword(''); setNewPassword(''); setConfirmPassword('');
       } else {
-        showStatus(result.message || 'Failed to change password', 'error');
+        showStatus(result.message || t('Failed to change password'), 'error');
       }
     } catch (error) {
-      showStatus('Network error', 'error');
+      showStatus(t('Network error'), 'error');
     } finally {
       setLoading(false);
     }
@@ -127,10 +129,10 @@ export default function Security() {
         setShowTotpModal(true);
         setTotpStep(1);
       } else {
-        showStatus(result.message || 'Setup failed', 'error');
+        showStatus(result.message || t('Setup failed'), 'error');
       }
     } catch (error) {
-      showStatus('Connection error', 'error');
+      showStatus(t('Connection error'), 'error');
     } finally {
       setLoading(false);
     }
@@ -153,16 +155,16 @@ export default function Security() {
       });
       const result = await response.json();
       if (result.success) {
-        showStatus('2FA enabled successfully!');
+        showStatus(t('2FA enabled successfully!'));
         const updatedUser = { ...userData, is2faEnabled: true };
         localStorage.setItem('userData', JSON.stringify(updatedUser));
         setShowTotpModal(false);
         setOtpValue('');
       } else {
-        showStatus(result.message || 'Verification failed', 'error');
+        showStatus(result.message || t('Verification failed'), 'error');
       }
     } catch (error) {
-      showStatus('Connection error', 'error');
+      showStatus(t('Connection error'), 'error');
     } finally {
       setLoading(false);
     }
@@ -181,13 +183,13 @@ export default function Security() {
       });
       const result = await response.json();
       if (result.success || result.status === 'success') {
-        showStatus('Session terminated successfully');
+        showStatus(t('Session terminated successfully'));
         setSessionsData(prev => prev.filter(s => s.id !== sessionId));
       } else {
-        showStatus(result.message || 'Failed to terminate session', 'error');
+        showStatus(result.message || t('Failed to terminate session'), 'error');
       }
     } catch (error) {
-      showStatus('Network error', 'error');
+      showStatus(t('Network error'), 'error');
     } finally {
       setLoading(false);
     }
@@ -218,6 +220,37 @@ export default function Security() {
     }
   };
 
+  const handleDisable2FA = async () => {
+    const code = otpDisableValue.join('');
+    if (code.length !== 6) return;
+    setLoading(true);
+    const token = localStorage.getItem('portalToken');
+    try {
+      const response = await fetch('https://v3.livefxhub.com:8444/api/auth/totp/disable', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ code })
+      });
+      const result = await response.json();
+      if (result.success) {
+        showStatus(t('2FA disabled successfully'));
+        const updatedUser = { ...userData, is2faEnabled: false };
+        localStorage.setItem('userData', JSON.stringify(updatedUser));
+        setShowDisable2FAModal(false);
+        setOtpDisableValue(['', '', '', '', '', '']);
+      } else {
+        showStatus(result.message || t('Failed to disable 2FA'), 'error');
+      }
+    } catch (error) {
+      showStatus(t('Network error'), 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="settings-security-view">
       {notification && (
@@ -227,28 +260,28 @@ export default function Security() {
         </div>
       )}
 
-      <h2>Security Settings</h2>
+      <h2>{t('Security Settings')}</h2>
 
       <div className="settings-section-card">
         <div className="security-item">
           <div className="security-info">
-            <h4>Password</h4>
-            <p>Change your password to keep your account secure.</p>
+            <h4>{t('Password')}</h4>
+            <p>{t('Change password desc')}</p>
           </div>
-          <button className="security-action-btn" onClick={() => setShowPasswordModal(true)}>Change</button>
+          <button className="security-action-btn" onClick={() => setShowPasswordModal(true)}>{t('Change')}</button>
         </div>
 
         <div className="security-item-group">
           <div className="security-item">
             <div className="security-info">
-              <h4>Two-Factor Authentication</h4>
-              <p>Add an extra layer of security to your account.</p>
+              <h4>{t('Two-Factor Authentication')}</h4>
+              <p>{t('2fa desc')}</p>
             </div>
             <button
               className={`security-action-btn ${show2FA ? 'active' : ''}`}
               onClick={() => setShow2FA(!show2FA)}
             >
-              Options
+              {t('Options')}
             </button>
           </div>
 
@@ -257,14 +290,14 @@ export default function Security() {
               <div className="two-fa-item">
                 <div className="two-fa-label">
                   <Smartphone size={16} />
-                  <span>Google Authenticator</span>
+                  <span>{t('Google Authenticator')}</span>
                 </div>
                 <button
                   className={`mini-enable-btn ${is2faEnabled ? 'disable' : ''}`}
                   onClick={is2faEnabled ? () => setShowDisable2FAModal(true) : handleSetupTotp}
                   disabled={loading}
                 >
-                  {loading ? <RefreshCw className="spin" size={14} /> : (is2faEnabled ? 'Disable' : 'Enable')}
+                  {loading ? <RefreshCw className="spin" size={14} /> : (is2faEnabled ? t('Disable') : t('Enable'))}
                 </button>
               </div>
             </div>
@@ -273,11 +306,11 @@ export default function Security() {
 
         <div className="security-item">
           <div className="security-info">
-            <h4>Active Sessions</h4>
-            <p>Manage and sign out of your active sessions on other devices.</p>
+            <h4>{t('Active Sessions')}</h4>
+            <p>{t('Active sessions desc')}</p>
           </div>
           <button className="security-action-btn" onClick={fetchSessions} disabled={loading}>
-            {loading && !showSessionsModal ? 'Fetching...' : 'Manage'}
+            {loading && !showSessionsModal ? t('Fetching...') : t('Manage')}
           </button>
         </div>
       </div>
@@ -287,13 +320,13 @@ export default function Security() {
         <div className="security-modal-overlay">
           <div className="security-modal-content small">
             <div className="modal-header">
-              <h3>Disable 2FA?</h3>
+              <h3>{t('Disable 2FA?')}</h3>
               <button onClick={() => setShowDisable2FAModal(false)}><X size={20} /></button>
             </div>
             <div className="modal-body align-center">
               <ShieldCheck size={48} color="#ef4444" style={{ marginBottom: '16px' }} />
               <p className="step-desc" style={{ textAlign: 'center', marginBottom: '24px' }}>
-                Enter the 6-digit code from your authenticator app to disable Two-Factor Authentication.
+                {t('Disable 2fa desc')}
               </p>
               
               <div className="otp-disable-grid">
@@ -318,14 +351,14 @@ export default function Security() {
                   onClick={() => setShowDisable2FAModal(false)}
                   disabled={loading}
                 >
-                  No, Keep it
+                  {t('No, Keep it')}
                 </button>
                 <button 
                   className="modal-primary-btn delete" 
                   onClick={handleDisable2FA}
                   disabled={loading || otpDisableValue.join('').length !== 6}
                 >
-                  {loading ? 'Verifying...' : 'Yes, Disable it'}
+                  {loading ? t('Verifying...') : t('Yes, Disable it')}
                 </button>
               </div>
             </div>
@@ -340,12 +373,12 @@ export default function Security() {
             <div className="modal-header">
               <div className="header-icon-title">
                 <ShieldCheck className="header-main-icon" size={24} />
-                <h3>Active Sessions</h3>
+                <h3>{t('Active Sessions')}</h3>
               </div>
               <button className="close-modal-btn" onClick={() => setShowSessionsModal(false)}><X size={20} /></button>
             </div>
             <div className="modal-body scrollable">
-              <p className="step-desc">For security, monitor and sign out from other devices currently logged into your account.</p>
+              <p className="step-desc">{t('Active sessions detail')}</p>
               <div className="sessions-list">
                 {sessionsData.map((session) => (
                   <div key={session.id} className={`session-card-premium ${session.isCurrent ? 'current' : ''}`}>
@@ -357,13 +390,13 @@ export default function Security() {
                       <div className="session-head">
                         <div className="title-group">
                           <strong>{session.deviceName}</strong>
-                          <span className="device-tag">({session.deviceLabel || 'Verified Device'})</span>
+                          <span className="device-tag">({session.deviceLabel || t('Verified Device')})</span>
                         </div>
-                        {session.isCurrent && <span className="premium-current-badge">This Device</span>}
+                        {session.isCurrent && <span className="premium-current-badge">{t('This Device')}</span>}
                       </div>
                       <div className="session-meta-grid">
                         <div className="meta-pill"><Globe size={11} /><span>{session.ipAddress}</span></div>
-                        <div className="meta-pill"><MapPin size={11} /><span>{session.location || 'UAE'}</span></div>
+                        <div className="meta-pill"><MapPin size={11} /><span>{session.location || t('UAE')}</span></div>
                         <div className="meta-pill"><Clock size={11} /><span>{new Date(session.loginTime).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}</span></div>
                       </div>
                     </div>
@@ -374,7 +407,7 @@ export default function Security() {
                         disabled={loading}
                       >
                         <LogOut size={16} />
-                        <span>{loading ? '...' : 'Logout'}</span>
+                        <span>{loading ? '...' : t('Logout')}</span>
                       </button>
                     )}
                   </div>
@@ -390,12 +423,12 @@ export default function Security() {
         <div className="security-modal-overlay">
           <div className="security-modal-content">
             <div className="modal-header">
-              <h3>Change Password</h3>
+              <h3>{t('Change Password')}</h3>
               <button onClick={() => setShowPasswordModal(false)}><X size={20} /></button>
             </div>
             <form onSubmit={handlePasswordChange} className="modal-body">
               <div className="form-group-security">
-                <label>Current Password</label>
+                <label>{t('Current Password')}</label>
                 <div className="password-input-row">
                   <input type={showPass.current ? "text" : "password"} value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} required />
                   <div className="eye-btn" onClick={() => setShowPass({...showPass, current: !showPass.current})}>
@@ -404,7 +437,7 @@ export default function Security() {
                 </div>
               </div>
               <div className="form-group-security">
-                <label>New Password</label>
+                <label>{t('New Password')}</label>
                 <div className="password-input-row">
                   <input type={showPass.new ? "text" : "password"} value={newPassword} onChange={(e) => setNewPassword(e.target.value)} required />
                   <div className="eye-btn" onClick={() => setShowPass({...showPass, new: !showPass.new})}>
@@ -413,7 +446,7 @@ export default function Security() {
                 </div>
               </div>
               <div className="form-group-security" style={{ marginBottom: '24px' }}>
-                <label>Confirm New Password</label>
+                <label>{t('Confirm New Password')}</label>
                 <div className="password-input-row">
                   <input type={showPass.confirm ? "text" : "password"} value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} required />
                   <div className="eye-btn" onClick={() => setShowPass({...showPass, confirm: !showPass.confirm})}>
@@ -422,7 +455,7 @@ export default function Security() {
                 </div>
               </div>
               <button type="submit" className="modal-primary-btn" disabled={loading}>
-                {loading ? 'Updating...' : 'Change Password'}
+                {loading ? t('Updating...') : t('Change Password')}
               </button>
             </form>
           </div>
@@ -434,34 +467,34 @@ export default function Security() {
         <div className="security-modal-overlay">
           <div className="security-modal-content">
             <div className="modal-header">
-              <h3>Google Authenticator</h3>
+              <h3>{t('Google Authenticator')}</h3>
               <button onClick={() => setShowTotpModal(false)}><X size={20} /></button>
             </div>
             <div className="modal-body">
               {totpStep === 1 ? (
                 <div className="totp-setup-step">
-                  <p className="step-desc">Scan this QR code with your authenticator app.</p>
+                  <p className="step-desc">{t('Scan QR')}</p>
                   <div className="qr-container">
                     {totpData && <img src={`https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent(totpData.otpauthUrl)}&size=200x200`} alt="QR" />}
                   </div>
                   <div className="manual-entry">
                     <div className="secret-code-box">
                       <code>{totpData?.otpauthUrl.split('secret=')[1].split('&')[0]}</code>
-                      <button onClick={() => { navigator.clipboard.writeText(totpData?.otpauthUrl.split('secret=')[1].split('&')[0]); showStatus('Copied'); }}><Copy size={14} /></button>
+                      <button onClick={() => { navigator.clipboard.writeText(totpData?.otpauthUrl.split('secret=')[1].split('&')[0]); showStatus(t('Copied')); }}><Copy size={14} /></button>
                     </div>
                   </div>
-                  <button className="modal-primary-btn" onClick={() => setTotpStep(2)}>Setup</button>
+                  <button className="modal-primary-btn" onClick={() => setTotpStep(2)}>{t('Setup')}</button>
                 </div>
               ) : (
                 <div className="totp-verify-step">
-                  <p className="step-desc">Enter 6-digit code.</p>
+                  <p className="step-desc">{t('Enter 6-digit code')}</p>
                   <div className="otp-input-wrapper">
                     <input type="text" maxLength="6" value={otpValue} onChange={(e) => setOtpValue(e.target.value.replace(/\D/g, ''))} />
                   </div>
                   <div className="modal-footer-btns">
-                    <button className="modal-secondary-btn" onClick={() => setTotpStep(1)}>Back</button>
+                    <button className="modal-secondary-btn" onClick={() => setTotpStep(1)}>{t('Back')}</button>
                     <button className="modal-primary-btn" onClick={handleConfirmTotp} disabled={loading || otpValue.length !== 6}>
-                      Confirm
+                      {t('Confirm')}
                     </button>
                   </div>
                 </div>

@@ -194,8 +194,7 @@ export const ordersManager = {
                     updated = true;
                 }
             }
-            // Always background sync to ensure exact data (commission, swap, etc)
-            this._refreshInBackground();
+            // Order updates are handled by WebSocket, no need to refresh from API
         } 
         // Handle Full Snapshot Updates
         else if (data.open_positions !== undefined || data.pending_orders !== undefined) {

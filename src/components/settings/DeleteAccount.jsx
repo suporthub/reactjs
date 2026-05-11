@@ -1,30 +1,30 @@
 import React from 'react';
 import { AlertCircle } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 export default function DeleteAccount() {
+  const { t } = useTranslation();
   return (
     <div className="settings-delete-view">
-      <h2 style={{ color: '#DA5244' }}>Delete Account</h2>
+      <h2 style={{ color: '#DA5244' }}>{t('Delete Account')}</h2>
 
       <div className="settings-section-card">
         <div className="delete-account-warning">
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
             <AlertCircle size={20} color="#DA5244" />
-            <strong style={{ color: '#DA5244' }}>Warning: This action is permanent</strong>
+            <strong style={{ color: '#DA5244' }}>{t('Delete warning')}</strong>
           </div>
           <p>
-            Deleting your account will result in the permanent removal of all your trading history,
-            wallet data, and personal information. This action cannot be undone.
+            {t('Delete account desc')}
           </p>
         </div>
 
         <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '20px' }}>
-          Please confirm you would like to delete your account by clicking the button below. 
-          You may be asked to provide your password for security verification.
+          {t('Delete account confirm')}
         </p>
 
         <button className="delete-confirm-btn">
-          Permanently Delete My Account
+          {t('Permanently Delete')}
         </button>
       </div>
     </div>
