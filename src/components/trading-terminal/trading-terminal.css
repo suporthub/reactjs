@@ -53,6 +53,67 @@
     transform: scale(1.05);
 }
 
+/* Account Info Display */
+.terminal-account-info {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-right: 8px;
+}
+
+.account-info-divider {
+    width: 1px;
+    height: 24px;
+    background: rgba(139, 148, 158, 0.2);
+}
+
+.account-details {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    align-items: flex-end;
+}
+
+.account-top-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.account-badge {
+    font-size: 8px;
+    font-weight: bold;
+    padding: 1px 6px;
+    border-radius: 3px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.account-badge.live {
+    background: rgba(76, 175, 80, 0.1);
+    color: #4CAF50;
+    border: 1px solid rgba(76, 175, 80, 0.2);
+}
+
+.account-badge.demo {
+    background: rgba(255, 152, 0, 0.1);
+    color: #FF9800;
+    border: 1px solid rgba(255, 152, 0, 0.2);
+}
+
+.account-name {
+    font-size: 11px;
+    color: var(--text-main);
+    font-weight: 500;
+    white-space: nowrap;
+}
+
+.account-number {
+    font-size: 9px;
+    color: var(--text-muted);
+    font-family: 'Arial', sans-serif;
+}
+
 /* =============== TOPBAR =============== */
 .terminal-topbar {
     display: flex;
@@ -373,6 +434,18 @@ body.resizing-active-col {
     border-color: var(--primary);
 }
 
+.market-cat-btn.cat-fav {
+    padding: 3px 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.market-cat-btn.cat-fav.active {
+    color: #fff;
+    background: var(--primary);
+}
+
 [data-theme='light'] .market-cat-btn {
     color: #000000;
     border-color: #e1e4e8;
@@ -461,8 +534,16 @@ body.resizing-active-col {
 
 .market-star {
     cursor: pointer;
-    transition: all 0.15s ease;
+    transition: color 0.2s ease, fill 0.2s ease;
     min-width: 12px;
+}
+
+.market-star.starred {
+    /* Glowing effect removed as requested */
+}
+
+.market-star:hover {
+    /* Scale effect removed as requested */
 }
 
 .market-symbol-name {
@@ -1766,6 +1847,63 @@ td.negative {
 [data-theme='light'] .order-modal-tab.active {
     background: #58a6ff;
     color: #ffffff;
+}
+
+/* ── GTC/FOK Info Icon & Tooltip ── */
+.order-modal-info-wrapper {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    cursor: help;
+}
+
+.order-modal-info-icon {
+    opacity: 0.5;
+    transition: opacity 0.2s;
+}
+
+.order-modal-info-wrapper:hover .order-modal-info-icon {
+    opacity: 1;
+}
+
+.order-modal-tooltip-fixed {
+    width: 240px;
+    padding: 10px 12px;
+    background: #1a1f2e;
+    border: 1px solid #2a3040;
+    border-radius: 8px;
+    color: #d0d5dd;
+    font-size: 11px;
+    font-family: Arial, sans-serif;
+    font-weight: 400;
+    line-height: 1.6;
+    text-align: left;
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.5);
+    pointer-events: none;
+    white-space: normal;
+}
+
+.order-modal-tooltip-arrow {
+    position: absolute;
+    bottom: -6px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 0;
+    height: 0;
+    border-left: 6px solid transparent;
+    border-right: 6px solid transparent;
+    border-top: 6px solid #2a3040;
+}
+
+[data-theme='light'] .order-modal-tooltip-fixed {
+    background: #ffffff;
+    border-color: #d0d5dd;
+    color: #333;
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12);
+}
+
+[data-theme='light'] .order-modal-tooltip-arrow {
+    border-top-color: #d0d5dd;
 }
 
 .order-modal-prices {

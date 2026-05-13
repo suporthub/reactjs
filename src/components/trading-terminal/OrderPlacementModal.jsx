@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, ChevronUp, ChevronDown } from 'lucide-react';
+import { X, ChevronUp, ChevronDown, Info } from 'lucide-react';
 import { tradingConfigManager } from '../../utils/tradingConfigCache';
 import { calculateMarginInUSD } from '../../utils/marginCalculator';
 import './trading-terminal.css';
@@ -17,6 +17,15 @@ export default function OrderPlacementModal({ symbol, bid, ask, tickDirection, a
     const [tpVal, setTpVal] = useState('');
     const [timeMode, setTimeMode] = useState('GTC');
     const [timeVal, setTimeVal] = useState('');
+    const [tooltipInfo, setTooltipInfo] = useState({ visible: false, text: '', x: 0, y: 0, iconX: 0 });
+
+    // Handle outside click to close tooltip
+    useEffect(() => {
+        if (!tooltipInfo.visible) return;
+        const handleGlobalClick = () => setTooltipInfo(prev => ({ ...prev, visible: false }));
+        window.addEventListener('click', handleGlobalClick);
+        return () => window.removeEventListener('click', handleGlobalClick);
+    }, [tooltipInfo.visible]);
 
 
 
@@ -158,11 +167,62 @@ export default function OrderPlacementModal({ symbol, bid, ask, tickDirection, a
                         key={mode} 
                         className={`order-modal-tab ${timeMode === mode ? 'active' : ''}`}
                         onClick={() => setTimeMode(mode)}
+                        style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}
                     >
                         {mode}
+                        <span
+                            className="order-modal-info-wrapper"
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                const rect = e.currentTarget.getBoundingClientRect();
+                                const tooltipWidth = 240;
+                                const screenWidth = window.innerWidth;
+                                
+                                // Calculate centered X, then clamp it so it doesn't go off-screen
+                                let targetX = rect.left + rect.width / 2;
+                                const halfWidth = tooltipWidth / 2;
+                                
+                                if (targetX - halfWidth < 10) {
+                                    targetX = halfWidth + 10;
+                                } else if (targetX + halfWidth > screenWidth - 10) {
+                                    targetX = screenWidth - halfWidth - 10;
+                                }
+
+                                setTooltipInfo({
+                                    visible: true,
+                                    text: mode === 'GTC'
+                                        ? 'The order stays active until it is fully executed or manually cancelled by the user. It does not expire at the end of the trading day.'
+                                        : 'The order must be executed completely immediately. If the full quantity cannot be filled instantly, the entire order is cancelled automatically.',
+                                    x: targetX,
+                                    y: rect.top,
+                                    iconX: rect.left + rect.width / 2
+                                });
+                            }}
+                        >
+                            <Info size={11} className="order-modal-info-icon" />
+                        </span>
                     </button>
                 ))}
             </div>
+
+            {/* Fixed Tooltip Portal */}
+            {tooltipInfo.visible && (
+                <div className="order-modal-tooltip-fixed" style={{
+                    position: 'fixed',
+                    left: tooltipInfo.x,
+                    top: tooltipInfo.y - 8,
+                    transform: 'translate(-50%, -100%)',
+                    zIndex: 9999
+                }} onClick={(e) => e.stopPropagation()}>
+                    {tooltipInfo.text}
+                    <div 
+                        className="order-modal-tooltip-arrow" 
+                        style={{ 
+                            left: `calc(50% + ${tooltipInfo.iconX - tooltipInfo.x}px)` 
+                        }} 
+                    />
+                </div>
+            )}
 
             <div className="order-modal-prices">
                 <div className="order-modal-price-box">

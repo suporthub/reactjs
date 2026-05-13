@@ -17,6 +17,17 @@ export default function TerminalTopbar() {
         return document.documentElement.getAttribute('data-theme') === 'dark';
     });
 
+    const [accountInfo, setAccountInfo] = useState(null);
+
+    useEffect(() => {
+        const params = new URLSearchParams(window.location.search);
+        const accId = params.get('account') || localStorage.getItem('activeTradingAccountNumber');
+        if (accId) {
+            const info = localStorage.getItem(`tradingAccountInfo_${accId}`);
+            if (info) setAccountInfo(JSON.parse(info));
+        }
+    }, []);
+
     const toggleTheme = () => {
         const newIsDark = !isDark;
         const newTheme = newIsDark ? 'dark' : 'light';
@@ -62,6 +73,20 @@ export default function TerminalTopbar() {
             </div>
 
             <div className="terminal-topbar-right">
+                {accountInfo && (
+                    <div className="terminal-account-info">
+                        <div className="account-details">
+                            <div className="account-top-row">
+                                <span className={`account-badge ${accountInfo.group?.toLowerCase().includes('demo') ? 'demo' : 'live'}`}>
+                                    {accountInfo.group?.toLowerCase().includes('demo') ? 'Demo' : 'Live'}
+                                </span>
+                                <span className="account-name">{accountInfo.name || 'Trading Account'}</span>
+                            </div>
+                            <div className="account-number">#{accountInfo.number}</div>
+                        </div>
+                    </div>
+                )}
+
                 <div className="terminal-mode-switcher" onClick={toggleTradingMode} title="Switch Trading Mode">
                     <div className={`mode-option ${tradingMode === 'Normal' ? 'active' : ''}`}>
                         <Zap size={12} />

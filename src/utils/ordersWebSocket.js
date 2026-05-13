@@ -24,6 +24,7 @@ class OrdersWebSocketManager {
         this.isConnected = false;
         this.isAuthenticated = false;
         this.authTimeout = null;
+        this.pingInterval = null;
     }
 
     /**
@@ -66,17 +67,18 @@ class OrdersWebSocketManager {
 
             this.ws.onmessage = (event) => {
                 try {
-                    // Sometimes pings are sent as raw strings
-                    if (event.data === 'PING') {
-                        this.ws.send('PONG');
-                        return;
+                    let data = {};
+                    try {
+                        data = JSON.parse(event.data);
+                    } catch(e) {
+                        // Raw string message (like PING)
                     }
-
-                    const data = JSON.parse(event.data);
                     
                     // Handle Gateway PING -> Client PONG heartbeat
-                    if (data.type === 'PING' || data.action === 'PING') {
-                        this.ws.send(JSON.stringify({ action: 'PONG' }));
+                    if (data.type?.toUpperCase() === 'PING' || data.action?.toUpperCase() === 'PING' || String(event.data).toUpperCase() === 'PING') {
+                        if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+                            this.ws.send(JSON.stringify({ action: 'PONG' }));
+                        }
                         return;
                     }
 
@@ -85,6 +87,7 @@ class OrdersWebSocketManager {
                         console.log('[OrdersWS] Authenticated successfully:', data.data);
                         this.isAuthenticated = true;
                         this._clearAuthTimeout();
+                        this._startPingInterval();
                         return;
                     }
 
@@ -93,6 +96,7 @@ class OrdersWebSocketManager {
                         data.type === 'MODIFY_ORDER_RESULT' || 
                         data.type === 'CANCEL_ORDER_RESULT' || 
                         data.type === 'CLOSE_ORDER_RESULT' ||
+                        data.type === 'CLOSE_ALL_RESULT' ||
                         (data.type === 'ORDER_STATE_CHANGE' && 
                             (data.data?.status === 'MODIFIED' || data.data?.status === 'CANCELLED' || data.data?.status === 'CLOSED'))) {
                         
@@ -107,6 +111,19 @@ class OrdersWebSocketManager {
                             else if (data.data.status === 'CLOSED') msg = 'Order closed successfully';
                             
                             resultData = { success: true, message: msg, ticket_id: data.data.ticket_id || data.data.orderId };
+                        }
+
+                        if (data.type === 'CLOSE_ALL_RESULT') {
+                            const { success, closed_count, failed_tickets } = data.data;
+                            resultData = {
+                                success: success,
+                                message: success 
+                                    ? `Successfully closed ${closed_count} positions${failed_tickets?.length > 0 ? ` (${failed_tickets.length} failed)` : ''}`
+                                    : 'Failed to close all positions',
+                                isBulk: true,
+                                closed_count: closed_count,
+                                failed_tickets: failed_tickets
+                            };
                         }
 
                         window.dispatchEvent(new CustomEvent('orderResult', { detail: resultData }));
@@ -139,6 +156,7 @@ class OrdersWebSocketManager {
                 this.isConnected = false;
                 this.isAuthenticated = false;
                 this._clearAuthTimeout();
+                this._stopPingInterval();
                 
                 if (this.isIntentionalClose) {
                     console.log('[OrdersWS] Disconnected intentionally.');
@@ -287,6 +305,31 @@ class OrdersWebSocketManager {
     }
 
     /**
+     * Sends a request to close all open positions.
+     * @returns {boolean} True if sent successfully
+     */
+    closeAllOrders() {
+        this.ensureConnected();
+
+        if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
+            console.error('[OrdersWS] Cannot close all orders: WebSocket is not connected.');
+            return false;
+        }
+
+        if (!this.isAuthenticated) {
+            console.error('[OrdersWS] Cannot close all orders: WebSocket is not yet authenticated.');
+            return false;
+        }
+
+        const msg = {
+            action: 'CLOSE_ALL_ORDERS'
+        };
+        this.ws.send(JSON.stringify(msg));
+        console.log('[OrdersWS] Sent CLOSE_ALL_ORDERS:', msg);
+        return true;
+    }
+
+    /**
      * Disconnects the WebSocket intentionally.
      */
     disconnect() {
@@ -331,6 +374,22 @@ class OrdersWebSocketManager {
         if (this.authTimeout) {
             clearTimeout(this.authTimeout);
             this.authTimeout = null;
+        }
+    }
+
+    _startPingInterval() {
+        this._stopPingInterval();
+        this.pingInterval = setInterval(() => {
+            if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+                this.ws.send(JSON.stringify({ action: 'PING' }));
+            }
+        }, 30000); // Send ping every 30 seconds
+    }
+
+    _stopPingInterval() {
+        if (this.pingInterval) {
+            clearInterval(this.pingInterval);
+            this.pingInterval = null;
         }
     }
 }

@@ -86,20 +86,31 @@ export default function Accounts({ setWalletTab }) {
             const result = await response.json();
 
             if (result.success && result.data) {
-                // Store tokens separately for trading terminal
-                localStorage.setItem('tradingAccessToken', result.data.accessToken);
+                // Store tokens separately for trading terminal with account suffix
+                localStorage.setItem(`tradingAccessToken_${accountNumber}`, result.data.accessToken);
+                localStorage.setItem('activeTradingAccountNumber', accountNumber);
                 
-                // Store refresh token in cookie
+                // Store refresh token in cookie with account suffix
                 const expiry = new Date();
                 expiry.setDate(expiry.getDate() + 7);
-                document.cookie = `tradingRefreshToken=${result.data.refreshToken}; path=/; expires=${expiry.toUTCString()}; SameSite=Strict; Secure`;
+                document.cookie = `tradingRefreshToken_${accountNumber}=${result.data.refreshToken}; path=/; expires=${expiry.toUTCString()}; SameSite=Strict; Secure`;
                 
                 if (result.data.sessionId) {
-                    localStorage.setItem('tradingSessionId', result.data.sessionId);
+                    localStorage.setItem(`tradingSessionId_${accountNumber}`, result.data.sessionId);
                 }
 
-                // Redirect to trading terminal in a new tab
-                window.open('/trading-terminal', '_blank');
+                // Find the full account object to store its name/type for the topbar
+                const accountObj = accounts.find(a => a.accountNumber === accountNumber);
+                if (accountObj) {
+                    localStorage.setItem(`tradingAccountInfo_${accountNumber}`, JSON.stringify({
+                        name: accountObj.accountName,
+                        group: accountObj.groupName || accountObj.accountType || 'Live',
+                        number: accountNumber
+                    }));
+                }
+
+                // Redirect to trading terminal in a new tab with account parameter
+                window.open(`/trading-terminal?account=${accountNumber}`, '_blank');
             } else {
                 // Stay here and show error
                 if (result.code !== 'SESSION_EXPIRED' && result.status !== 401) {

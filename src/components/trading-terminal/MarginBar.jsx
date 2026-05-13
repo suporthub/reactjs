@@ -158,11 +158,16 @@ export default function MarginBar() {
 
     // ── Derived display values ──────────────────────────────────
     const balance      = parseFloat(portfolio.balance) || 0;
-    const usedMargin   = parseFloat(portfolio.used_margin) || 0;
+    let usedMargin     = parseFloat(portfolio.used_margin) || 0;
+
+    // Sanitize usedMargin: tiny floating point errors from the server can cause 
+    // astronomical Margin Level values if not handled.
+    if (usedMargin < 0.01) usedMargin = 0;
 
     // Dynamic calculations based on user's formulas
     const equity       = balance + totalPL;
     const freeMargin   = equity - usedMargin;
+    // Standard Margin Level Formula: (Equity / Used Margin) * 100
     const marginLevel  = usedMargin > 0 ? (equity / usedMargin) * 100 : 0;
 
     // Dynamic signal strength based on network RTT

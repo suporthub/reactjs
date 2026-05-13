@@ -12,6 +12,12 @@ import { tradingFetch, getTradingAccessToken } from './tradingTokenManager';
 
 const TRADING_CONFIG_CACHE_KEY = 'trading_config';
 const TRADING_CONFIG_VERSION_KEY = 'trading_config_version';
+
+function getAccountKey(base) {
+    const params = new URLSearchParams(window.location.search);
+    const accId = params.get('account') || localStorage.getItem('activeTradingAccountNumber') || 'default';
+    return `${base}_${accId}`;
+}
 const API_URL = 'https://v3.livefxhub.com:8444/api/live/trading-config';
 
 let _configPromise = null;
@@ -40,7 +46,7 @@ export const tradingConfigManager = {
             // 3. Persistent Cache Check
             if (!force) {
                 try {
-                    const cached = localStorage.getItem(TRADING_CONFIG_CACHE_KEY);
+                    const cached = localStorage.getItem(getAccountKey(TRADING_CONFIG_CACHE_KEY));
                     if (cached) {
                         _inMemoryConfig = JSON.parse(cached);
                         console.log('[TradingConfig] Loaded from persistent cache.');
@@ -80,13 +86,13 @@ export const tradingConfigManager = {
             const result = await response.json();
             if (result.success && result.data) {
                 const newConfig = result.data;
-                const oldVersion = localStorage.getItem(TRADING_CONFIG_VERSION_KEY);
+                const oldVersion = localStorage.getItem(getAccountKey(TRADING_CONFIG_VERSION_KEY));
 
                 // Update Cache Layers
                 _inMemoryConfig = newConfig;
-                localStorage.setItem(TRADING_CONFIG_CACHE_KEY, JSON.stringify(newConfig));
+                localStorage.setItem(getAccountKey(TRADING_CONFIG_CACHE_KEY), JSON.stringify(newConfig));
                 if (newConfig.version) {
-                    localStorage.setItem(TRADING_CONFIG_VERSION_KEY, newConfig.version);
+                    localStorage.setItem(getAccountKey(TRADING_CONFIG_VERSION_KEY), newConfig.version);
                 }
 
                 // Precision Event Dispatch: Only notify if the config version has changed

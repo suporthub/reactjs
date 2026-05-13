@@ -9,7 +9,15 @@
  * Tokens used:
  *   - tradingAccessToken  → localStorage
  *   - tradingRefreshToken → cookie
+ * 
+ * Multi-Account Support:
+ * All keys are suffixed with _${accountNumber} to prevent data mismatch.
  */
+
+function getActiveAccountId() {
+    const params = new URLSearchParams(window.location.search);
+    return params.get('account') || localStorage.getItem('activeTradingAccountNumber') || 'default';
+}
 
 const REFRESH_URL = 'https://v3.livefxhub.com:8444/api/auth/refresh-token';
 
@@ -30,38 +38,44 @@ function setCookie(name, value, days) {
 
 // ── Token getters / setters ─────────────────────────────────────
 export function getTradingAccessToken() {
-    return localStorage.getItem('tradingAccessToken');
+    const accId = getActiveAccountId();
+    return localStorage.getItem(`tradingAccessToken_${accId}`);
 }
 
 export function getTradingRefreshToken() {
-    return getCookie('tradingRefreshToken');
+    const accId = getActiveAccountId();
+    return getCookie(`tradingRefreshToken_${accId}`);
 }
 
 function setTradingTokens(accessToken, refreshToken) {
+    const accId = getActiveAccountId();
     if (accessToken) {
-        localStorage.setItem('tradingAccessToken', accessToken);
+        localStorage.setItem(`tradingAccessToken_${accId}`, accessToken);
     }
     if (refreshToken) {
-        setCookie('tradingRefreshToken', refreshToken, 7);
+        setCookie(`tradingRefreshToken_${accId}`, refreshToken, 7);
     }
 }
 
 /**
- * Clears all trading-related session data.
+ * Clears trading-related session data for the CURRENT account only.
  */
 export function clearTradingSession() {
-    console.log('[TradingTokenManager] Clearing trading session...');
-    localStorage.removeItem('tradingAccessToken');
-    localStorage.removeItem('tradingSessionId');
-    localStorage.removeItem('trading_config');
-    localStorage.removeItem('trading_config_version');
-    localStorage.removeItem('portfolio_summary');
-    localStorage.removeItem('portfolio_summary_ts');
-    localStorage.removeItem('orders_active');
-    localStorage.removeItem('orders_active_ts');
+    const accId = getActiveAccountId();
+    console.log(`[TradingTokenManager] Clearing trading session for account ${accId}...`);
     
-    // Clear tradingRefreshToken cookie
-    document.cookie = 'tradingRefreshToken=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/; SameSite=Strict; Secure';
+    localStorage.removeItem(`tradingAccessToken_${accId}`);
+    localStorage.removeItem(`tradingSessionId_${accId}`);
+    localStorage.removeItem(`trading_config_${accId}`);
+    localStorage.removeItem(`trading_config_version_${accId}`);
+    localStorage.removeItem(`tradingAccountInfo_${accId}`);
+    localStorage.removeItem(`portfolio_summary_${accId}`);
+    localStorage.removeItem(`portfolio_summary_ts_${accId}`);
+    localStorage.removeItem(`orders_active_${accId}`);
+    localStorage.removeItem(`orders_active_ts_${accId}`);
+    
+    // Clear tradingRefreshToken cookie for this account
+    document.cookie = `tradingRefreshToken_${accId}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/; SameSite=Strict; Secure`;
 }
 
 // ── Singleton refresh guard ─────────────────────────────────────
@@ -142,7 +156,8 @@ export async function refreshTradingToken() {
 
             // Update sessionId if provided
             if (sessionId) {
-                localStorage.setItem('tradingSessionId', sessionId);
+                const accId = getActiveAccountId();
+                localStorage.setItem(`tradingSessionId_${accId}`, sessionId);
             }
 
             console.log('[TradingTokenManager] Tokens refreshed successfully');

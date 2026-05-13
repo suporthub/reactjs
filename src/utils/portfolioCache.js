@@ -13,6 +13,12 @@ import { tradingFetch, getTradingAccessToken } from './tradingTokenManager';
 
 const PORTFOLIO_CACHE_KEY = 'portfolio_summary';
 const PORTFOLIO_TIMESTAMP_KEY = 'portfolio_summary_ts';
+
+function getAccountKey(base) {
+    const params = new URLSearchParams(window.location.search);
+    const accId = params.get('account') || localStorage.getItem('activeTradingAccountNumber') || 'default';
+    return `${base}_${accId}`;
+}
 const API_URL = 'https://v3.livefxhub.com:8444/api/orders/portfolio';
 const CACHE_TTL_MS = 60_000; // 60s — portfolio data refreshes every minute
 
@@ -56,7 +62,7 @@ export const portfolioManager = {
             // 3. Persistent Cache Check (warm path)
             if (!force) {
                 try {
-                    const cached = localStorage.getItem(PORTFOLIO_CACHE_KEY);
+                    const cached = localStorage.getItem(getAccountKey(PORTFOLIO_CACHE_KEY));
                     if (cached && !this._isStale()) {
                         _inMemoryPortfolio = JSON.parse(cached);
                         console.log('[PortfolioCache] Loaded from persistent cache.');
@@ -125,7 +131,9 @@ export const portfolioManager = {
 
                 let margin_level_pct = parseFloat(data.margin_level_pct);
                 if (isNaN(margin_level_pct)) {
-                    margin_level_pct = used_margin > 0 ? (equity / used_margin) * 100 : 0;
+                    // Sanitize used_margin to avoid astronomical values from floating point errors
+                    const safeMargin = used_margin < 0.01 ? 0 : used_margin;
+                    margin_level_pct = safeMargin > 0 ? (equity / safeMargin) * 100 : 0;
                 }
 
                 const portfolio = {
@@ -140,8 +148,8 @@ export const portfolioManager = {
 
                 // Update all cache layers
                 _inMemoryPortfolio = portfolio;
-                localStorage.setItem(PORTFOLIO_CACHE_KEY, JSON.stringify(portfolio));
-                localStorage.setItem(PORTFOLIO_TIMESTAMP_KEY, Date.now().toString());
+                localStorage.setItem(getAccountKey(PORTFOLIO_CACHE_KEY), JSON.stringify(portfolio));
+                localStorage.setItem(getAccountKey(PORTFOLIO_TIMESTAMP_KEY), Date.now().toString());
 
                 console.log('[PortfolioCache] Portfolio synced:', portfolio);
 
@@ -192,7 +200,8 @@ export const portfolioManager = {
 
         let margin_level_pct = typeof data.margin_level_pct !== 'undefined' ? parseFloat(data.margin_level_pct) : current.margin_level_pct;
         if (typeof data.margin_level_pct === 'undefined') {
-            margin_level_pct = used_margin > 0 ? (equity / used_margin) * 100 : 0;
+            const safeMargin = used_margin < 0.01 ? 0 : used_margin;
+            margin_level_pct = safeMargin > 0 ? (equity / safeMargin) * 100 : 0;
         }
 
         const portfolio = {
@@ -207,8 +216,8 @@ export const portfolioManager = {
 
         // Update all cache layers
         _inMemoryPortfolio = portfolio;
-        localStorage.setItem(PORTFOLIO_CACHE_KEY, JSON.stringify(portfolio));
-        localStorage.setItem(PORTFOLIO_TIMESTAMP_KEY, Date.now().toString());
+        localStorage.setItem(getAccountKey(PORTFOLIO_CACHE_KEY), JSON.stringify(portfolio));
+        localStorage.setItem(getAccountKey(PORTFOLIO_TIMESTAMP_KEY), Date.now().toString());
 
         console.log('[PortfolioCache] Portfolio updated via WebSocket:', portfolio);
 
@@ -228,7 +237,7 @@ export const portfolioManager = {
      * Checks if the cached data has exceeded the TTL.
      */
     _isStale() {
-        const ts = localStorage.getItem(PORTFOLIO_TIMESTAMP_KEY);
+        const ts = localStorage.getItem(getAccountKey(PORTFOLIO_TIMESTAMP_KEY));
         if (!ts) return true;
         return (Date.now() - parseInt(ts, 10)) > CACHE_TTL_MS;
     },
@@ -238,8 +247,8 @@ export const portfolioManager = {
      */
     invalidate() {
         _inMemoryPortfolio = null;
-        localStorage.removeItem(PORTFOLIO_CACHE_KEY);
-        localStorage.removeItem(PORTFOLIO_TIMESTAMP_KEY);
+        localStorage.removeItem(getAccountKey(PORTFOLIO_CACHE_KEY));
+        localStorage.removeItem(getAccountKey(PORTFOLIO_TIMESTAMP_KEY));
         console.log('[PortfolioCache] Cache invalidated.');
     },
 

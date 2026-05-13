@@ -115,12 +115,33 @@ export default React.memo(function OrdersPanel({ isMinimized, onToggleMinimize }
         const handleOrderResult = (e) => {
             if (mountedRef.current && e.detail) {
                 const data = e.detail;
+                
+                // If this is a bulk result (like Close All), show it prominently
+                if (data.isBulk) {
+                    setOrderMessage({
+                        type: data.success ? 'success' : 'error',
+                        text: data.message
+                    });
+                    
+                    // Mark bulk as active for 2 seconds to prevent individual closes from overriding
+                    window._lastBulkTime = Date.now();
+                    
+                    setTimeout(() => {
+                        if (mountedRef.current) setOrderMessage(null);
+                    }, 5000);
+                    return;
+                }
+
+                // For individual results, check if we just showed a bulk result
+                if (window._lastBulkTime && (Date.now() - window._lastBulkTime < 2000)) {
+                    // Ignore individual results for 2 seconds after a bulk action
+                    return;
+                }
+
                 let messageText = data.message || (data.success ? 'Order processed' : 'Order failed');
                 
-                // If we have a ticket_id, append it for better clarity (matching the previous modal notification)
-                // Aggressively look for any form of ticket/order ID in the response
-                const ticketId = data.ticket_id || data.ticketId || data.orderId || data.order_id || data.ticket || data.id || 
-                                 data.data?.ticket_id || data.data?.orderId || data.order?.id || data.order?.ticket_id;
+                // If we have a ticket_id, append it for better clarity
+                const ticketId = data.ticket_id || data.ticketId || data.orderId || data.order_id || data.ticket || data.id;
                 
                 if (data.success && ticketId) {
                     messageText = `${messageText} (Ticket: ${ticketId})`;
@@ -387,6 +408,8 @@ export default React.memo(function OrdersPanel({ isMinimized, onToggleMinimize }
                         <th>Quantity</th>
                         <th>Open Price</th>
                         <th>Market Price</th>
+                        <th>Stop Loss</th>
+                        <th>Take Profit</th>
                         <th style={{ textAlign: 'center' }}>Edit</th>
                     </tr>
                 );
@@ -399,6 +422,8 @@ export default React.memo(function OrdersPanel({ isMinimized, onToggleMinimize }
                         <th>Order Type</th>
                         <th>Quantity</th>
                         <th>Rejected Price</th>
+                        <th>Stop Loss</th>
+                        <th>Take Profit</th>
                         <th>Reason</th>
                     </tr>
                 );
@@ -413,6 +438,8 @@ export default React.memo(function OrdersPanel({ isMinimized, onToggleMinimize }
                         <th>Quantity</th>
                         <th>Open Price</th>
                         <th>Close Price</th>
+                        <th>Stop Loss</th>
+                        <th>Take Profit</th>
                         <th>Commission</th>
                         <th>Swap</th>
                         <th>Net Profit</th>
@@ -511,8 +538,8 @@ export default React.memo(function OrdersPanel({ isMinimized, onToggleMinimize }
                     );
                 });
             case 'Pending Orders':
-                if (isLoading) return <tr><td colSpan={8} style={{ textAlign: 'center', padding: '16px', color: 'var(--text-muted)' }}>Loading orders...</td></tr>;
-                if (pendingOrders.length === 0) return <tr><td colSpan={8} style={{ textAlign: 'center', padding: '16px', color: 'var(--text-muted)' }}>No pending orders</td></tr>;
+                if (isLoading) return <tr><td colSpan={10} style={{ textAlign: 'center', padding: '16px', color: 'var(--text-muted)' }}>Loading orders...</td></tr>;
+                if (pendingOrders.length === 0) return <tr><td colSpan={10} style={{ textAlign: 'center', padding: '16px', color: 'var(--text-muted)' }}>No pending orders</td></tr>;
 
                 const sortedPendingOrders = [...pendingOrders].sort((a, b) => new Date(b.orderTime) - new Date(a.orderTime));
 
@@ -537,6 +564,8 @@ export default React.memo(function OrdersPanel({ isMinimized, onToggleMinimize }
                             <td>{safeFixed(order.quantity, 2)}</td>
                             <td>{safeFixed(order.openPrice, precision)}</td>
                             <td>{safeFixed(displayMarketPrice, precision)}</td>
+                            <td>{order.stopLoss > 0 ? safeFixed(order.stopLoss, precision) : '0.00000'}</td>
+                            <td>{order.takeProfit > 0 ? safeFixed(order.takeProfit, precision) : '0.00000'}</td>
                             <td style={{ textAlign: 'center' }}>
                                 <Pencil
                                     size={14}
@@ -548,8 +577,8 @@ export default React.memo(function OrdersPanel({ isMinimized, onToggleMinimize }
                     );
                 });
             case 'Rejected Orders':
-                if (rejectedLoading && rejectedData.length === 0) return <tr><td colSpan={7} style={{ textAlign: 'center', padding: '16px', color: 'var(--text-muted)' }}>Loading rejected orders...</td></tr>;
-                if (!rejectedLoading && rejectedData.length === 0) return <tr><td colSpan={7} style={{ textAlign: 'center', padding: '16px', color: 'var(--text-muted)' }}>No rejected orders</td></tr>;
+                if (rejectedLoading && rejectedData.length === 0) return <tr><td colSpan={9} style={{ textAlign: 'center', padding: '16px', color: 'var(--text-muted)' }}>Loading rejected orders...</td></tr>;
+                if (!rejectedLoading && rejectedData.length === 0) return <tr><td colSpan={9} style={{ textAlign: 'center', padding: '16px', color: 'var(--text-muted)' }}>No rejected orders</td></tr>;
                 return (
                     <>
                         {rejectedData.map((order) => {
@@ -566,6 +595,8 @@ export default React.memo(function OrdersPanel({ isMinimized, onToggleMinimize }
                                     </td>
                                     <td>{safeFixed(order.volume, 2)}</td>
                                     <td>{safeFixed(order.openPrice, precision)}</td>
+                                    <td>{safeFixed(order.stopLoss || order.sl || 0, precision)}</td>
+                                    <td>{safeFixed(order.takeProfit || order.tp || 0, precision)}</td>
                                     <td style={{ color: '#DA5244', textTransform: 'capitalize' }}>{order.closeReason || '—'}</td>
                                 </tr>
                             );
@@ -576,8 +607,8 @@ export default React.memo(function OrdersPanel({ isMinimized, onToggleMinimize }
                     </>
                 );
             case 'History':
-                if (historyLoading && historyData.length === 0) return <tr><td colSpan={12} style={{ textAlign: 'center', padding: '16px', color: 'var(--text-muted)' }}>Loading history...</td></tr>;
-                if (!historyLoading && historyData.length === 0) return <tr><td colSpan={12} style={{ textAlign: 'center', padding: '16px', color: 'var(--text-muted)' }}>No history</td></tr>;
+                if (historyLoading && historyData.length === 0) return <tr><td colSpan={14} style={{ textAlign: 'center', padding: '16px', color: 'var(--text-muted)' }}>Loading history...</td></tr>;
+                if (!historyLoading && historyData.length === 0) return <tr><td colSpan={14} style={{ textAlign: 'center', padding: '16px', color: 'var(--text-muted)' }}>No history</td></tr>;
                 return (
                     <>
                         {historyData.map((order) => {
@@ -598,6 +629,8 @@ export default React.memo(function OrdersPanel({ isMinimized, onToggleMinimize }
                                     <td>{safeFixed(order.volume, 2)}</td>
                                     <td>{safeFixed(order.openPrice, precision)}</td>
                                     <td>{safeFixed(order.closePrice, precision)}</td>
+                                    <td>{safeFixed(order.stopLoss || order.sl || 0, precision)}</td>
+                                    <td>{safeFixed(order.takeProfit || order.tp || 0, precision)}</td>
                                     <td>{safeFixed(totalCommission, 2)}</td>
                                     <td>{safeFixed(order.swap, 2)}</td>
                                     <td style={{ color: netPnl >= 0 ? '#3687ED' : '#DA5244', fontWeight: '600' }}>{safeFixed(netPnl, 2)}</td>
@@ -606,7 +639,7 @@ export default React.memo(function OrdersPanel({ isMinimized, onToggleMinimize }
                             );
                         })}
                         {historyLoading && (
-                            <tr><td colSpan={12} style={{ textAlign: 'center', padding: '10px', color: 'var(--text-muted)' }}>Loading more...</td></tr>
+                            <tr><td colSpan={14} style={{ textAlign: 'center', padding: '10px', color: 'var(--text-muted)' }}>Loading more...</td></tr>
                         )}
                     </>
                 );
@@ -712,7 +745,7 @@ export default React.memo(function OrdersPanel({ isMinimized, onToggleMinimize }
                     ref={tableScrollRef}
                     onScroll={(activeTab === 'History' || activeTab === 'Rejected Orders') ? handleTableScroll : undefined}
                 >
-                    <table className="orders-table">
+                    <table className="orders-table" style={(activeTab === 'History' || activeTab === 'Rejected Orders') ? { fontSize: '8px' } : {}}>
                         <thead>
                             {renderHeader()}
                         </thead>
@@ -751,9 +784,8 @@ export default React.memo(function OrdersPanel({ isMinimized, onToggleMinimize }
                         <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
                             <button
                                 onClick={() => {
-                                    console.log('Close All Confirmed');
+                                    ordersWebSocket.closeAllOrders();
                                     setShowCloseAllConfirm(false);
-                                    // TODO: Dispatch API call to close all
                                 }}
                                 style={{
                                     backgroundColor: 'rgba(76, 175, 80, 0.1)',
@@ -836,7 +868,7 @@ export default React.memo(function OrdersPanel({ isMinimized, onToggleMinimize }
                         alignItems: 'center',
                         justifyContent: 'center',
                         zIndex: 999,
-                        backdropFilter: 'blur(2px)'
+                        backdropFilter: 'blur(1px)'
                     }}>
                         <div className="orders-edit-modal" style={{
                             backgroundColor: 'var(--surface)',
@@ -966,7 +998,7 @@ export default React.memo(function OrdersPanel({ isMinimized, onToggleMinimize }
                     alignItems: 'center',
                     justifyContent: 'center',
                     zIndex: 100,
-                    backdropFilter: 'blur(2px)'
+                    backdropFilter: 'blur(1px)'
                 }}>
                     <div className="orders-confirm-modal" style={{
                         backgroundColor: '#111625',
@@ -1038,7 +1070,7 @@ export default React.memo(function OrdersPanel({ isMinimized, onToggleMinimize }
                     alignItems: 'center',
                     justifyContent: 'center',
                     zIndex: 100,
-                    backdropFilter: 'blur(2px)'
+                    backdropFilter: 'blur(1px)'
                 }}>
                     <div className="orders-confirm-modal" style={{
                         backgroundColor: '#111625',

@@ -61,6 +61,8 @@ function normalizePendingOrder(ord) {
         quantity: parseFloat(ord.volume || ord.quantity) || 0,
         openPrice: parseFloat(ord.requested_price || ord.open_price || ord.openPrice || ord.price) || 0,
         marketPrice: parseFloat(ord.market_price || ord.marketPrice) || 0,
+        stopLoss: ord.sl ?? ord.stopLoss ?? null,
+        takeProfit: ord.tp ?? ord.takeProfit ?? null,
     };
 }
 
@@ -175,26 +177,40 @@ export const ordersManager = {
         if (type === 'ORDER_STATE_CHANGE') {
             const orderData = payload.type === 'ORDER_STATE_CHANGE' ? payload.data : data;
             if (orderData) {
-                if (orderData.status === 'OPEN') {
-                    // Optimistic insert
-                    const newPos = normalizeOpenPosition(orderData);
-                    if (newPos.orderId && newPos.symbolName) {
+                const status = orderData.status;
+
+                if (status === 'CLOSED' || status === 'REJECTED' || status === 'CANCELLED' || status === 'DELETED') {
+                    // terminal states - remove from both
+                    orders.open_positions = orders.open_positions.filter(o => o.orderId !== orderData.ticket_id && o.orderId !== orderData.orderId);
+                    orders.pending_orders = orders.pending_orders.filter(o => o.orderId !== orderData.ticket_id && o.orderId !== orderData.orderId);
+                    updated = true;
+                } else {
+                    // OPEN, RESTING, MODIFIED, etc. - Upsert
+                    // Determine if it's a position or a pending order
+                    const isPending = (orderData.order_type || '').toUpperCase().includes('LIMIT') || 
+                                     (orderData.order_type || '').toUpperCase().includes('STOP') ||
+                                     status === 'RESTING';
+
+                    if (isPending) {
+                        const newOrd = normalizePendingOrder(orderData);
+                        const existingIdx = orders.pending_orders.findIndex(o => o.orderId === newOrd.orderId);
+                        if (existingIdx >= 0) {
+                            orders.pending_orders[existingIdx] = { ...orders.pending_orders[existingIdx], ...newOrd };
+                        } else {
+                            orders.pending_orders = [newOrd, ...orders.pending_orders];
+                        }
+                    } else {
+                        const newPos = normalizeOpenPosition(orderData);
                         const existingIdx = orders.open_positions.findIndex(o => o.orderId === newPos.orderId);
                         if (existingIdx >= 0) {
                             orders.open_positions[existingIdx] = { ...orders.open_positions[existingIdx], ...newPos };
                         } else {
                             orders.open_positions = [newPos, ...orders.open_positions];
                         }
-                        updated = true;
                     }
-                } else if (orderData.status === 'CLOSED' || orderData.status === 'REJECTED') {
-                    // Optimistic remove
-                    orders.open_positions = orders.open_positions.filter(o => o.orderId !== orderData.ticket_id && o.orderId !== orderData.orderId);
-                    orders.pending_orders = orders.pending_orders.filter(o => o.orderId !== orderData.ticket_id && o.orderId !== orderData.orderId);
                     updated = true;
                 }
             }
-            // Order updates are handled by WebSocket, no need to refresh from API
         } 
         // Handle Full Snapshot Updates
         else if (data.open_positions !== undefined || data.pending_orders !== undefined) {

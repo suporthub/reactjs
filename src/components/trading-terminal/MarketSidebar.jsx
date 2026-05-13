@@ -2,13 +2,10 @@ import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { decode } from '@msgpack/msgpack';
 import { Search, Star, PanelLeftClose } from 'lucide-react';
 import OrderPlacementModal from './OrderPlacementModal';
-import {
-    getTradingAccessToken,
-    refreshTradingToken,
-    isTokenExpiredWsEvent,
-    isTokenExpiredWsMessage
-} from '../../utils/tradingTokenManager';
+import { tradingFetch, getTradingAccessToken, refreshTradingToken, isTokenExpiredWsEvent, isTokenExpiredWsMessage } from '../../utils/tradingTokenManager';
 import { tradingConfigManager } from '../../utils/tradingConfigCache';
+
+const API_FAVORITES = 'https://v3.livefxhub.com:8444/api/favorites';
 
 const CATEGORIES = ['★', 'Currencies', 'Commodities', 'Indices', 'Crypto'];
 
@@ -105,20 +102,34 @@ export default function MarketSidebar({ selectedSymbol, setSelectedSymbol, onTog
     // ── Load Config ──
     useEffect(() => {
         const load = async () => {
-            const data = await tradingConfigManager.getConfig();
-            if (data?.symbols) {
-                configRef.current = data;
+            const [config, favoriteSymbols] = await Promise.all([
+                tradingConfigManager.getConfig(),
+                (async () => {
+                    try {
+                        const res = await tradingFetch(API_FAVORITES);
+                        if (res.ok) {
+                            const result = await res.json();
+                            return result.success ? result.data.map(f => f.symbol) : [];
+                        }
+                    } catch (e) { console.error('[MarketSidebar] Favorites fetch failed:', e); }
+                    return [];
+                })()
+            ]);
+
+            if (config?.symbols) {
+                configRef.current = config;
                 const map = new Map();
-                data.symbols.forEach(s => {
+                config.symbols.forEach(s => {
+                    const isStarred = favoriteSymbols.includes(s.symbol);
                     const item = {
                         symbol: s.symbol, bid: '-', ask: '-',
-                        instrumentType: s.instrumentType, starred: false
+                        instrumentType: s.instrumentType, starred: isStarred
                     };
 
                     // Proactive Snapshot Injection:
                     // If the config response contains a price snapshot, apply it immediately
                     // so the user sees data without waiting for the WebSocket handshake.
-                    const snapshot = (data.snapshot && data.snapshot[s.symbol]) || (data.prices && data.prices[s.symbol]);
+                    const snapshot = (config.snapshot && config.snapshot[s.symbol]) || (config.prices && config.prices[s.symbol]);
                     if (snapshot && Array.isArray(snapshot)) {
                         const precision = s.showPoints;
                         if (snapshot[0] !== undefined) {
@@ -378,10 +389,43 @@ export default function MarketSidebar({ selectedSymbol, setSelectedSymbol, onTog
     }, []);
 
     // ── Stable callbacks (never change identity) ──
-    const toggleStar = useCallback((symbol) => {
+    const toggleStar = useCallback(async (symbol) => {
         const existing = masterMapRef.current.get(symbol);
-        if (existing) {
-            existing.starred = !existing.starred;
+        if (!existing) return;
+
+        const wasStarred = existing.starred;
+        const newStarred = !wasStarred;
+
+        // Optimistic UI update
+        existing.starred = newStarred;
+        setMarketData(Array.from(masterMapRef.current.values()));
+
+        try {
+            if (newStarred) {
+                // Add to favorites
+                await tradingFetch(API_FAVORITES, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ symbol })
+                });
+            } else {
+                // Remove from favorites
+                await tradingFetch(`${API_FAVORITES}/${symbol}`, {
+                    method: 'DELETE'
+                });
+            }
+
+            // Success Notification
+            window.dispatchEvent(new CustomEvent('orderResult', {
+                detail: {
+                    success: true,
+                    message: newStarred ? `${symbol} added to favorites` : `${symbol} removed from favorites`
+                }
+            }));
+        } catch (err) {
+            console.error('[MarketSidebar] Star toggle failed:', err);
+            // Rollback on failure
+            existing.starred = wasStarred;
             setMarketData(Array.from(masterMapRef.current.values()));
         }
     }, []);
@@ -397,13 +441,18 @@ export default function MarketSidebar({ selectedSymbol, setSelectedSymbol, onTog
         return marketData
             .filter(item => {
                 const matchesSearch = item.symbol.toLowerCase().includes(searchTerm.toLowerCase());
-                if (activeCategory === '★') return matchesSearch && item.starred;
+                
+                // If there's a search term, show anything that matches regardless of category
+                if (searchTerm) return matchesSearch;
+
+                // Otherwise, filter by category
+                if (activeCategory === '★') return item.starred;
                 const type = (item.instrumentType || '').toLowerCase();
                 if (activeCategory === 'Currencies' && type !== 'forex') return false;
                 if (activeCategory === 'Commodities' && type !== 'commodity') return false;
                 if (activeCategory === 'Indices' && type !== 'index') return false;
                 if (activeCategory === 'Crypto' && type !== 'crypto') return false;
-                return matchesSearch;
+                return true;
             })
             .sort((a, b) => a.symbol.localeCompare(b.symbol));
     }, [marketData, searchTerm, activeCategory]);
@@ -441,10 +490,11 @@ export default function MarketSidebar({ selectedSymbol, setSelectedSymbol, onTog
                         {CATEGORIES.map(cat => (
                             <button
                                 key={cat}
-                                className={`market-cat-btn ${activeCategory === cat ? 'active' : ''}`}
+                                className={`market-cat-btn ${activeCategory === cat ? 'active' : ''} ${cat === '★' ? 'cat-fav' : ''}`}
                                 onClick={() => setActiveCategory(cat)}
+                                title={cat === '★' ? 'Favorites' : cat}
                             >
-                                {cat}
+                                {cat === '★' ? <Star size={12} fill={activeCategory === '★' ? 'currentColor' : 'none'} /> : cat}
                             </button>
                         ))}
                     </div>

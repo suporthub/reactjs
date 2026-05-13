@@ -1,11 +1,14 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Bitcoin, Landmark, CreditCard, Smartphone, Wallet, Info, ArrowLeft } from 'lucide-react';
+import { Bitcoin, Landmark, CreditCard, Smartphone, Wallet, Info, ArrowLeft, ShieldAlert, FileText, ChevronRight, History, PlusCircle } from 'lucide-react';
 import CryptoWithdraw from './CryptoWithdraw';
 import VietnamWithdraw from './VietnamWithdraw';
+import AddWithdrawDetails from './AddWithdrawDetails';
 
-export default function Withdraw() {
+export default function Withdraw({ selectedMethod, setSelectedMethod, isAddingDetails, setIsAddingDetails }) {
     const { t } = useTranslation();
+    const navigate = useNavigate();
     const userDataStr = localStorage.getItem('userData');
     const userData = userDataStr ? JSON.parse(userDataStr) : null;
     const countryCode = userData?.countryCode || userData?.country || '';
@@ -48,14 +51,58 @@ export default function Withdraw() {
             limits: '10 - 2,000 USD'
         }
     ];
+    
+    const kycStatus = userData?.kycStatus?.toLowerCase() || 'not_started';
 
-    const [selectedMethod, setSelectedMethod] = useState(null);
+    if (kycStatus !== 'approved') {
+        return (
+            <div className="wallet-tab-content">
+                <div className="kyc-restriction-container">
+                    <div className="kyc-lock-icon">
+                        <ShieldAlert size={48} color="#f59e0b" />
+                    </div>
+                    <h2>{t('Verification Required')}</h2>
+                    <p>
+                        {kycStatus === 'pending' 
+                            ? t('Your KYC verification is currently under review. Withdrawals will be enabled once your account is fully verified.')
+                            : t('To ensure the security of your funds and comply with financial regulations, please complete your identity verification to enable withdrawals.')}
+                    </p>
+                    
+                    <div className="kyc-status-badge-large" data-status={kycStatus}>
+                        {t(kycStatus)}
+                    </div>
+
+                    <button 
+                        className="kyc-primary-btn" 
+                        style={{ marginTop: '32px', maxWidth: '300px' }}
+                        onClick={() => navigate('/settings', { state: { activeTab: 'KYC' } })}
+                    >
+                        {t('Complete Verification')}
+                        <ChevronRight size={18} style={{ marginLeft: '8px' }} />
+                    </button>
+                    
+                    <div className="kyc-info-grid">
+                        <div className="info-item">
+                            <FileText size={20} />
+                            <span>{t('Instant fund security')}</span>
+                        </div>
+                        <div className="info-item">
+                            <Landmark size={20} />
+                            <span>{t('Higher limits enabled')}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="wallet-tab-content">
             <div className="withdraw-view-container">
                 
-                {selectedMethod ? (
+                {isAddingDetails ? (
+                    <AddWithdrawDetails onBack={() => setIsAddingDetails(false)} />
+                ) : selectedMethod ? (
                     <>
                         <button className="deposit-back-btn" onClick={() => setSelectedMethod(null)}>
                             <ArrowLeft size={18} />

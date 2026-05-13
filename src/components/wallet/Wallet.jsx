@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import {
     CreditCard, Calendar, Filter, History,
-    FileText, Download, Upload
+    FileText, Download, Upload, PlusCircle
 } from 'lucide-react';
 import TransactionHistory from './TransactionHistory';
 import Deposit from './Deposit';
@@ -16,6 +16,8 @@ export default function Wallet({ activeTab = 'Transactions', setActiveTab }) {
     const [txType, setTxType] = useState('All transaction types');
     const [status, setStatus] = useState('All statuses');
     const [account, setAccount] = useState('All accounts');
+    const [selectedMethod, setSelectedMethod] = useState(null);
+    const [isAddingDetails, setIsAddingDetails] = useState(false);
 
     const dateOptions = [
         'Last 3 days',
@@ -51,6 +53,19 @@ export default function Wallet({ activeTab = 'Transactions', setActiveTab }) {
                             <button className="header-action-btn withdraw" onClick={() => setActiveTab('Withdraw')}>
                                 <Upload size={16} />
                                 {t('Withdraw')}
+                            </button>
+                        </div>
+                    )}
+
+                    {activeTab === 'Withdraw' && !selectedMethod && !isAddingDetails && (
+                        <div className="header-actions">
+                            <button className="header-action-btn secondary" style={{ border: '1px solid var(--border-color)', background: 'var(--surface-light)', color: 'var(--text-main)' }} onClick={() => window.location.hash = '/transactions'}>
+                                <History size={16} style={{ marginRight: '8px' }} />
+                                {t('Withdraw History')}
+                            </button>
+                            <button className="header-action-btn deposit" onClick={() => setIsAddingDetails(true)}>
+                                <PlusCircle size={16} style={{ marginRight: '8px' }} />
+                                {t('Add Withdraw Details')}
                             </button>
                         </div>
                     )}
@@ -93,7 +108,14 @@ export default function Wallet({ activeTab = 'Transactions', setActiveTab }) {
                     </>
                 )}
                 {activeTab === 'Deposit' && <Deposit />}
-                {activeTab === 'Withdraw' && <Withdraw />}
+                {activeTab === 'Withdraw' && (
+                    <Withdraw 
+                        selectedMethod={selectedMethod} 
+                        setSelectedMethod={setSelectedMethod}
+                        isAddingDetails={isAddingDetails}
+                        setIsAddingDetails={setIsAddingDetails}
+                    />
+                )}
 
             </div>
         </main>

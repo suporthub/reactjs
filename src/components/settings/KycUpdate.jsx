@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
-import { 
-  ArrowUpRight, 
-  BadgeCheck, 
-  Clock3, 
-  FileText, 
-  UploadCloud, 
-  ChevronRight, 
+import {
+  ArrowUpRight,
+  BadgeCheck,
+  Clock3,
+  FileText,
+  UploadCloud,
+  ChevronRight,
   ArrowLeft,
   CheckCircle,
   AlertCircle,
@@ -18,7 +18,7 @@ export default function KycUpdate() {
   const userDataStr = localStorage.getItem('userData');
   const userData = userDataStr ? JSON.parse(userDataStr) : null;
   const kycStatus = userData?.kycStatus || 'none';
-  
+
   const [showWizard, setShowWizard] = useState(false);
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
@@ -29,7 +29,7 @@ export default function KycUpdate() {
   const [city, setCity] = useState('');
   const [pincode, setPincode] = useState('');
   const [country, setCountry] = useState('');
-  
+
   // Step 2 Data
   const [idProofType, setIdProofType] = useState('passport');
   const [addressProofType, setAddressProofType] = useState('utility_bill');
@@ -81,7 +81,7 @@ export default function KycUpdate() {
         // Update local cache
         const updatedUser = { ...userData, kycStatus: 'pending' };
         localStorage.setItem('userData', JSON.stringify(updatedUser));
-        
+
         setTimeout(() => {
           setShowWizard(false);
           setStep(1);
@@ -141,40 +141,40 @@ export default function KycUpdate() {
             <div className="kyc-step-content">
               <h3>{t('Step 1: Address Details')}</h3>
               <p className="step-desc">{t('Address details desc')}</p>
-              
+
               <div className="kyc-form-grid">
                 <div className="kyc-form-group full">
                   <label>{t('Address Line 1')}</label>
-                  <input 
-                    type="text" 
-                    placeholder={t('Address placeholder')} 
+                  <input
+                    type="text"
+                    placeholder={t('Address placeholder')}
                     value={addressLine1}
                     onChange={(e) => setAddressLine1(e.target.value)}
                   />
                 </div>
                 <div className="kyc-form-group">
                   <label>{t('City')}</label>
-                  <input 
-                    type="text" 
-                    placeholder={t('City placeholder')} 
+                  <input
+                    type="text"
+                    placeholder={t('City placeholder')}
                     value={city}
                     onChange={(e) => setCity(e.target.value)}
                   />
                 </div>
                 <div className="kyc-form-group">
                   <label>{t('Pincode / Zip')}</label>
-                  <input 
-                    type="text" 
-                    placeholder={t('Pincode placeholder')} 
+                  <input
+                    type="text"
+                    placeholder={t('Pincode placeholder')}
                     value={pincode}
                     onChange={(e) => setPincode(e.target.value)}
                   />
                 </div>
                 <div className="kyc-form-group">
                   <label>{t('Country ISO')}</label>
-                  <input 
-                    type="text" 
-                    placeholder={t('Country placeholder')} 
+                  <input
+                    type="text"
+                    placeholder={t('Country placeholder')}
                     maxLength="2"
                     style={{ textTransform: 'uppercase' }}
                     value={country}
@@ -203,14 +203,22 @@ export default function KycUpdate() {
                       <option value="passport">{t('Passport')}</option>
                       <option value="driving_license">{t('Driving License')}</option>
                       <option value="national_id">{t('National ID')}</option>
+                      <option value="other">{t('Other')}</option>
                     </select>
                   </div>
                   <div className={`upload-zone ${idProofFile ? 'has-file' : ''}`}>
-                    <input 
-                      type="file" 
-                      id="idProof" 
-                      accept="image/*,.pdf" 
-                      onChange={(e) => setIdProofFile(e.target.files[0])}
+                    <input
+                      type="file"
+                      id="idProof"
+                      accept="image/*,.pdf"
+                      onChange={(e) => {
+                        const file = e.target.files[0];
+                        if (file && file.size > 20 * 1024 * 1024) {
+                          setStatus({ type: 'error', message: t('File size too large (Max 20MB)') });
+                          return;
+                        }
+                        setIdProofFile(file);
+                      }}
                     />
                     <label htmlFor="idProof">
                       {idProofFile ? (
@@ -221,10 +229,15 @@ export default function KycUpdate() {
                       ) : (
                         <>
                           <UploadCloud size={32} />
-                          <span>{t('Upload front ID')}</span>
+                          <span>{t('Upload Front Side of ID')}</span>
                         </>
                       )}
                     </label>
+                  </div>
+                  <div className="upload-note">
+                    {t('Upload front and back side as a single image or PDF (Max 20MB).')}
+                    <br />
+                    <span style={{ color: 'var(--text-muted)', fontSize: '9px' }}>{t('PNG, PDF, JPEG, JPG acceptable')}</span>
                   </div>
                 </div>
 
@@ -235,14 +248,25 @@ export default function KycUpdate() {
                     <select value={addressProofType} onChange={(e) => setAddressProofType(e.target.value)}>
                       <option value="utility_bill">{t('Utility Bill')}</option>
                       <option value="bank_statement">{t('Bank Statement')}</option>
+                      <option value="passport">{t('Passport')}</option>
+                      <option value="driving_license">{t('Driving License')}</option>
+                      <option value="national_id">{t('National ID')}</option>
+                      <option value="other">{t('Other')}</option>
                     </select>
                   </div>
                   <div className={`upload-zone ${addressProofFile ? 'has-file' : ''}`}>
-                    <input 
-                      type="file" 
-                      id="addressProof" 
-                      accept="image/*,.pdf" 
-                      onChange={(e) => setAddressProofFile(e.target.files[0])}
+                    <input
+                      type="file"
+                      id="addressProof"
+                      accept="image/*,.pdf"
+                      onChange={(e) => {
+                        const file = e.target.files[0];
+                        if (file && file.size > 20 * 1024 * 1024) {
+                          setStatus({ type: 'error', message: t('File size too large (Max 20MB)') });
+                          return;
+                        }
+                        setAddressProofFile(file);
+                      }}
                     />
                     <label htmlFor="addressProof">
                       {addressProofFile ? (
@@ -253,10 +277,15 @@ export default function KycUpdate() {
                       ) : (
                         <>
                           <UploadCloud size={32} />
-                          <span>{t('Upload PoA desc')}</span>
+                          <span>{t('Upload Document (within 3 months)')}</span>
                         </>
                       )}
                     </label>
+                  </div>
+                  <div className="upload-note">
+                    {t('Upload front and back side as a single image or PDF (Max 20MB).')}
+                    <br />
+                    <span style={{ color: 'var(--text-muted)', fontSize: '9px' }}>{t('PNG, PDF, JPEG, JPG acceptable')}</span>
                   </div>
                 </div>
               </div>
@@ -265,8 +294,8 @@ export default function KycUpdate() {
                 <button className="kyc-back-btn" onClick={() => setStep(1)} disabled={loading}>
                   {t('Previous')}
                 </button>
-                <button 
-                  className={`kyc-submit-btn ${loading ? 'loading' : ''}`} 
+                <button
+                  className={`kyc-submit-btn ${loading ? 'loading' : ''}`}
                   onClick={handleKycSubmit}
                   disabled={loading}
                 >
