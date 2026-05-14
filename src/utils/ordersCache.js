@@ -32,20 +32,48 @@ const DEFAULT_ORDERS = {
  * into the shape expected by the OrdersPanel UI.
  */
 function normalizeOpenPosition(pos) {
-    return {
-        orderId: pos.ticket_id || pos.orderId || '',
-        symbolName: pos.symbol || pos.symbolName || '',
-        orderTime: pos.order_time || pos.open_time || pos.orderTime || null,
-        orderType: (pos.order_side || pos.side || pos.orderType || '').toUpperCase(),
-        quantity: parseFloat(pos.volume || pos.quantity) || 0,
-        openPrice: parseFloat(pos.open_price || pos.openPrice) || 0,
-        marketPrice: parseFloat(pos.market_price || pos.marketPrice) || 0,
-        commission: parseFloat(pos.commission) || 0,
-        swap: parseFloat(pos.swap) || 0,
-        stopLoss: pos.sl ?? pos.stopLoss ?? null,
-        takeProfit: pos.tp ?? pos.takeProfit ?? null,
-        profitLoss: parseFloat(pos.profit_loss || pos.profitLoss) || 0,
-    };
+    const n = {};
+    
+    // Identity & Metadata
+    const id = pos.ticket_id || pos.orderId;
+    if (id !== undefined) n.orderId = id;
+    
+    const symbol = pos.symbol || pos.symbolName;
+    if (symbol !== undefined) n.symbolName = symbol;
+    
+    const time = pos.order_time || pos.open_time || pos.orderTime;
+    if (time !== undefined) n.orderTime = time;
+    
+    const side = pos.order_side || pos.side || pos.orderType;
+    if (side !== undefined) n.orderType = side.toUpperCase();
+
+    // Values (Numeric) - Only set if source key exists
+    if (pos.volume !== undefined || pos.quantity !== undefined) 
+        n.quantity = parseFloat(pos.volume || pos.quantity) || 0;
+        
+    if (pos.open_price !== undefined || pos.openPrice !== undefined) 
+        n.openPrice = parseFloat(pos.open_price || pos.openPrice) || 0;
+        
+    if (pos.market_price !== undefined || pos.marketPrice !== undefined) 
+        n.marketPrice = parseFloat(pos.market_price || pos.marketPrice) || 0;
+        
+    if (pos.commission !== undefined) 
+        n.commission = parseFloat(pos.commission) || 0;
+        
+    if (pos.swap !== undefined) 
+        n.swap = parseFloat(pos.swap) || 0;
+        
+    if (pos.profit_loss !== undefined || pos.profitLoss !== undefined) 
+        n.profitLoss = parseFloat(pos.profit_loss || pos.profitLoss) || 0;
+
+    // SL / TP (Can be 0, which means 'None')
+    if (pos.sl !== undefined) n.stopLoss = pos.sl;
+    else if (pos.stopLoss !== undefined) n.stopLoss = pos.stopLoss;
+    
+    if (pos.tp !== undefined) n.takeProfit = pos.tp;
+    else if (pos.takeProfit !== undefined) n.takeProfit = pos.takeProfit;
+
+    return n;
 }
 
 /**
@@ -53,17 +81,36 @@ function normalizeOpenPosition(pos) {
  * into the shape expected by the OrdersPanel UI.
  */
 function normalizePendingOrder(ord) {
-    return {
-        orderId: ord.ticket_id || ord.orderId || '',
-        symbolName: ord.symbol || ord.symbolName || '',
-        orderTime: ord.order_time || ord.open_time || ord.orderTime || null,
-        orderType: (ord.order_type || ord.orderType || ord.order_side || ord.side || '').toUpperCase(),
-        quantity: parseFloat(ord.volume || ord.quantity) || 0,
-        openPrice: parseFloat(ord.requested_price || ord.open_price || ord.openPrice || ord.price) || 0,
-        marketPrice: parseFloat(ord.market_price || ord.marketPrice) || 0,
-        stopLoss: ord.sl ?? ord.stopLoss ?? null,
-        takeProfit: ord.tp ?? ord.takeProfit ?? null,
-    };
+    const n = {};
+    
+    const id = ord.ticket_id || ord.orderId;
+    if (id !== undefined) n.orderId = id;
+    
+    const symbol = ord.symbol || ord.symbolName;
+    if (symbol !== undefined) n.symbolName = symbol;
+    
+    const time = ord.order_time || ord.open_time || ord.orderTime;
+    if (time !== undefined) n.orderTime = time;
+    
+    const type = ord.order_type || ord.orderType || ord.order_side || ord.side;
+    if (type !== undefined) n.orderType = type.toUpperCase();
+
+    if (ord.volume !== undefined || ord.quantity !== undefined) 
+        n.quantity = parseFloat(ord.volume || ord.quantity) || 0;
+        
+    if (ord.requested_price !== undefined || ord.open_price !== undefined || ord.openPrice !== undefined || ord.price !== undefined) 
+        n.openPrice = parseFloat(ord.requested_price || ord.open_price || ord.openPrice || ord.price) || 0;
+        
+    if (ord.market_price !== undefined || ord.marketPrice !== undefined) 
+        n.marketPrice = parseFloat(ord.market_price || ord.marketPrice) || 0;
+
+    if (ord.sl !== undefined) n.stopLoss = ord.sl;
+    else if (ord.stopLoss !== undefined) n.stopLoss = ord.stopLoss;
+    
+    if (ord.tp !== undefined) n.takeProfit = ord.tp;
+    else if (ord.takeProfit !== undefined) n.takeProfit = ord.takeProfit;
+
+    return n;
 }
 
 export const ordersManager = {
@@ -193,33 +240,42 @@ export const ordersManager = {
 
                     if (isPending) {
                         const newOrd = normalizePendingOrder(orderData);
-                        const existingIdx = orders.pending_orders.findIndex(o => o.orderId === newOrd.orderId);
+                        const orderId = newOrd.orderId || orderData.ticket_id || orderData.orderId;
+                        
+                        // 1. Remove from open_positions (just in case it was there)
+                        orders.open_positions = orders.open_positions.filter(o => o.orderId !== orderId);
+                        
+                        // 2. Upsert in pending_orders
+                        const existingIdx = orders.pending_orders.findIndex(o => o.orderId === orderId);
                         if (existingIdx >= 0) {
-                            // Incremental update: Only overwrite existing fields if the new ones are not empty/null
-                            const merged = { ...orders.pending_orders[existingIdx] };
-                            Object.keys(newOrd).forEach(key => {
-                                if (newOrd[key] !== "" && newOrd[key] !== null && newOrd[key] !== undefined) {
-                                    merged[key] = newOrd[key];
-                                }
-                            });
+                            const merged = { ...orders.pending_orders[existingIdx], ...newOrd };
                             orders.pending_orders[existingIdx] = merged;
                         } else {
-                            orders.pending_orders = [newOrd, ...orders.pending_orders];
+                            orders.pending_orders = [{
+                                orderId: '', symbolName: '', orderTime: null, orderType: '',
+                                quantity: 0, openPrice: 0, marketPrice: 0, stopLoss: null, takeProfit: null,
+                                ...newOrd
+                            }, ...orders.pending_orders];
                         }
                     } else {
                         const newPos = normalizeOpenPosition(orderData);
-                        const existingIdx = orders.open_positions.findIndex(o => o.orderId === newPos.orderId);
+                        const orderId = newPos.orderId || orderData.ticket_id || orderData.orderId;
+                        
+                        // 1. Remove from pending_orders (ESSENTIAL for triggered orders)
+                        orders.pending_orders = orders.pending_orders.filter(o => o.orderId !== orderId);
+                        
+                        // 2. Upsert in open_positions
+                        const existingIdx = orders.open_positions.findIndex(o => o.orderId === orderId);
                         if (existingIdx >= 0) {
-                            // Incremental update: Only overwrite existing fields if the new ones are not empty/null
-                            const merged = { ...orders.open_positions[existingIdx] };
-                            Object.keys(newPos).forEach(key => {
-                                if (newPos[key] !== "" && newPos[key] !== null && newPos[key] !== undefined) {
-                                    merged[key] = newPos[key];
-                                }
-                            });
+                            const merged = { ...orders.open_positions[existingIdx], ...newPos };
                             orders.open_positions[existingIdx] = merged;
                         } else {
-                            orders.open_positions = [newPos, ...orders.open_positions];
+                            orders.open_positions = [{
+                                orderId: '', symbolName: '', orderTime: null, orderType: '',
+                                quantity: 0, openPrice: 0, marketPrice: 0, commission: 0, swap: 0,
+                                stopLoss: null, takeProfit: null, profitLoss: 0,
+                                ...newPos
+                            }, ...orders.open_positions];
                         }
                     }
                     updated = true;

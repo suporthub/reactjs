@@ -19,6 +19,14 @@ export default function Withdraw({ selectedMethod, setSelectedMethod, isAddingDe
     const [showNewAccountForm, setShowNewAccountForm] = useState(false);
     const [visibleAccounts, setVisibleAccounts] = useState({});
 
+    const [withdrawAmount, setWithdrawAmount] = useState('');
+    const [selectedTradingAccount, setSelectedTradingAccount] = useState('');
+    const [tradingAccounts, setTradingAccounts] = useState([]);
+    const [isWithdrawing, setIsWithdrawing] = useState(false);
+    const [withdrawResult, setWithdrawResult] = useState(null);
+    const [withdrawError, setWithdrawError] = useState('');
+    const [activeWithdrawalView, setActiveWithdrawalView] = useState(false);
+
     const toggleAccountVisibility = (e, id) => {
         e.stopPropagation();
         setVisibleAccounts(prev => ({ ...prev, [id]: !prev[id] }));
@@ -80,6 +88,7 @@ export default function Withdraw({ selectedMethod, setSelectedMethod, isAddingDe
             fetchSavedMethods();
             setSelectedSavedMethod(null);
             setShowNewAccountForm(false);
+            setActiveWithdrawalView(false);
         }
     }, [selectedMethod]);
 
@@ -98,6 +107,75 @@ export default function Withdraw({ selectedMethod, setSelectedMethod, isAddingDe
             console.error('Failed to fetch payment methods:', error);
         } finally {
             setLoadingMethods(false);
+        }
+    };
+
+    const fetchTradingAccounts = async () => {
+        const token = localStorage.getItem('portalToken');
+        const fingerprint = localStorage.getItem('deviceFingerprint');
+        try {
+            const response = await fetch('https://v3.livefxhub.com:8444/api/live/accounts', {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'X-Device-Fingerprint': fingerprint
+                }
+            });
+            const result = await response.json();
+            if (result.success) {
+                setTradingAccounts(result.data || []);
+            }
+        } catch (error) {
+            console.error("Fetch accounts failed:", error);
+        }
+    };
+
+    useEffect(() => {
+        if (activeWithdrawalView) {
+            fetchTradingAccounts();
+        }
+    }, [activeWithdrawalView]);
+
+    const handleConfirmWithdrawal = async () => {
+        if (!selectedTradingAccount || !withdrawAmount || !selectedSavedMethod) {
+            setWithdrawError(t('Please select an account and enter an amount.'));
+            return;
+        }
+
+        setIsWithdrawing(true);
+        setWithdrawError('');
+
+        const token = localStorage.getItem('portalToken');
+        
+        try {
+            const payload = {
+                tradingAccountId: selectedTradingAccount,
+                amount: parseFloat(withdrawAmount),
+                paymentMethodId: selectedSavedMethod.id
+            };
+
+            const response = await fetch('https://v3.livefxhub.com:8444/api/financial/withdrawals', {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(payload)
+            });
+
+            const result = await response.json();
+            if (result.success || response.status === 201 || result.data) {
+                setWithdrawResult(result.data || result);
+                setWithdrawAmount('');
+                setSelectedTradingAccount('');
+            } else {
+                setWithdrawError(result.message || t('Withdrawal request failed.'));
+            }
+        } catch (error) {
+            console.error("Withdrawal error:", error);
+            setWithdrawError(t('Network error. Please try again.'));
+        } finally {
+            setIsWithdrawing(false);
         }
     };
     
@@ -151,26 +229,123 @@ export default function Withdraw({ selectedMethod, setSelectedMethod, isAddingDe
     return (
         <div className="wallet-tab-content">
             <div className="withdraw-view-container">
-                
                 {isAddingDetails ? (
                     <AddWithdrawDetails onBack={() => setIsAddingDetails(false)} />
                 ) : selectedMethod ? (
-                    <>
-                        <button className="deposit-back-btn" onClick={() => setSelectedMethod(null)}>
-                            <ArrowLeft size={18} />
-                            <span>{t('Back')}</span>
-                        </button>
+                    <div className="method-selection-view">
+                        {!activeWithdrawalView && (
+                            <div className="method-navigation">
+                                <button className="deposit-back-btn" onClick={() => setSelectedMethod(null)}>
+                                    <ArrowLeft size={18} />
+                                    <span>{t('Back')}</span>
+                                </button>
 
-                        <div className="payment-view-header" style={{ marginBottom: '32px' }}>
-                            <h2>{t('Withdrawal via')} {t(currentMethodObj?.name)}</h2>
-                        </div>
+                                <div className="payment-view-header" style={{ marginBottom: '32px' }}>
+                                    <h2>{t('Withdrawal via')} {t(currentMethodObj?.name)}</h2>
+                                </div>
+                            </div>
+                        )}
 
                         {loadingMethods ? (
                             <div style={{ display: 'flex', justifyContent: 'center', padding: '60px' }}>
                                 <Loader2 className="spin" size={32} color="var(--primary)" />
                             </div>
+                        ) : activeWithdrawalView ? (
+                            <div className="withdraw-form-container" style={{ background: 'var(--surface)', padding: '32px', borderRadius: '20px', border: '1px solid rgba(255, 255, 255, 0.05)', maxWidth: '720px', margin: '0 auto', boxShadow: '0 20px 40px rgba(0, 0, 0, 0.2)' }}>
+                                <button className="deposit-back-btn" onClick={() => { setActiveWithdrawalView(false); setWithdrawResult(null); setWithdrawError(''); }} style={{ marginBottom: '24px' }}>
+                                    <ArrowLeft size={18} />
+                                    <span>{t('Back to Accounts')}</span>
+                                </button>
+                                
+                                {withdrawResult ? (
+                                    <div className="withdraw-success-container" style={{ textAlign: 'center', padding: '32px 0' }}>
+                                        <div style={{ width: '64px', height: '64px', borderRadius: '50%', background: 'rgba(16, 185, 129, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
+                                            <Check size={32} color="#10b981" />
+                                        </div>
+                                        <h3 style={{ fontSize: '24px', fontWeight: '700', marginBottom: '8px' }}>{t('Withdrawal Initiated')}</h3>
+                                        <p style={{ color: 'var(--text-muted)', marginBottom: '24px' }}>{withdrawResult.description || t('Your withdrawal request has been submitted.')}</p>
+                                        
+                                        <div style={{ background: 'var(--surface-light)', borderRadius: '12px', padding: '16px', marginBottom: '24px', textAlign: 'left' }}>
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+                                                <span style={{ color: 'var(--text-muted)' }}>{t('Amount')}</span>
+                                                <strong style={{ fontSize: '16px' }}>${parseFloat(withdrawResult.amount).toFixed(2)}</strong>
+                                            </div>
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+                                                <span style={{ color: 'var(--text-muted)' }}>{t('Transaction Ref')}</span>
+                                                <span style={{ fontFamily: 'var(--font-mono)', fontSize: '13px' }}>{withdrawResult.txnRef}</span>
+                                            </div>
+                                            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                                <span style={{ color: 'var(--text-muted)' }}>{t('Status')}</span>
+                                                <span style={{ color: '#f59e0b', fontWeight: '600', textTransform: 'capitalize' }}>{withdrawResult.status || 'Pending'}</span>
+                                            </div>
+                                        </div>
+                                        
+                                        <button className="kyc-primary-btn" onClick={() => { setActiveWithdrawalView(false); setWithdrawResult(null); setSelectedSavedMethod(null); }} style={{ width: '100%' }}>
+                                            {t('Done')}
+                                        </button>
+                                    </div>
+                                ) : (
+                                    <div className="withdraw-form-content">
+                                        <div style={{ marginBottom: '24px' }}>
+                                            <h3 style={{ fontSize: '20px', fontWeight: '700', marginBottom: '8px' }}>{t('Withdraw Funds')}</h3>
+                                            <p style={{ color: 'var(--text-muted)', fontSize: '14px' }}>{t('Transfer funds from your trading account to your saved')} {selectedSavedMethod?.type === 'BANK' ? t('Bank Account') : t('Crypto Wallet')}</p>
+                                        </div>
+                                        
+                                        {withdrawError && (
+                                            <div className="kyc-status-alert error" style={{ marginBottom: '20px' }}>
+                                                <ShieldAlert size={18} />
+                                                <span>{withdrawError}</span>
+                                            </div>
+                                        )}
+
+                                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '32px' }}>
+                                            <div className="form-group-wallet" style={{ margin: 0 }}>
+                                                <label style={{ display: 'block', marginBottom: '8px', fontSize: '13px', color: 'var(--text-muted)' }}>{t('From Trading Account')}</label>
+                                                <select 
+                                                    className="wallet-input"
+                                                    value={selectedTradingAccount}
+                                                    onChange={(e) => setSelectedTradingAccount(e.target.value)}
+                                                    style={{ width: '100%', height: '44px', background: 'var(--surface-light)', border: '1px solid var(--border-color)', borderRadius: '8px', color: '#fff', padding: '0 12px', outline: 'none' }}
+                                                >
+                                                    <option value="">{t('Select Source Account')}</option>
+                                                    {tradingAccounts.map(acc => (
+                                                        <option key={acc.id} value={acc.id}>
+                                                            {acc.accountName} (#{acc.accountNumber}) - ${acc.walletBalance || acc.balance || '0.00'}
+                                                        </option>
+                                                    ))}
+                                                </select>
+                                            </div>
+
+                                            <div className="form-group-wallet" style={{ margin: 0 }}>
+                                                <label style={{ display: 'block', marginBottom: '8px', fontSize: '13px', color: 'var(--text-muted)' }}>{t('Amount (USD)')}</label>
+                                                <div style={{ position: 'relative', width: '100%' }}>
+                                                    <span style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', fontSize: '15px', pointerEvents: 'none' }}>$</span>
+                                                    <input 
+                                                        type="number" 
+                                                        className="wallet-input" 
+                                                        style={{ width: '100%', height: '44px', paddingLeft: '32px', paddingRight: '12px', background: 'var(--surface-light)', border: '1px solid var(--border-color)', borderRadius: '8px', color: '#fff', outline: 'none' }}
+                                                        placeholder="0.00" 
+                                                        value={withdrawAmount}
+                                                        onChange={(e) => setWithdrawAmount(e.target.value)}
+                                                    />
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <button 
+                                            className="kyc-primary-btn" 
+                                            style={{ width: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px' }}
+                                            onClick={handleConfirmWithdrawal}
+                                            disabled={isWithdrawing || !selectedTradingAccount || !withdrawAmount}
+                                        >
+                                            {isWithdrawing ? <Loader2 className="spin" size={20} /> : null}
+                                            {isWithdrawing ? t('Processing...') : t('Submit Withdrawal Request')}
+                                        </button>
+                                    </div>
+                                )}
+                            </div>
                         ) : (
-                            <>
+                            <div className="saved-methods-container">
                                 <div className="saved-accounts-section" style={{ marginBottom: '32px' }}>
                                     <h3 style={{ fontSize: '14px', fontWeight: '600', color: 'var(--text-muted)', marginBottom: '16px' }}>
                                         {filteredSavedMethods.length > 0 ? t('Choose a saved account') : t('No saved accounts found')}
@@ -182,7 +357,8 @@ export default function Withdraw({ selectedMethod, setSelectedMethod, isAddingDe
                                                 className={`saved-method-card ${selectedSavedMethod?.id === method.id ? 'active' : ''}`}
                                                 onClick={() => setSelectedSavedMethod(method)}
                                                 style={{ 
-                                                    background: method.type === 'BANK' ? 'linear-gradient(120deg, #8ba8c4 0%, #d4c5c2 50%, #dfa579 100%)' : 'linear-gradient(120deg, #667eea 0%, #764ba2 100%)',
+                                                    background: method.type === 'BANK' ? 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)' : 'linear-gradient(135deg, #1e3a8a 0%, #172554 100%)',
+                                                    border: '1px solid rgba(255, 255, 255, 0.05)',
                                                     borderRadius: '16px',
                                                     padding: '20px',
                                                     cursor: 'pointer',
@@ -247,7 +423,9 @@ export default function Withdraw({ selectedMethod, setSelectedMethod, isAddingDe
 
                                                 {selectedSavedMethod?.id === method.id && (
                                                     <div style={{ marginTop: '16px', animation: 'fadeIn 0.2s ease', position: 'relative', zIndex: 1 }}>
-                                                        <button style={{ 
+                                                        <button 
+                                                            onClick={() => setActiveWithdrawalView(true)}
+                                                            style={{ 
                                                             width: '100%', height: '36px', borderRadius: '10px', 
                                                             background: '#ffffff', color: '#000000', 
                                                             border: 'none', fontWeight: '700', fontSize: '13px', cursor: 'pointer',
@@ -290,7 +468,7 @@ export default function Withdraw({ selectedMethod, setSelectedMethod, isAddingDe
                                 </div>
 
                                 {showNewAccountForm && (
-                                    <>
+                                    <div className="new-account-form-container">
                                         {selectedMethod === 'crypto' && <CryptoWithdraw />}
                                         {selectedMethod === 'vietnam-withdraw' && <VietnamWithdraw />}
                                         {selectedMethod === 'bank-transfer' && <div>{t('Bank Transfer logic here...')}</div>}
@@ -303,75 +481,75 @@ export default function Withdraw({ selectedMethod, setSelectedMethod, isAddingDe
                                             <ArrowLeft size={16} />
                                             {t('Back to saved accounts')}
                                         </button>
-                                    </>
+                                    </div>
                                 )}
-                            </>
+                            </div>
                         )}
-                    </>
+                    </div>
                 ) : (
-                    <>
+                    <div className="withdraw-methods-overview">
                         {/* Balance Summary Card */}
-                <div className="balance-overview-card">
-                    <div className="balance-left">
-                        <div className="total-label">{t('Available for Withdrawal')}</div>
-                        <div className="total-amount">$5,240.00</div>
-                        <div className="balance-stats">
-                            <div className="stat">
-                                <span className="stat-label">{t('Total Balance:')}</span>
-                                <span className="stat-value">$12,850.40</span>
+                        <div className="balance-overview-card">
+                            <div className="balance-left">
+                                <div className="total-label">{t('Available for Withdrawal')}</div>
+                                <div className="total-amount">$5,240.00</div>
+                                <div className="balance-stats">
+                                    <div className="stat">
+                                        <span className="stat-label">{t('Total Balance:')}</span>
+                                        <span className="stat-value">$12,850.40</span>
+                                    </div>
+                                    <div className="stat">
+                                        <span className="stat-label">{t('In Orders:')}</span>
+                                        <span className="stat-value">$7,610.40</span>
+                                    </div>
+                                </div>
                             </div>
-                            <div className="stat">
-                                <span className="stat-label">{t('In Orders:')}</span>
-                                <span className="stat-value">$7,610.40</span>
+                            <div className="balance-right">
+                                <div className="balance-icon-bg">
+                                    <Wallet size={32} />
+                                </div>
                             </div>
                         </div>
-                    </div>
-                    <div className="balance-right">
-                        <div className="balance-icon-bg">
-                            <Wallet size={32} />
+
+                        <div className="withdraw-list-header">
+                            <h2>{t('Withdrawal Methods')}</h2>
+                            <div className="info-badge">
+                                <Info size={14} />
+                                <span>{t('Withdrawals are processed according to the sequence of deposits.')}</span>
+                            </div>
+                        </div>
+
+                        <div className="withdraw-methods-list">
+                            {withdrawMethods.map((method) => (
+                                <div key={method.id} className="withdraw-list-item">
+                                    <div className="item-main">
+                                        <div className="method-icon-circle-box" style={{ color: method.color, backgroundColor: `${method.color}15` }}>
+                                            <method.icon size={22} />
+                                        </div>
+                                        <div className="item-info">
+                                            <div className="withdrawal-method-name">{t(method.name)}</div>
+                                            <div className="withdrawal-method-processed">{t('Processed within')} {t(method.processing)}</div>
+                                        </div>
+                                    </div>
+
+                                    <div className="item-meta">
+                                        <div className="meta-group">
+                                            <span className="label">{t('Fee:')}</span>
+                                            <span className="value free">{t(method.fee)}</span>
+                                        </div>
+                                        <div className="meta-group">
+                                            <span className="label">{t('Limits:')}</span>
+                                            <span className="value">{t(method.limits)}</span>
+                                        </div>
+                                    </div>
+
+                                    <button className="withdraw-btn-action" onClick={() => setSelectedMethod(method.id)}>
+                                        {t('Withdraw')}
+                                    </button>
+                                </div>
+                            ))}
                         </div>
                     </div>
-                </div>
-
-                <div className="withdraw-list-header">
-                    <h2>{t('Withdrawal Methods')}</h2>
-                    <div className="info-badge">
-                        <Info size={14} />
-                        <span>{t('Withdrawals are processed according to the sequence of deposits.')}</span>
-                    </div>
-                </div>
-
-                <div className="withdraw-methods-list">
-                    {withdrawMethods.map((method) => (
-                        <div key={method.id} className="withdraw-list-item">
-                            <div className="item-main">
-                                <div className="method-icon-circle-box" style={{ color: method.color, backgroundColor: `${method.color}15` }}>
-                                    <method.icon size={22} />
-                                </div>
-                                <div className="item-info">
-                                    <div className="withdrawal-method-name">{t(method.name)}</div>
-                                    <div className="withdrawal-method-processed">{t('Processed within')} {t(method.processing)}</div>
-                                </div>
-                            </div>
-
-                            <div className="item-meta">
-                                <div className="meta-group">
-                                    <span className="label">{t('Fee:')}</span>
-                                    <span className="value free">{t(method.fee)}</span>
-                                </div>
-                                <div className="meta-group">
-                                    <span className="label">{t('Limits:')}</span>
-                                    <span className="value">{t(method.limits)}</span>
-                                </div>
-                            </div>
-
-                            <button className="withdraw-btn-action" onClick={() => setSelectedMethod(method.id)}>
-                                {t('Withdraw')}
-                            </button>
-                        </div>
-                    ))}
-                </div>
-                    </>
                 )}
             </div>
         </div>

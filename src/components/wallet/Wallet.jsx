@@ -59,10 +59,7 @@ export default function Wallet({ activeTab = 'Transactions', setActiveTab }) {
 
                     {activeTab === 'Withdraw' && !selectedMethod && !isAddingDetails && (
                         <div className="header-actions">
-                            <button className="header-action-btn secondary" style={{ border: '1px solid var(--border-color)', background: 'var(--surface-light)', color: 'var(--text-main)' }} onClick={() => window.location.hash = '/transactions'}>
-                                <History size={16} style={{ marginRight: '8px' }} />
-                                {t('Withdraw History')}
-                            </button>
+
                             <button className="header-action-btn deposit" onClick={() => setIsAddingDetails(true)}>
                                 <PlusCircle size={16} style={{ marginRight: '8px' }} />
                                 {t('Add Withdraw Details')}

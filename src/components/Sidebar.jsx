@@ -98,6 +98,7 @@ export default function Sidebar({ sidebarOpen, setSidebarOpen, activePage, setAc
                         </div>
                     </a>
 
+                    {/* Future use:
                     <div className="nav-item-wrapper">
                         <a href="#" className={`nav-item ${activePage === 'CopyTrading' ? 'active' : ''}`} onClick={(e) => { toggleMenu('copyTrading', e); setActivePage('CopyTrading'); setCopyTradingTab('Discover'); }}>
                             <div className="nav-item-left">
@@ -120,6 +121,7 @@ export default function Sidebar({ sidebarOpen, setSidebarOpen, activePage, setAc
                             <span className="nav-text">{t('Algo trading')}</span>
                         </div>
                     </a>
+                    */}
 
                     <div className="nav-item-wrapper">
                         <a href="#" className={`nav-item ${activePage === 'Wallet' ? 'active' : ''}`} onClick={(e) => { toggleMenu('wallet', e); setActivePage('Wallet'); setWalletTab('Transactions'); }}>
@@ -157,12 +159,14 @@ export default function Sidebar({ sidebarOpen, setSidebarOpen, activePage, setAc
                         </div>
                     </a>
 
+                    {/* Future use:
                     <a href="#" className={`nav-item ${activePage === 'Calendar' ? 'active' : ''}`} onClick={(e) => handleNavClick('Calendar', e)}>
                         <div className="nav-item-left">
                             <Calendar className="nav-icon" size={20} />
                             <span className="nav-text">{t('Calendar')}</span>
                         </div>
                     </a>
+                    */}
 
                     <a href="#" className={`nav-item ${activePage === 'IB' ? 'active' : ''}`} onClick={(e) => handleNavClick('IB', e)}>
                         <div className="nav-item-left">
