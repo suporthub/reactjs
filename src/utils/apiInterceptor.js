@@ -118,8 +118,7 @@ window.fetch = async (...args) => {
               'Content-Type': 'application/json',
               'Authorization': `Bearer ${currentToken}`
             },
-            body: JSON.stringify({ refreshToken }),
-            credentials: 'include'
+            body: JSON.stringify({ refreshToken })
           });
 
           if (!refreshResponse.ok) {

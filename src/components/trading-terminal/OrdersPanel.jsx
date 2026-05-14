@@ -31,6 +31,11 @@ export default React.memo(function OrdersPanel({ isMinimized, onToggleMinimize }
     const [historyCursor, setHistoryCursor] = useState(null);
     const [historyHasMore, setHistoryHasMore] = useState(true);
     const [historyInitialLoaded, setHistoryInitialLoaded] = useState(false);
+    const [historyFilters, setHistoryFilters] = useState({
+        search: '',
+        fromDate: '',
+        toDate: ''
+    });
 
     // ── Rejected Orders tab state ──────────────────────────────
     const [rejectedData, setRejectedData] = useState([]);
@@ -38,6 +43,11 @@ export default React.memo(function OrdersPanel({ isMinimized, onToggleMinimize }
     const [rejectedCursor, setRejectedCursor] = useState(null);
     const [rejectedHasMore, setRejectedHasMore] = useState(true);
     const [rejectedInitialLoaded, setRejectedInitialLoaded] = useState(false);
+    const [rejectedFilters, setRejectedFilters] = useState({
+        search: '',
+        fromDate: '',
+        toDate: ''
+    });
 
     const tableScrollRef = useRef(null);
     const mountedRef = useRef(true);
@@ -181,6 +191,21 @@ export default React.memo(function OrdersPanel({ isMinimized, onToggleMinimize }
 
         try {
             let url = `${HISTORY_API_URL}?type=completed&limit=${HISTORY_PAGE_LIMIT}`;
+            
+            // Intelligent Search Logic
+            if (historyFilters.search) {
+                const s = historyFilters.search.trim();
+                // If it's numeric or long or contains '-', assume Order ID
+                if (/^\d+$/.test(s) || s.length > 10 || s.includes('-')) {
+                    url += `&order_id=${s}`;
+                } else {
+                    url += `&symbol=${s.toUpperCase()}`;
+                }
+            }
+            
+            if (historyFilters.fromDate) url += `&from_date=${historyFilters.fromDate}`;
+            if (historyFilters.toDate) url += `&to_date=${historyFilters.toDate}`;
+            
             if (cursor) {
                 url += `&cursor=${cursor}`;
             }
@@ -214,7 +239,7 @@ export default React.memo(function OrdersPanel({ isMinimized, onToggleMinimize }
             }
             historyFetchingRef.current = false;
         }
-    }, []);
+    }, [historyFilters]);
 
     // ── Rejected Orders API fetch ────────────────────────────────
     const fetchRejected = useCallback(async (cursor = null, isLoadMore = false) => {
@@ -227,6 +252,20 @@ export default React.memo(function OrdersPanel({ isMinimized, onToggleMinimize }
 
         try {
             let url = `${HISTORY_API_URL}?type=rejected&limit=${HISTORY_PAGE_LIMIT}`;
+            
+            // Intelligent Search Logic
+            if (rejectedFilters.search) {
+                const s = rejectedFilters.search.trim();
+                if (/^\d+$/.test(s) || s.length > 10 || s.includes('-')) {
+                    url += `&order_id=${s}`;
+                } else {
+                    url += `&symbol=${s.toUpperCase()}`;
+                }
+            }
+            
+            if (rejectedFilters.fromDate) url += `&from_date=${rejectedFilters.fromDate}`;
+            if (rejectedFilters.toDate) url += `&to_date=${rejectedFilters.toDate}`;
+            
             if (cursor) {
                 url += `&cursor=${cursor}`;
             }
@@ -260,7 +299,7 @@ export default React.memo(function OrdersPanel({ isMinimized, onToggleMinimize }
             }
             rejectedFetchingRef.current = false;
         }
-    }, []);
+    }, [rejectedFilters]);
 
     const handleDownloadCSV = useCallback(async () => {
         try {
@@ -672,7 +711,148 @@ export default React.memo(function OrdersPanel({ isMinimized, onToggleMinimize }
                         </button>
                     ))}
                 </div>
-                <div className="orders-tabs-right">
+                <div className="orders-tabs-right" style={{ display: 'flex', alignItems: 'center' }}>
+                    {/* Inline Filters for History/Rejected */}
+                    {(activeTab === 'History' || activeTab === 'Rejected Orders') && (
+                        <div className="header-inline-filters" style={{ 
+                            display: 'flex', 
+                            alignItems: 'center', 
+                            gap: '4px', 
+                            marginRight: '4px',
+                            borderRight: '1px solid var(--border-color)',
+                            paddingRight: '8px'
+                        }}>
+                            {/* Combined Search Input */}
+                            <input 
+                                type="text" 
+                                placeholder="Search Symbol / ID..."
+                                value={activeTab === 'History' ? historyFilters.search : rejectedFilters.search}
+                                onChange={(e) => {
+                                    const val = e.target.value;
+                                    if (activeTab === 'History') setHistoryFilters(prev => ({ ...prev, search: val }));
+                                    else setRejectedFilters(prev => ({ ...prev, search: val }));
+                                }}
+                                onKeyDown={(e) => e.key === 'Enter' && (activeTab === 'History' ? fetchHistory() : fetchRejected())}
+                                style={{
+                                    backgroundColor: 'var(--surface)',
+                                    border: '1px solid var(--border-color)',
+                                    borderRadius: '3px',
+                                    color: 'var(--text-main)',
+                                    fontSize: '9px',
+                                    padding: '2px 8px',
+                                    width: '160px',
+                                    outline: 'none',
+                                    height: '22px',
+                                    transition: 'border-color 0.2s'
+                                }}
+                                onFocus={(e) => e.target.style.borderColor = 'var(--primary)'}
+                                onBlur={(e) => e.target.style.borderColor = 'var(--border-color)'}
+                            />
+
+                            {/* Adaptive Date Range Group */}
+                            <div style={{ 
+                                display: 'flex', 
+                                alignItems: 'center', 
+                                gap: '2px', 
+                                background: 'var(--surface)', 
+                                borderRadius: '3px', 
+                                padding: '0 4px', 
+                                marginLeft: '2px',
+                                border: '1px solid var(--border-color)',
+                                height: '22px'
+                            }}>
+                                <input 
+                                    type="date" 
+                                    value={activeTab === 'History' ? historyFilters.fromDate : rejectedFilters.fromDate}
+                                    onChange={(e) => {
+                                        const val = e.target.value;
+                                        if (activeTab === 'History') setHistoryFilters(prev => ({ ...prev, fromDate: val }));
+                                        else setRejectedFilters(prev => ({ ...prev, fromDate: val }));
+                                    }}
+                                    style={{
+                                        background: 'transparent',
+                                        border: 'none',
+                                        color: 'var(--text-main)',
+                                        fontSize: '9px',
+                                        padding: 0,
+                                        width: '82px',
+                                        outline: 'none',
+                                        cursor: 'pointer',
+                                        colorScheme: 'inherit'
+                                    }}
+                                />
+                                <span style={{ color: 'var(--text-muted)', fontSize: '10px', fontWeight: 'bold' }}>-</span>
+                                <input 
+                                    type="date" 
+                                    value={activeTab === 'History' ? historyFilters.toDate : rejectedFilters.toDate}
+                                    onChange={(e) => {
+                                        const val = e.target.value;
+                                        if (activeTab === 'History') setHistoryFilters(prev => ({ ...prev, toDate: val }));
+                                        else setRejectedFilters(prev => ({ ...prev, toDate: val }));
+                                    }}
+                                    style={{
+                                        background: 'transparent',
+                                        border: 'none',
+                                        color: 'var(--text-main)',
+                                        fontSize: '9px',
+                                        padding: 0,
+                                        width: '82px',
+                                        outline: 'none',
+                                        cursor: 'pointer',
+                                        colorScheme: 'inherit'
+                                    }}
+                                />
+                            </div>
+
+                            {/* GO Button (beside calendar) */}
+                            <button 
+                                onClick={() => activeTab === 'History' ? fetchHistory() : fetchRejected()}
+                                style={{
+                                    backgroundColor: 'var(--primary)',
+                                    border: 'none',
+                                    borderRadius: '2px',
+                                    color: '#FFFFFF',
+                                    fontSize: '9px',
+                                    padding: '0 10px',
+                                    cursor: 'pointer',
+                                    fontWeight: 'bold',
+                                    height: '22px',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center'
+                                }}
+                            >
+                                GO
+                            </button>
+
+                            {/* Clear Button */}
+                            <button 
+                                onClick={() => {
+                                    const reset = { search: '', fromDate: '', toDate: '' };
+                                    if (activeTab === 'History') { setHistoryFilters(reset); setTimeout(() => fetchHistory(), 0); }
+                                    else { setRejectedFilters(reset); setTimeout(() => fetchRejected(), 0); }
+                                }}
+                                style={{
+                                    backgroundColor: 'rgba(218, 82, 68, 0.05)',
+                                    border: '1px solid rgba(218, 82, 68, 0.2)',
+                                    borderRadius: '3px',
+                                    color: '#DA5244',
+                                    fontSize: '9px',
+                                    padding: '0 6px',
+                                    cursor: 'pointer',
+                                    marginLeft: '2px',
+                                    height: '22px',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center'
+                                }}
+                                title="Clear Filters"
+                            >
+                                ✕
+                            </button>
+                        </div>
+                    )}
+
                     <button
                         className="orders-download-btn"
                         onClick={handleDownloadCSV}
@@ -761,12 +941,11 @@ export default React.memo(function OrdersPanel({ isMinimized, onToggleMinimize }
                 <div className="orders-confirm-overlay" style={{
                     position: 'absolute',
                     top: 0, left: 0, right: 0, bottom: 0,
-                    backgroundColor: 'rgba(10, 15, 28, 0.7)',
+                    backgroundColor: 'transparent',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    zIndex: 100,
-                    backdropFilter: 'blur(2px)'
+                    zIndex: 100
                 }}>
                     <div className="orders-confirm-modal" style={{
                         backgroundColor: '#111625',
@@ -863,12 +1042,11 @@ export default React.memo(function OrdersPanel({ isMinimized, onToggleMinimize }
                     <div className="orders-edit-overlay" style={{
                         position: 'fixed',
                         top: 0, left: 0, right: 0, bottom: 0,
-                        backgroundColor: 'rgba(10, 15, 28, 0.6)',
+                        backgroundColor: 'transparent',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        zIndex: 999,
-                        backdropFilter: 'blur(1px)'
+                        zIndex: 999
                     }}>
                         <div className="orders-edit-modal" style={{
                             backgroundColor: 'var(--surface)',
@@ -993,12 +1171,11 @@ export default React.memo(function OrdersPanel({ isMinimized, onToggleMinimize }
                 <div className="orders-confirm-overlay" style={{
                     position: 'absolute',
                     top: 0, left: 0, right: 0, bottom: 0,
-                    backgroundColor: 'rgba(10, 15, 28, 0.7)',
+                    backgroundColor: 'transparent',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    zIndex: 100,
-                    backdropFilter: 'blur(1px)'
+                    zIndex: 100
                 }}>
                     <div className="orders-confirm-modal" style={{
                         backgroundColor: '#111625',
@@ -1065,12 +1242,11 @@ export default React.memo(function OrdersPanel({ isMinimized, onToggleMinimize }
                 <div className="orders-confirm-overlay" style={{
                     position: 'absolute',
                     top: 0, left: 0, right: 0, bottom: 0,
-                    backgroundColor: 'rgba(10, 15, 28, 0.7)',
+                    backgroundColor: 'transparent',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    zIndex: 100,
-                    backdropFilter: 'blur(1px)'
+                    zIndex: 100
                 }}>
                     <div className="orders-confirm-modal" style={{
                         backgroundColor: '#111625',
