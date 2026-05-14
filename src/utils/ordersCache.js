@@ -195,7 +195,14 @@ export const ordersManager = {
                         const newOrd = normalizePendingOrder(orderData);
                         const existingIdx = orders.pending_orders.findIndex(o => o.orderId === newOrd.orderId);
                         if (existingIdx >= 0) {
-                            orders.pending_orders[existingIdx] = { ...orders.pending_orders[existingIdx], ...newOrd };
+                            // Incremental update: Only overwrite existing fields if the new ones are not empty/null
+                            const merged = { ...orders.pending_orders[existingIdx] };
+                            Object.keys(newOrd).forEach(key => {
+                                if (newOrd[key] !== "" && newOrd[key] !== null && newOrd[key] !== undefined) {
+                                    merged[key] = newOrd[key];
+                                }
+                            });
+                            orders.pending_orders[existingIdx] = merged;
                         } else {
                             orders.pending_orders = [newOrd, ...orders.pending_orders];
                         }
@@ -203,7 +210,14 @@ export const ordersManager = {
                         const newPos = normalizeOpenPosition(orderData);
                         const existingIdx = orders.open_positions.findIndex(o => o.orderId === newPos.orderId);
                         if (existingIdx >= 0) {
-                            orders.open_positions[existingIdx] = { ...orders.open_positions[existingIdx], ...newPos };
+                            // Incremental update: Only overwrite existing fields if the new ones are not empty/null
+                            const merged = { ...orders.open_positions[existingIdx] };
+                            Object.keys(newPos).forEach(key => {
+                                if (newPos[key] !== "" && newPos[key] !== null && newPos[key] !== undefined) {
+                                    merged[key] = newPos[key];
+                                }
+                            });
+                            orders.open_positions[existingIdx] = merged;
                         } else {
                             orders.open_positions = [newPos, ...orders.open_positions];
                         }

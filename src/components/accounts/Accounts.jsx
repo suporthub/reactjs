@@ -105,6 +105,7 @@ export default function Accounts({ setWalletTab }) {
                     localStorage.setItem(`tradingAccountInfo_${accountNumber}`, JSON.stringify({
                         name: accountObj.accountName,
                         group: accountObj.groupName || accountObj.accountType || 'Live',
+                        type: accountObj.type || 'live',
                         number: accountNumber
                     }));
                 }
@@ -267,7 +268,7 @@ export default function Accounts({ setWalletTab }) {
                 }
                 : {
                     accountName: formData.accountName,
-                    group: "Demo", // Forced for Demo based on updated requirement
+                    group: "Standard", // Forced Standard for Demo based on updated requirement
                     accountVariant: formData.accountVariant,
                     initialBalance: Number(formData.initialBalance) || 10000,
                     currency: "USD",
@@ -313,12 +314,15 @@ export default function Accounts({ setWalletTab }) {
                 }, 2000);
             } else if (result.code === 'EMAIL_NOT_VERIFIED') {
                 setFormError(result.message);
+                setTimeout(() => setFormError(''), 5000);
                 handleSendOtp();
             } else {
                 setFormError(result.message || 'Account creation failed');
+                setTimeout(() => setFormError(''), 5000);
             }
         } catch (err) {
             setFormError('Connection failed. Please try again.');
+            setTimeout(() => setFormError(''), 5000);
         } finally {
             setFormLoading(false);
         }

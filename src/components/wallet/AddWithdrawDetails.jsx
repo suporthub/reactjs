@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Landmark, Bitcoin, CreditCard, ArrowLeft, Save, Info, Loader2, CheckCircle, AlertCircle } from 'lucide-react';
+import { Landmark, Bitcoin, CreditCard, ArrowLeft, Save, Info, Loader2, CheckCircle, AlertCircle, Check } from 'lucide-react';
 
 export default function AddWithdrawDetails({ onBack }) {
     const { t } = useTranslation();
@@ -8,6 +8,7 @@ export default function AddWithdrawDetails({ onBack }) {
     const [loading, setLoading] = useState(false);
     const [status, setStatus] = useState(null); // 'success' | 'error'
     const [message, setMessage] = useState('');
+    const [validationErrors, setValidationErrors] = useState({});
 
     // Bank Form State
     const [bankData, setBankData] = useState({
@@ -15,7 +16,7 @@ export default function AddWithdrawDetails({ onBack }) {
         accountName: '',
         accountNumber: '',
         routingNumber: '',
-        isDefault: true
+        isDefault: false
     });
 
     // Crypto Form State
@@ -23,13 +24,15 @@ export default function AddWithdrawDetails({ onBack }) {
         providerName: '',
         accountName: '',
         accountNumber: '',
-        network: 'TRC20'
+        network: 'TRC20',
+        isDefault: false
     });
 
     const handleSave = async () => {
         setLoading(true);
         setStatus(null);
         setMessage('');
+        setValidationErrors({});
 
         const token = localStorage.getItem('portalToken');
         const payload = activeMethod === 'bank' 
@@ -52,14 +55,17 @@ export default function AddWithdrawDetails({ onBack }) {
                 setStatus('success');
                 setMessage(t('Payment method saved successfully!'));
                 // Reset forms
-                if (activeMethod === 'bank') setBankData({ providerName: '', accountName: '', accountNumber: '', routingNumber: '', isDefault: true });
-                else setCryptoData({ providerName: '', accountName: '', accountNumber: '', network: 'TRC20' });
+                if (activeMethod === 'bank') setBankData({ providerName: '', accountName: '', accountNumber: '', routingNumber: '', isDefault: false });
+                else setCryptoData({ providerName: '', accountName: '', accountNumber: '', network: 'TRC20', isDefault: false });
                 
                 // Close after delay
                 setTimeout(() => onBack(), 2000);
             } else {
                 setStatus('error');
                 setMessage(result.message || t('Failed to save payment method.'));
+                if (result.errors) {
+                    setValidationErrors(result.errors);
+                }
             }
         } catch (error) {
             setStatus('error');
@@ -67,6 +73,17 @@ export default function AddWithdrawDetails({ onBack }) {
         } finally {
             setLoading(false);
         }
+    };
+
+    const renderError = (field) => {
+        if (validationErrors[field]) {
+            return (
+                <span className="field-error-msg" style={{ color: '#ef4444', fontSize: '11px', marginTop: '4px', display: 'block' }}>
+                    {validationErrors[field][0]}
+                </span>
+            );
+        }
+        return null;
     };
 
     return (
@@ -86,21 +103,21 @@ export default function AddWithdrawDetails({ onBack }) {
             <div className="withdraw-method-tabs">
                 <button 
                     className={`method-tab ${activeMethod === 'bank' ? 'active' : ''}`}
-                    onClick={() => { setActiveMethod('bank'); setStatus(null); }}
+                    onClick={() => { setActiveMethod('bank'); setStatus(null); setValidationErrors({}); }}
                 >
                     <Landmark size={18} />
                     {t('Bank Account')}
                 </button>
                 <button 
                     className={`method-tab ${activeMethod === 'crypto' ? 'active' : ''}`}
-                    onClick={() => { setActiveMethod('crypto'); setStatus(null); }}
+                    onClick={() => { setActiveMethod('crypto'); setStatus(null); setValidationErrors({}); }}
                 >
                     <Bitcoin size={18} />
                     {t('Crypto Wallet')}
                 </button>
                 <button 
                     className={`method-tab ${activeMethod === 'other' ? 'active' : ''}`}
-                    onClick={() => { setActiveMethod('other'); setStatus(null); }}
+                    onClick={() => { setActiveMethod('other'); setStatus(null); setValidationErrors({}); }}
                 >
                     <CreditCard size={18} />
                     {t('Other Methods')}
@@ -111,7 +128,16 @@ export default function AddWithdrawDetails({ onBack }) {
                 {status && (
                     <div className={`kyc-status-alert ${status}`} style={{ marginBottom: '24px', padding: '12px 16px', borderRadius: '12px', display: 'flex', alignItems: 'center', gap: '12px', fontSize: '14px' }}>
                         {status === 'success' ? <CheckCircle size={20} color="#10b981" /> : <AlertCircle size={20} color="#ef4444" />}
-                        <span style={{ color: status === 'success' ? '#10b981' : '#ef4444', fontWeight: '600' }}>{message}</span>
+                        <div style={{ display: 'flex', flexDirection: 'column' }}>
+                            <span style={{ color: status === 'success' ? '#10b981' : '#ef4444', fontWeight: '600' }}>{message}</span>
+                            {status === 'error' && Object.keys(validationErrors).length > 0 && (
+                                <ul style={{ margin: '4px 0 0 20px', padding: 0, fontSize: '12px', color: '#ef4444' }}>
+                                    {Object.keys(validationErrors).map(key => (
+                                        <li key={key}>{validationErrors[key][0]}</li>
+                                    ))}
+                                </ul>
+                            )}
+                        </div>
                     </div>
                 )}
 
@@ -124,11 +150,12 @@ export default function AddWithdrawDetails({ onBack }) {
                                 </label>
                                 <input 
                                     type="text" 
-                                    className="wallet-input" 
+                                    className={`wallet-input ${validationErrors.providerName ? 'error' : ''}`}
                                     placeholder={t('e.g. Chase Bank')} 
                                     value={bankData.providerName}
                                     onChange={(e) => setBankData({...bankData, providerName: e.target.value})}
                                 />
+                                {renderError('providerName')}
                             </div>
                             <div className="form-group-wallet">
                                 <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: 'var(--text-muted)', marginBottom: '8px' }}>
@@ -136,11 +163,12 @@ export default function AddWithdrawDetails({ onBack }) {
                                 </label>
                                 <input 
                                     type="text" 
-                                    className="wallet-input" 
+                                    className={`wallet-input ${validationErrors.accountName ? 'error' : ''}`}
                                     placeholder={t('Your full name')} 
                                     value={bankData.accountName}
                                     onChange={(e) => setBankData({...bankData, accountName: e.target.value})}
                                 />
+                                {renderError('accountName')}
                             </div>
                             <div className="form-group-wallet">
                                 <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: 'var(--text-muted)', marginBottom: '8px' }}>
@@ -148,24 +176,33 @@ export default function AddWithdrawDetails({ onBack }) {
                                 </label>
                                 <input 
                                     type="text" 
-                                    className="wallet-input" 
+                                    className={`wallet-input ${validationErrors.accountNumber ? 'error' : ''}`}
                                     placeholder={t('Enter account number')} 
                                     value={bankData.accountNumber}
                                     onChange={(e) => setBankData({...bankData, accountNumber: e.target.value})}
                                 />
+                                {renderError('accountNumber')}
                             </div>
                             <div className="form-group-wallet">
                                 <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: 'var(--text-muted)', marginBottom: '8px' }}>
-                                    {t('Routing Number')}
+                                    {t('IFSC Code / IBAN / SWIFT')}
                                 </label>
                                 <input 
                                     type="text" 
-                                    className="wallet-input" 
-                                    placeholder={t('Enter routing number')} 
+                                    className={`wallet-input ${validationErrors.routingNumber ? 'error' : ''}`}
+                                    placeholder={t('Enter bank code')} 
                                     value={bankData.routingNumber}
                                     onChange={(e) => setBankData({...bankData, routingNumber: e.target.value})}
                                 />
+                                {renderError('routingNumber')}
                             </div>
+                        </div>
+
+                        <div className="default-checkbox-row" style={{ marginTop: '20px', display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer' }} onClick={() => setBankData({...bankData, isDefault: !bankData.isDefault})}>
+                            <div style={{ width: '20px', height: '20px', border: '2px solid var(--border-color)', borderRadius: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: bankData.isDefault ? 'var(--primary)' : 'transparent', borderColor: bankData.isDefault ? 'var(--primary)' : 'var(--border-color)', transition: 'all 0.2s' }}>
+                                {bankData.isDefault && <Check size={14} color="#fff" strokeWidth={3} />}
+                            </div>
+                            <span style={{ fontSize: '13px', color: 'var(--text-main)', fontWeight: '500' }}>{t('Set as default payout method')}</span>
                         </div>
                     </div>
                 )}
@@ -179,11 +216,12 @@ export default function AddWithdrawDetails({ onBack }) {
                                 </label>
                                 <input 
                                     type="text" 
-                                    className="wallet-input" 
+                                    className={`wallet-input ${validationErrors.providerName ? 'error' : ''}`}
                                     placeholder={t('e.g. Binance, Trust Wallet')} 
                                     value={cryptoData.providerName}
                                     onChange={(e) => setCryptoData({...cryptoData, providerName: e.target.value})}
                                 />
+                                {renderError('providerName')}
                             </div>
                             <div className="form-group-wallet">
                                 <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: 'var(--text-muted)', marginBottom: '8px' }}>
@@ -191,11 +229,12 @@ export default function AddWithdrawDetails({ onBack }) {
                                 </label>
                                 <input 
                                     type="text" 
-                                    className="wallet-input" 
+                                    className={`wallet-input ${validationErrors.accountName ? 'error' : ''}`}
                                     placeholder={t('e.g. My Primary Wallet')} 
                                     value={cryptoData.accountName}
                                     onChange={(e) => setCryptoData({...cryptoData, accountName: e.target.value})}
                                 />
+                                {renderError('accountName')}
                             </div>
                             <div className="form-group-wallet">
                                 <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: 'var(--text-muted)', marginBottom: '8px' }}>
@@ -217,12 +256,20 @@ export default function AddWithdrawDetails({ onBack }) {
                                 </label>
                                 <input 
                                     type="text" 
-                                    className="wallet-input" 
+                                    className={`wallet-input ${validationErrors.accountNumber ? 'error' : ''}`}
                                     placeholder={t('Enter wallet address')} 
                                     value={cryptoData.accountNumber}
                                     onChange={(e) => setCryptoData({...cryptoData, accountNumber: e.target.value})}
                                 />
+                                {renderError('accountNumber')}
                             </div>
+                        </div>
+
+                        <div className="default-checkbox-row" style={{ marginTop: '20px', display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer' }} onClick={() => setCryptoData({...cryptoData, isDefault: !cryptoData.isDefault})}>
+                            <div style={{ width: '20px', height: '20px', border: '2px solid var(--border-color)', borderRadius: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: cryptoData.isDefault ? 'var(--primary)' : 'transparent', borderColor: cryptoData.isDefault ? 'var(--primary)' : 'var(--border-color)', transition: 'all 0.2s' }}>
+                                {cryptoData.isDefault && <Check size={14} color="#fff" strokeWidth={3} />}
+                            </div>
+                            <span style={{ fontSize: '13px', color: 'var(--text-main)', fontWeight: '500' }}>{t('Set as default payout method')}</span>
                         </div>
                     </div>
                 )}

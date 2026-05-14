@@ -77,8 +77,8 @@ export default function TerminalTopbar() {
                     <div className="terminal-account-info">
                         <div className="account-details">
                             <div className="account-top-row">
-                                <span className={`account-badge ${accountInfo.group?.toLowerCase().includes('demo') ? 'demo' : 'live'}`}>
-                                    {accountInfo.group?.toLowerCase().includes('demo') ? 'Demo' : 'Live'}
+                                <span className={`account-badge ${accountInfo.type?.toLowerCase() === 'demo' ? 'demo' : 'live'}`}>
+                                    {accountInfo.type?.toLowerCase() === 'demo' ? 'Demo' : 'Live'}
                                 </span>
                                 <span className="account-name">{accountInfo.name || 'Trading Account'}</span>
                             </div>

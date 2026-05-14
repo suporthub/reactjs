@@ -77,7 +77,7 @@ class OrdersWebSocketManager {
                     // Handle Gateway PING -> Client PONG heartbeat
                     if (data.type?.toUpperCase() === 'PING' || data.action?.toUpperCase() === 'PING' || String(event.data).toUpperCase() === 'PING') {
                         if (this.ws && this.ws.readyState === WebSocket.OPEN) {
-                            this.ws.send(JSON.stringify({ action: 'PONG' }));
+                            this.ws.send('PONG');
                         }
                         return;
                     }
@@ -87,7 +87,6 @@ class OrdersWebSocketManager {
                         console.log('[OrdersWS] Authenticated successfully:', data.data);
                         this.isAuthenticated = true;
                         this._clearAuthTimeout();
-                        this._startPingInterval();
                         return;
                     }
 
@@ -156,7 +155,6 @@ class OrdersWebSocketManager {
                 this.isConnected = false;
                 this.isAuthenticated = false;
                 this._clearAuthTimeout();
-                this._stopPingInterval();
                 
                 if (this.isIntentionalClose) {
                     console.log('[OrdersWS] Disconnected intentionally.');
@@ -374,22 +372,6 @@ class OrdersWebSocketManager {
         if (this.authTimeout) {
             clearTimeout(this.authTimeout);
             this.authTimeout = null;
-        }
-    }
-
-    _startPingInterval() {
-        this._stopPingInterval();
-        this.pingInterval = setInterval(() => {
-            if (this.ws && this.ws.readyState === WebSocket.OPEN) {
-                this.ws.send(JSON.stringify({ action: 'PING' }));
-            }
-        }, 30000); // Send ping every 30 seconds
-    }
-
-    _stopPingInterval() {
-        if (this.pingInterval) {
-            clearInterval(this.pingInterval);
-            this.pingInterval = null;
         }
     }
 }

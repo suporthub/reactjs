@@ -395,7 +395,7 @@ export default function Signup() {
                 phoneNumber: `${formData.phoneCode}${formData.mobile}`,
                 password: formData.password,
                 country: formData.countryISO2,
-                groupName: formData.accountType.charAt(0).toUpperCase() + formData.accountType.slice(1),
+                groupName: accountKind === 'demo' ? 'Standard' : (formData.accountType.charAt(0).toUpperCase() + formData.accountType.slice(1)),
                 currency: "USD",
                 leverage: 100,
                 referralCode: formData.referralId || ""

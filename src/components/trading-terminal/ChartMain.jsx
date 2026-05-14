@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useCallback, useState, useMemo } from 'react';
 import { Clock } from 'lucide-react';
 import { createDatafeed } from './datafeed';
+import { tradingFetch } from '../../utils/tradingTokenManager';
 
 const TIMEFRAMES = [
     { label: '1s', tv: '1S' },
@@ -124,18 +125,13 @@ export default function ChartMain({ selectedSymbol, selectedTimeframe, setSelect
                 let savedState = null;
                 let savedResolution = null;
                 try {
-                    const token = localStorage.getItem('tradingAccessToken');
-                    if (token) {
-                        const res = await fetch(`${API_BASE}/${sym}`, {
-                            headers: { 'Authorization': `Bearer ${token}` }
-                        });
-                        if (res.ok) {
-                            const json = await res.json();
-                            if (json?.data?.content) {
-                                savedState = JSON.parse(json.data.content);
-                                savedResolution = json.data.resolution;
-                                console.log('[ChartMain] Loaded saved chart for', sym, 'resolution:', savedResolution);
-                            }
+                    const res = await tradingFetch(`${API_BASE}/${sym}`);
+                    if (res.ok) {
+                        const json = await res.json();
+                        if (json?.data?.content) {
+                            savedState = JSON.parse(json.data.content);
+                            savedResolution = json.data.resolution;
+                            console.log('[ChartMain] Loaded saved chart for', sym, 'resolution:', savedResolution);
                         }
                     }
                 } catch (e) { console.warn('[ChartMain] Failed to fetch saved chart:', e); }
@@ -243,18 +239,14 @@ export default function ChartMain({ selectedSymbol, selectedTimeframe, setSelect
 
                     // ── Auto-save: persist chart state on user changes ──
                     w.subscribe('onAutoSaveNeeded', () => {
-                        const token = localStorage.getItem('tradingAccessToken');
-                        if (!token) return;
                         w.save((state) => {
                             const currentSym = w.chart().symbol() || sym;
                             const resolution = w.chart().resolution();
                             console.log('[ChartMain] Auto-saving chart for', currentSym, 'res:', resolution);
-                            fetch(`${API_BASE}/${currentSym}`, {
+                            
+                            tradingFetch(`${API_BASE}/${currentSym}`, {
                                 method: 'POST',
-                                headers: {
-                                    'Content-Type': 'application/json',
-                                    'Authorization': `Bearer ${token}`
-                                },
+                                headers: { 'Content-Type': 'application/json' },
                                 body: JSON.stringify({ resolution, content: JSON.stringify(state) })
                             }).catch(e => console.error('[ChartMain] Auto-save failed:', e));
                         });
